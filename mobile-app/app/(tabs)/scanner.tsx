@@ -87,7 +87,7 @@ export default function ScannerScreen() {
           onPress={requestPermission}
           accessibilityRole="button"
           className="rounded-2xl bg-primary px-6 py-3.5">
-          <Text className="font-opendyslexic text-sm font-bold text-white">Berikan Izin Kamera</Text>
+          <Text className="font-opendyslexic-bold text-sm text-white">Berikan Izin Kamera</Text>
         </Pressable>
       </View>
     );
@@ -101,7 +101,7 @@ export default function ScannerScreen() {
       contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 24 }}
       showsVerticalScrollIndicator={false}>
       <View className="mb-5">
-        <Text className="mb-1 font-opendyslexic text-2xl font-bold text-text-main">Smart OCR Scan 📡</Text>
+        <Text className="mb-1 font-opendyslexic-bold text-2xl text-text-main">Smart OCR Scan 📡</Text>
         <Text className="font-opendyslexic text-xs text-text-muted">
           Foto dokumen fisik → teks digital ramah disleksia
         </Text>
@@ -111,11 +111,11 @@ export default function ScannerScreen() {
         <>
           <View className="mb-4 h-52 items-center justify-center rounded-3xl bg-[#111122]">
             <Text className="mb-3 text-5xl">✅</Text>
-            <Text className="font-opendyslexic text-sm font-bold text-success">Berhasil!</Text>
+            <Text className="font-opendyslexic-bold text-sm text-success">Berhasil!</Text>
           </View>
 
           <View className="mb-4 rounded-3xl border border-border bg-surface p-5">
-            <Text className="mb-3 font-opendyslexic text-[10px] font-bold uppercase tracking-widest text-primary">
+            <Text className="mb-3 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-primary">
               📄 TEKS TERDETEKSI
             </Text>
             <Text
@@ -126,18 +126,18 @@ export default function ScannerScreen() {
             </Text>
             <View className="flex-row">
               <View className="mr-2 rounded-full bg-primary/10 px-3 py-1.5">
-                <Text className="font-opendyslexic text-[10px] font-bold text-primary">
+                <Text className="font-opendyslexic-bold text-[10px] text-primary">
                   {paragraphCount} paragraf
                 </Text>
               </View>
               <View className="rounded-full bg-primary/10 px-3 py-1.5">
-                <Text className="font-opendyslexic text-[10px] font-bold text-primary">Tipografi otomatis</Text>
+                <Text className="font-opendyslexic-bold text-[10px] text-primary">Tipografi otomatis</Text>
               </View>
             </View>
           </View>
 
           <View className="mb-5 rounded-3xl border border-border bg-surface p-5">
-            <Text className="mb-4 font-opendyslexic text-[10px] font-bold uppercase tracking-widest text-primary">
+            <Text className="mb-4 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-primary">
               🔒 PREPROCESSING OTOMATIS
             </Text>
             {PREPROCESSING_STEPS.map((step, index) => {
@@ -160,11 +160,11 @@ export default function ScannerScreen() {
             onPress={openReader}
             accessibilityRole="button"
             className="mb-3 flex-row items-center justify-center rounded-2xl bg-primary py-4">
-            <Text className="mr-2 font-opendyslexic text-base font-bold text-white">Buka & Baca Sekarang</Text>
+            <Text className="mr-2 font-opendyslexic-bold text-base text-white">Buka & Baca Sekarang</Text>
             <ChevronRight size={18} color="#FFFFFF" />
           </Pressable>
           <Pressable onPress={resetScan} accessibilityRole="button" className="rounded-2xl py-3">
-            <Text className="text-center font-opendyslexic text-xs font-bold text-text-muted">
+            <Text className="text-center font-opendyslexic-bold text-xs text-text-muted">
               ← Pindai dokumen lain
             </Text>
           </Pressable>
@@ -208,7 +208,7 @@ export default function ScannerScreen() {
 
           {/* Tips */}
           <View className="mb-5 rounded-3xl border border-border bg-surface p-5">
-            <Text className="mb-4 font-opendyslexic text-[10px] font-bold uppercase tracking-widest text-primary">
+            <Text className="mb-4 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-primary">
               TIPS SCAN TERBAIK
             </Text>
             {SCAN_TIPS.map((tip) => (
@@ -230,7 +230,7 @@ export default function ScannerScreen() {
                 phase === 'scanning' ? 'bg-primary/50' : 'bg-primary'
               }`}>
               {phase === 'scanning' ? <ActivityIndicator color="#FFFFFF" className="mr-3" /> : null}
-              <Text className="font-opendyslexic text-base font-bold text-white">
+              <Text className="font-opendyslexic-bold text-base text-white">
                 {phase === 'scanning' ? 'Memproses…' : 'Mulai Scan 📸'}
               </Text>
             </Pressable>
@@ -266,7 +266,7 @@ function SourceTab({
       className={`flex-1 flex-row items-center justify-center rounded-xl py-3 ${active ? 'bg-primary' : ''}`}>
       {icon}
       <Text
-        className={`ml-2 font-opendyslexic text-sm font-bold ${active ? 'text-white' : 'text-text-muted'}`}>
+        className={`ml-2 font-opendyslexic-bold text-sm ${active ? 'text-white' : 'text-text-muted'}`}>
         {label}
       </Text>
     </Pressable>

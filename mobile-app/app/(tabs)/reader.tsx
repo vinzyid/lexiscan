@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, type TextLayoutLine } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -23,9 +23,10 @@ import {
   getSimplifyLevel,
   type SimplifyLevelId,
 } from '../../src/data/sample-document';
+import { simplifyText, AiApiError } from '../../src/api/ai';
 import { DyslexicText } from '../../src/components/dyslexic-text';
 import { TypographySheet } from '../../src/components/typography-sheet';
-import { ExplainSheet } from '../../src/components/explain-sheet';
+import { ExplainSheet, type ExplainTarget } from '../../src/components/explain-sheet';
 import { WordSheet } from '../../src/components/word-sheet';
 
 export default function ReaderScreen() {
@@ -37,6 +38,8 @@ export default function ReaderScreen() {
     typeLevelId,
     simplifyLevel,
     setSimplifyLevel,
+    aiParagraphs,
+    setAiParagraphs,
     focusMode,
     toggleFocusMode,
     rulerMode,
@@ -48,26 +51,56 @@ export default function ReaderScreen() {
   } = useOCRStore();
 
   const [typographyOpen, setTypographyOpen] = useState(false);
-  const [explainOpen, setExplainOpen] = useState(false);
+  const [explainTarget, setExplainTarget] = useState<ExplainTarget | null>(null);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const [rulerLine, setRulerLine] = useState(0);
   const [lines, setLines] = useState<TextLayoutLine[]>([]);
+  const [simplifyLoading, setSimplifyLoading] = useState(false);
+  const [simplifyError, setSimplifyError] = useState<string | null>(null);
 
   const typeLevel = getTypeLevel(typeLevelId);
   const level = getSimplifyLevel(simplifyLevel);
 
   /**
-   * Teks hasil OCR selalu tampil apa adanya: backend penyederhanaan L2–L5
-   * belum terhubung, jadi levelnya dikunci ke L1 untuk dokumen pindaian.
+   * Dokumen contoh memakai lima level kurasi lokal (demo tetap jalan offline).
+   * Teks pindaian: L1 adalah hasil OCR apa adanya; L2–L5 diminta ke backend
+   * (POST /api/simplify-text) dan di-cache per level di store.
    */
   const isScanned = rawText.trim().length > 0;
+  const scannedParagraphs = useMemo(
+    () =>
+      rawText
+        .split(/\n{2,}|\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0),
+    [rawText],
+  );
+
+  const needsAi = isScanned && simplifyLevel !== 'L1';
+  const aiResult = needsAi ? aiParagraphs[simplifyLevel] : undefined;
+
+  const fetchSimplified = useCallback(() => {
+    if (simplifyLevel === 'L1') return;
+    setSimplifyLoading(true);
+    setSimplifyError(null);
+
+    const requestedLevel = simplifyLevel;
+    simplifyText(rawText, requestedLevel)
+      .then((result) => setAiParagraphs(requestedLevel, result))
+      .catch((e) =>
+        setSimplifyError(e instanceof AiApiError ? e.message : 'Terjadi kesalahan tak terduga.'),
+      )
+      .finally(() => setSimplifyLoading(false));
+  }, [rawText, simplifyLevel, setAiParagraphs]);
+
+  useEffect(() => {
+    if (needsAi && !aiResult) fetchSimplified();
+  }, [needsAi, aiResult, fetchSimplified]);
+
   const paragraphs = useMemo(() => {
     if (!isScanned) return level.paragraphs;
-    return rawText
-      .split(/\n{2,}|\n/)
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0);
-  }, [isScanned, rawText, level.paragraphs]);
+    return aiResult ?? scannedParagraphs;
+  }, [isScanned, level.paragraphs, aiResult, scannedParagraphs]);
 
   const activeIndex = Math.min(activeParagraphIndex, Math.max(0, paragraphs.length - 1));
   const shownParagraphs = paragraphs.length > 0 ? paragraphs : ['Belum ada teks untuk dibaca.'];
@@ -103,10 +136,10 @@ export default function ReaderScreen() {
         {/* Judul dokumen + preset tipografi */}
         <View className="flex-row items-center justify-between px-4 pb-3">
           <View className="flex-1 pr-3">
-            <Text className="mb-1 font-opendyslexic text-[10px] font-bold uppercase tracking-widest text-text-muted">
+            <Text className="mb-1 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-text-muted">
               DOKUMEN
             </Text>
-            <Text className="font-opendyslexic text-base font-bold text-text-main" numberOfLines={1}>
+            <Text className="font-opendyslexic-bold text-base text-text-main" numberOfLines={1}>
               {isScanned ? 'Hasil Pindaian' : DOC_TITLE}
             </Text>
           </View>
@@ -116,48 +149,50 @@ export default function ReaderScreen() {
             accessibilityLabel="Ubah tipografi"
             className="flex-row items-center rounded-xl bg-primary/10 px-3.5 py-2">
             <Type size={14} color={colors.primary} />
-            <Text className="ml-2 font-opendyslexic text-xs font-bold text-primary">{typeLevel.name}</Text>
+            <Text className="ml-2 font-opendyslexic-bold text-xs text-primary">{typeLevel.name}</Text>
           </Pressable>
         </View>
 
         {/* Level penyederhanaan */}
         <View className="px-4 pb-2">
           <Text className="mb-2 font-opendyslexic text-[10px] text-text-muted">
-            <Text className="font-bold text-warm">🧠 LEVEL </Text>
-            <Text className="font-bold text-primary">{level.name}</Text>
+            <Text className="font-opendyslexic-bold text-warm">🧠 LEVEL </Text>
+            <Text className="font-opendyslexic-bold text-primary">{level.name}</Text>
             <Text> — {level.tagline}</Text>
           </Text>
           <View className="flex-row">
             {SIMPLIFY_LEVELS.map((item) => {
               const selected = item.id === simplifyLevel;
-              const locked = isScanned && item.id !== 'L1';
 
               return (
                 <Pressable
                   key={item.id}
-                  disabled={locked}
                   onPress={() => setSimplifyLevel(item.id as SimplifyLevelId)}
                   accessibilityRole="radio"
-                  accessibilityState={{ selected, disabled: locked }}
+                  accessibilityState={{ selected }}
                   accessibilityLabel={`Level ${item.id}: ${item.name}`}
                   className={`mr-2 flex-1 items-center rounded-lg py-2 ${
                     selected ? 'bg-primary' : 'bg-surface-alt'
-                  }`}
-                  style={locked ? { opacity: 0.35 } : undefined}>
+                  }`}>
                   <Text
-                    className={`font-opendyslexic text-[11px] font-bold ${
-                      selected ? 'text-white' : 'text-text-muted'
-                    }`}>
+                    className={`font-opendyslexic-bold text-[11px] ${selected ? 'text-white' : 'text-text-muted'}`}>
                     {item.id}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
-          {isScanned ? (
-            <Text className="mt-2 font-opendyslexic text-[9px] text-text-muted">
-              Penyederhanaan L2–L5 belum tersedia untuk teks pindaian — ini teks aslinya.
+          {needsAi && simplifyLoading ? (
+            <Text className="mt-2 font-opendyslexic text-[9px] text-primary">
+              🦉 Lexi sedang menyederhanakan teksnya… sementara ini teks asli dulu.
             </Text>
+          ) : null}
+          {needsAi && !simplifyLoading && simplifyError ? (
+            <Pressable onPress={fetchSimplified} accessibilityRole="button" hitSlop={6}>
+              <Text className="mt-2 font-opendyslexic text-[9px] text-text-muted">
+                ⚠️ {simplifyError} <Text className="font-opendyslexic-bold text-primary">Ketuk untuk coba lagi.</Text>
+              </Text>
+            </Pressable>
           ) : null}
         </View>
 
@@ -193,7 +228,7 @@ export default function ReaderScreen() {
                 className="h-7 w-7 items-center justify-center rounded-lg bg-surface-alt">
                 <ChevronLeft size={13} color={colors.textMuted} />
               </Pressable>
-              <Text className="mx-2 font-opendyslexic text-[10px] font-bold text-text-muted">
+              <Text className="mx-2 font-opendyslexic-bold text-[10px] text-text-muted">
                 {activeIndex + 1}/{shownParagraphs.length}
               </Text>
               <Pressable
@@ -210,7 +245,7 @@ export default function ReaderScreen() {
 
         {/* Isi bacaan */}
         <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingTop: 20, paddingBottom: 28 }}>
-          <Text className="mb-4 font-opendyslexic text-[11px] font-bold uppercase tracking-widest text-warm">
+          <Text className="mb-4 font-opendyslexic-bold text-[11px] uppercase tracking-widest text-warm">
             {isScanned ? 'TEKS HASIL PINDAIAN' : DOC_SECTION}
           </Text>
 
@@ -227,7 +262,7 @@ export default function ReaderScreen() {
                   focusMode && isActive ? 'rounded-2xl border-l-4 border-primary bg-primary/5 p-4' : ''
                 }`}>
                 {focusMode && isActive ? (
-                  <Text className="mb-2 font-opendyslexic text-[9px] font-bold uppercase tracking-widest text-primary">
+                  <Text className="mb-2 font-opendyslexic-bold text-[9px] uppercase tracking-widest text-primary">
                     PARAGRAF {index + 1} DARI {shownParagraphs.length}
                   </Text>
                 ) : null}
@@ -281,7 +316,7 @@ export default function ReaderScreen() {
           {bicolorMode ? (
             <View className="rounded-2xl border border-border bg-surface p-3">
               <Text className="font-opendyslexic text-[9px] leading-4 text-text-muted">
-                <Text className="font-bold text-primary">🌈 Bicolor Aktif</Text> — kata bergantian warna
+                <Text className="font-opendyslexic-bold text-primary">🌈 Bicolor Aktif</Text> — kata bergantian warna
                 membantu mata melacak posisi.
               </Text>
             </View>
@@ -291,11 +326,18 @@ export default function ReaderScreen() {
         {/* Aksi bawah */}
         <View className="border-t border-border px-4 pb-3 pt-3">
           <Pressable
-            onPress={() => setExplainOpen(true)}
+            onPress={() =>
+              setExplainTarget({
+                term: shownParagraphs[activeIndex],
+                context: shownParagraphs[activeIndex],
+                // Dokumen contoh punya jawaban kurasi; teks pindaian dijelaskan AI beneran.
+                useStaticAnswers: !isScanned,
+              })
+            }
             accessibilityRole="button"
             className="mb-2 flex-row items-center justify-center rounded-2xl bg-primary/10 py-3.5">
             <Lightbulb size={15} color={colors.primary} />
-            <Text className="ml-2 font-opendyslexic text-xs font-bold text-primary">Jelaskan Teks Ini</Text>
+            <Text className="ml-2 font-opendyslexic-bold text-xs text-primary">Jelaskan Teks Ini</Text>
           </Pressable>
           <Text className="text-center font-opendyslexic text-[9px] text-text-muted">
             💡 Ketuk kata apapun untuk melihat lebih jelas
@@ -304,8 +346,15 @@ export default function ReaderScreen() {
       </View>
 
       <TypographySheet visible={typographyOpen} onClose={() => setTypographyOpen(false)} />
-      <ExplainSheet visible={explainOpen} onClose={() => setExplainOpen(false)} />
-      <WordSheet word={selectedWord} onClose={() => setSelectedWord(null)} />
+      <ExplainSheet target={explainTarget} onClose={() => setExplainTarget(null)} />
+      <WordSheet
+        word={selectedWord}
+        onClose={() => setSelectedWord(null)}
+        onExplain={(word) => {
+          setSelectedWord(null);
+          setExplainTarget({ term: word, context: shownParagraphs[activeIndex] });
+        }}
+      />
     </>
   );
 }
@@ -331,9 +380,7 @@ function FeatureChip({
       }`}>
       {icon}
       <Text
-        className={`ml-1.5 font-opendyslexic text-[10px] font-bold ${
-          active ? 'text-white' : 'text-text-muted'
-        }`}>
+        className={`ml-1.5 font-opendyslexic-bold text-[10px] ${active ? 'text-white' : 'text-text-muted'}`}>
         {label}
       </Text>
     </Pressable>

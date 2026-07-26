@@ -23,8 +23,15 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  /*
+   * Bold didaftarkan sebagai family terpisah, bukan sebagai varian berat dari
+   * "OpenDyslexic". Di Android, fontFamily kustom + fontWeight bold tanpa faces
+   * terdaftar bikin RN mundur ke font sistem, jadi setiap teks tebal harus
+   * menyebut family ini secara eksplisit lewat class `font-opendyslexic-bold`.
+   */
   const [loaded, error] = useFonts({
     OpenDyslexic: require('../assets/fonts/OpenDyslexic-Regular.otf'),
+    'OpenDyslexic-Bold': require('../assets/fonts/OpenDyslexic-Bold.otf'),
   });
 
   useEffect(() => {

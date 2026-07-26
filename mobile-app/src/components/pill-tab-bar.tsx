@@ -49,7 +49,7 @@ export function PillTabBar({ state, navigation, insets }: BottomTabBarProps) {
             }`}>
             <Icon size={isFocused ? 17 : 20} color={isFocused ? '#FFFFFF' : colors.textMuted} />
             {isFocused ? (
-              <Text className="ml-2 font-opendyslexic text-[11px] font-bold text-white">{label}</Text>
+              <Text className="ml-2 font-opendyslexic-bold text-[11px] text-white">{label}</Text>
             ) : null}
           </Pressable>
         );

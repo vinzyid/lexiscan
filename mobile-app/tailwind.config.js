@@ -22,6 +22,8 @@ module.exports = {
       },
       fontFamily: {
         opendyslexic: ['OpenDyslexic', 'sans-serif'],
+        // Family sendiri, bukan fontWeight — lihat catatan di app/_layout.tsx.
+        'opendyslexic-bold': ['OpenDyslexic-Bold', 'sans-serif'],
       }
     },
   },

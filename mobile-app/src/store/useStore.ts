@@ -8,6 +8,14 @@ interface OCRState {
   setRawText: (text: string) => void;
   clearRawText: () => void;
 
+  /**
+   * Hasil penyederhanaan AI per level untuk teks pindaian saat ini.
+   * Ikut dikosongkan setiap rawText berganti supaya tidak menampilkan
+   * hasil dokumen sebelumnya.
+   */
+  aiParagraphs: Partial<Record<SimplifyLevelId, string[]>>;
+  setAiParagraphs: (level: SimplifyLevelId, paragraphs: string[]) => void;
+
   /** Tampilan */
   themeId: ThemeId;
   setThemeId: (id: ThemeId) => void;
@@ -37,8 +45,13 @@ const XP_PER_LEVEL = 250;
 
 export const useOCRStore = create<OCRState>((set) => ({
   rawText: '',
-  setRawText: (text) => set({ rawText: text, simplifyLevel: 'L1', activeParagraphIndex: 0 }),
-  clearRawText: () => set({ rawText: '', activeParagraphIndex: 0 }),
+  setRawText: (text) =>
+    set({ rawText: text, simplifyLevel: 'L1', activeParagraphIndex: 0, aiParagraphs: {} }),
+  clearRawText: () => set({ rawText: '', activeParagraphIndex: 0, aiParagraphs: {} }),
+
+  aiParagraphs: {},
+  setAiParagraphs: (level, paragraphs) =>
+    set((s) => ({ aiParagraphs: { ...s.aiParagraphs, [level]: paragraphs } })),
 
   themeId: 'krem',
   setThemeId: (id) => set({ themeId: id }),

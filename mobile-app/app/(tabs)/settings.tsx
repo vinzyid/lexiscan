@@ -15,12 +15,12 @@ export default function SettingsScreen() {
       className="flex-1 bg-background px-5"
       contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 28 }}
       showsVerticalScrollIndicator={false}>
-      <Text className="mb-1 font-opendyslexic text-2xl font-bold text-text-main">Pengaturan 🎨</Text>
+      <Text className="mb-1 font-opendyslexic-bold text-2xl text-text-main">Pengaturan 🎨</Text>
       <Text className="mb-7 font-opendyslexic text-xs text-text-muted">
         Sesuaikan tampilan agar paling nyaman dibaca
       </Text>
 
-      <Text className="mb-2 font-opendyslexic text-[10px] font-bold uppercase tracking-widest text-warm">
+      <Text className="mb-2 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-warm">
         🎨 TEMA WARNA RAMAH DISLEKSIA
       </Text>
       <Text className="mb-4 font-opendyslexic text-[10px] leading-4 text-text-muted">
@@ -44,7 +44,7 @@ export default function SettingsScreen() {
             <Text className="mr-3 text-lg">{theme.emoji}</Text>
             <View className="flex-1">
               <Text
-                className="mb-2 font-opendyslexic text-xs font-bold"
+                className="mb-2 font-opendyslexic-bold text-xs"
                 style={{ color: theme.isDark ? '#ECEAF6' : '#2D2D2D' }}>
                 {theme.name}
               </Text>
@@ -68,7 +68,7 @@ export default function SettingsScreen() {
         );
       })}
 
-      <Text className="mb-4 mt-6 font-opendyslexic text-[10px] font-bold uppercase tracking-widest text-warm">
+      <Text className="mb-4 mt-6 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-warm">
         📖 MODE TIPOGRAFI DEFAULT
       </Text>
 
@@ -87,9 +87,7 @@ export default function SettingsScreen() {
             }`}>
             <View className="mb-1 flex-row items-start justify-between">
               <Text
-                className={`font-opendyslexic text-sm font-bold ${
-                  selected ? 'text-primary' : 'text-text-main'
-                }`}>
+                className={`font-opendyslexic-bold text-sm ${selected ? 'text-primary' : 'text-text-main'}`}>
                 {selected ? `✓ ${level.name}` : level.name}
               </Text>
               <View className="flex-row">
@@ -107,7 +105,7 @@ export default function SettingsScreen() {
         <View className="mb-2 flex-row items-center">
           <Text className="mr-3 text-2xl">🦉</Text>
           <View>
-            <Text className="font-opendyslexic text-sm font-bold text-text-main">LexiScan v1.0</Text>
+            <Text className="font-opendyslexic-bold text-sm text-text-main">LexiScan v1.0</Text>
             <Text className="font-opendyslexic text-[10px] text-warm">
               Dirancang untuk pembaca disleksia
             </Text>
@@ -126,7 +124,7 @@ function Badge({ label, value }: { label: string; value: string }) {
   return (
     <View className="ml-2 items-center rounded-lg bg-surface-alt px-2 py-1">
       <Text className="font-opendyslexic text-[8px] uppercase tracking-wider text-text-muted">{label}</Text>
-      <Text className="font-opendyslexic text-[10px] font-bold text-text-main">{value}</Text>
+      <Text className="font-opendyslexic-bold text-[10px] text-text-main">{value}</Text>
     </View>
   );
 }

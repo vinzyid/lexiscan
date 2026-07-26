@@ -24,6 +24,12 @@ export default function DashboardScreen() {
   const [typographyOpen, setTypographyOpen] = useState(false);
   const [explainOpen, setExplainOpen] = useState(false);
 
+  /*
+   * Dari dashboard belum ada dokumen yang dibuka, jadi sheet menjelaskan
+   * topik dokumen contoh memakai jawaban kurasi (tanpa memanggil API).
+   */
+  const explainDemoTarget = { term: 'Mitokondria', useStaticAnswers: true };
+
   const { level, xp, streakDays, typeLevelId, simplifyLevel, focusMode, toggleFocusMode } = useOCRStore();
   const typeLevel = getTypeLevel(typeLevelId);
   const doc = getSimplifyLevel(simplifyLevel);
@@ -63,7 +69,7 @@ export default function DashboardScreen() {
           <View className="mb-5 flex-row items-start justify-between">
             <View className="flex-1 pr-3">
               <Text className="mb-1 font-opendyslexic text-xs text-white/80">Hei, Budi! 👋</Text>
-              <Text className="font-opendyslexic text-xl font-bold leading-8 text-white">
+              <Text className="font-opendyslexic-bold text-xl leading-8 text-white">
                 Siap petualangan{'\n'}hari ini? 🚀
               </Text>
             </View>
@@ -73,7 +79,7 @@ export default function DashboardScreen() {
           <View className="flex-row items-center justify-between">
             <View className="flex-1 flex-row items-center">
               <View className="rounded-md bg-white/20 px-2 py-1">
-                <Text className="font-opendyslexic text-[10px] font-bold text-white">Lv.{level}</Text>
+                <Text className="font-opendyslexic-bold text-[10px] text-white">Lv.{level}</Text>
               </View>
               <View className="mx-2 h-1.5 flex-1 overflow-hidden rounded-full bg-white/20">
                 <View
@@ -84,7 +90,7 @@ export default function DashboardScreen() {
               <Text className="font-opendyslexic text-[10px] text-white/90">{xp} XP</Text>
             </View>
             <View className="ml-3 rounded-full bg-white/20 px-3 py-1.5">
-              <Text className="font-opendyslexic text-[10px] font-bold text-white">🔥 {streakDays} hari</Text>
+              <Text className="font-opendyslexic-bold text-[10px] text-white">🔥 {streakDays} hari</Text>
             </View>
           </View>
         </View>
@@ -93,7 +99,7 @@ export default function DashboardScreen() {
         <View className="mb-6 flex-row items-start rounded-2xl border border-warm/30 bg-warm/10 p-4">
           <Text className="mr-3 mt-0.5 text-xl">✌️</Text>
           <View className="flex-1">
-            <Text className="mb-1 font-opendyslexic text-[10px] font-bold uppercase tracking-widest text-primary">
+            <Text className="mb-1 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-primary">
               TIP HARI INI
             </Text>
             <Text className="font-opendyslexic text-xs leading-5 text-text-main">{tipOfTheDay()}</Text>
@@ -110,7 +116,7 @@ export default function DashboardScreen() {
               <Camera size={20} color="#FFFFFF" />
             </View>
             <View>
-              <Text className="mb-1 font-opendyslexic text-sm font-bold text-white">Pindai Dokumen</Text>
+              <Text className="mb-1 font-opendyslexic-bold text-sm text-white">Pindai Dokumen</Text>
               <Text className="font-opendyslexic text-[10px] text-white/70">Foto → Teks</Text>
             </View>
           </Pressable>
@@ -123,7 +129,7 @@ export default function DashboardScreen() {
               <BookOpen size={20} color={colors.primary} />
             </View>
             <View>
-              <Text className="mb-1 font-opendyslexic text-sm font-bold text-text-main">Lanjut Baca</Text>
+              <Text className="mb-1 font-opendyslexic-bold text-sm text-text-main">Lanjut Baca</Text>
               <Text className="font-opendyslexic text-[10px] text-text-muted">
                 {doc.id} • {typeLevel.name}
               </Text>
@@ -132,7 +138,7 @@ export default function DashboardScreen() {
         </View>
 
         {/* 5 fitur utama */}
-        <Text className="mb-4 font-opendyslexic text-[10px] font-bold uppercase tracking-widest text-text-main">
+        <Text className="mb-4 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-text-main">
           5 FITUR UTAMA
         </Text>
         <View className="mb-8 flex-row flex-wrap justify-between">
@@ -145,7 +151,10 @@ export default function DashboardScreen() {
                 item.wide ? 'w-full' : 'w-[48%]'
               }`}>
               <View className="mr-2 rounded-xl bg-surface-alt p-2">{item.icon}</View>
-              <Text className="flex-1 font-opendyslexic text-[10px] font-bold text-text-main" numberOfLines={1}>
+              {/* Dua baris: OpenDyslexic Bold jauh lebih lebar, satu baris memotong nama fitur. */}
+              <Text
+                className="flex-1 font-opendyslexic-bold text-[10px] leading-[14px] text-text-main"
+                numberOfLines={2}>
                 {item.label}
               </Text>
             </Pressable>
@@ -154,7 +163,7 @@ export default function DashboardScreen() {
 
         {/* Inovasi khusus disleksia */}
         <View className="rounded-3xl border border-border bg-surface p-5">
-          <Text className="mb-5 font-opendyslexic text-[10px] font-bold uppercase tracking-widest text-text-main">
+          <Text className="mb-5 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-text-main">
             INOVASI KHUSUS DISLEKSIA
           </Text>
           {innovations.map((item) => (
@@ -163,7 +172,7 @@ export default function DashboardScreen() {
                 {item.icon}
               </View>
               <View className="flex-1">
-                <Text className="mb-0.5 font-opendyslexic text-xs font-bold text-text-main">{item.title}</Text>
+                <Text className="mb-0.5 font-opendyslexic-bold text-xs text-text-main">{item.title}</Text>
                 <Text className="font-opendyslexic text-[9px] leading-4 text-text-muted">{item.desc}</Text>
               </View>
             </View>
@@ -172,7 +181,7 @@ export default function DashboardScreen() {
             onPress={() => router.push('/reader')}
             accessibilityRole="button"
             className="mt-1 rounded-2xl bg-primary/10 py-3">
-            <Text className="text-center font-opendyslexic text-xs font-bold text-primary">
+            <Text className="text-center font-opendyslexic-bold text-xs text-primary">
               Coba Sekarang →
             </Text>
           </Pressable>
@@ -180,7 +189,7 @@ export default function DashboardScreen() {
       </ScrollView>
 
       <TypographySheet visible={typographyOpen} onClose={() => setTypographyOpen(false)} />
-      <ExplainSheet visible={explainOpen} onClose={() => setExplainOpen(false)} />
+      <ExplainSheet target={explainOpen ? explainDemoTarget : null} onClose={() => setExplainOpen(false)} />
     </>
   );
 }

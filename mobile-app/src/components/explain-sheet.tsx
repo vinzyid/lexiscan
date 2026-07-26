@@ -1,41 +1,87 @@
 import { useState } from 'react';
-import { Modal, View, Text, Pressable, ScrollView } from 'react-native';
+import { Modal, View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { ArrowLeft, ChevronRight } from 'lucide-react-native';
 
+import { explainTerm, AiApiError } from '../api/ai';
 import { EXPLAIN_STYLES, getExplainStyle, type ExplainStyleId } from '../data/sample-document';
 import { useThemeColors } from '../theme/theme-provider';
+
+export type ExplainTarget = {
+  /** Kata atau potongan teks yang ingin dijelaskan. */
+  term: string;
+  /** Paragraf tempat term muncul; dikirim ke backend sebagai konteks. */
+  context?: string;
+  /**
+   * Pakai jawaban kurasi lokal, bukan API — untuk dokumen contoh, supaya
+   * demo tetap jalan tanpa server dan tanpa kuota.
+   */
+  useStaticAnswers?: boolean;
+};
 
 /**
  * Layar "AI Explain This": pilih gaya penjelasan dulu, lalu Lexi menjawab
  * dalam gelembung chat. Tombol "Coba Gaya Lain" mengembalikan ke pilihan.
+ * Jawaban datang dari POST /api/explain-word, kecuali target statis.
  */
-export function ExplainSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null; onClose: () => void }) {
   const colors = useThemeColors();
   const [styleId, setStyleId] = useState<ExplainStyleId | null>(null);
+  const [paragraphs, setParagraphs] = useState<string[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const active = styleId ? getExplainStyle(styleId) : null;
 
-  const close = () => {
+  const reset = () => {
     setStyleId(null);
+    setParagraphs(null);
+    setError(null);
+    setLoading(false);
+  };
+
+  const close = () => {
+    reset();
     onClose();
   };
 
+  const ask = async (id: ExplainStyleId) => {
+    if (!target) return;
+    setStyleId(id);
+    setError(null);
+
+    if (target.useStaticAnswers) {
+      setParagraphs(getExplainStyle(id).answer);
+      return;
+    }
+
+    setLoading(true);
+    setParagraphs(null);
+    try {
+      setParagraphs(await explainTerm(target.term, id, target.context));
+    } catch (e) {
+      setError(e instanceof AiApiError ? e.message : 'Terjadi kesalahan tak terduga. Coba lagi.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={close}>
+    <Modal visible={!!target} animationType="slide" onRequestClose={close}>
       <View className="flex-1 bg-background">
         {/* Header */}
         <View className="flex-row items-center border-b border-border px-4 pb-4 pt-14">
           <Pressable
-            onPress={() => (active ? setStyleId(null) : close())}
+            onPress={() => (active ? reset() : close())}
             hitSlop={10}
             accessibilityRole="button"
             accessibilityLabel={active ? 'Kembali ke pilihan gaya' : 'Tutup'}
             className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-surface-alt">
             <ArrowLeft size={16} color={colors.textMuted} />
           </Pressable>
-          <View>
-            <Text className="font-opendyslexic text-base font-bold text-text-main">AI Explain This 💡</Text>
-            <Text className="font-opendyslexic text-[10px] text-text-muted">
-              {active ? 'Penjelasan dari Lexi' : 'Pilih gaya penjelasan'}
+          <View className="flex-1">
+            <Text className="font-opendyslexic-bold text-base text-text-main">AI Explain This 💡</Text>
+            <Text className="font-opendyslexic text-[10px] text-text-muted" numberOfLines={1}>
+              {active ? 'Penjelasan dari Lexi' : `Tentang: ${target?.term ?? ''}`}
             </Text>
           </View>
         </View>
@@ -43,7 +89,7 @@ export function ExplainSheet({ visible, onClose }: { visible: boolean; onClose: 
         {active ? (
           <ScrollView className="flex-1 px-4 pt-5" contentContainerClassName="pb-10">
             <View className="mb-4 self-start rounded-full bg-primary/10 px-4 py-2">
-              <Text className="font-opendyslexic text-[11px] font-bold text-primary">
+              <Text className="font-opendyslexic-bold text-[11px] text-primary">
                 {active.emoji} {active.name}
               </Text>
             </View>
@@ -53,30 +99,51 @@ export function ExplainSheet({ visible, onClose }: { visible: boolean; onClose: 
                 <Text className="text-lg">🦉</Text>
               </View>
               <View className="flex-1 rounded-3xl rounded-tl-lg border border-border bg-surface p-4">
-                {active.answer.map((para, index) => (
-                  <Text
-                    key={index}
-                    className={`font-opendyslexic text-xs leading-6 text-text-main ${
-                      index < active.answer.length - 1 ? 'mb-4' : ''
-                    }`}>
-                    {para}
-                  </Text>
-                ))}
+                {loading ? (
+                  <View className="flex-row items-center py-1">
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <Text className="ml-3 font-opendyslexic text-xs text-text-muted">
+                      Lexi sedang berpikir…
+                    </Text>
+                  </View>
+                ) : error ? (
+                  <>
+                    <Text className="mb-3 font-opendyslexic text-xs leading-6 text-text-main">
+                      Aduh, aku belum bisa menjawab. {error}
+                    </Text>
+                    <Pressable
+                      onPress={() => ask(active.id)}
+                      accessibilityRole="button"
+                      className="self-start rounded-xl bg-primary/10 px-4 py-2">
+                      <Text className="font-opendyslexic-bold text-xs text-primary">🔄 Coba Lagi</Text>
+                    </Pressable>
+                  </>
+                ) : (
+                  (paragraphs ?? []).map((para, index, all) => (
+                    <Text
+                      key={index}
+                      className={`font-opendyslexic text-xs leading-6 text-text-main ${
+                        index < all.length - 1 ? 'mb-4' : ''
+                      }`}>
+                      {para}
+                    </Text>
+                  ))
+                )}
               </View>
             </View>
 
             <Pressable
-              onPress={() => setStyleId(null)}
+              onPress={reset}
               accessibilityRole="button"
               className="mt-6 rounded-2xl bg-primary/10 py-3.5">
-              <Text className="text-center font-opendyslexic text-xs font-bold text-primary">
+              <Text className="text-center font-opendyslexic-bold text-xs text-primary">
                 ← Coba Gaya Lain
               </Text>
             </Pressable>
 
             <View className="mt-3 flex-row justify-center">
               {EXPLAIN_STYLES.filter((s) => s.id !== active.id).map((s) => (
-                <Pressable key={s.id} onPress={() => setStyleId(s.id)} hitSlop={6} className="mx-2">
+                <Pressable key={s.id} onPress={() => ask(s.id)} hitSlop={6} className="mx-2">
                   <Text className="font-opendyslexic text-[10px] text-text-muted">
                     {s.emoji} {s.name}
                   </Text>
@@ -88,7 +155,7 @@ export function ExplainSheet({ visible, onClose }: { visible: boolean; onClose: 
           <ScrollView className="flex-1 px-5 pt-8" contentContainerClassName="pb-10">
             <View className="mb-8 items-center">
               <Text className="mb-3 text-6xl">🦉</Text>
-              <Text className="font-opendyslexic text-sm font-bold text-text-main">
+              <Text className="font-opendyslexic-bold text-sm text-text-main">
                 Mau Lexi jelasin gimana? 🙂
               </Text>
             </View>
@@ -96,12 +163,12 @@ export function ExplainSheet({ visible, onClose }: { visible: boolean; onClose: 
             {EXPLAIN_STYLES.map((s) => (
               <Pressable
                 key={s.id}
-                onPress={() => setStyleId(s.id)}
+                onPress={() => ask(s.id)}
                 accessibilityRole="button"
                 className="mb-3 flex-row items-center rounded-3xl border border-border bg-surface p-4">
                 <Text className="mr-3 text-2xl">{s.emoji}</Text>
                 <View className="flex-1">
-                  <Text className="mb-0.5 font-opendyslexic text-xs font-bold text-text-main">{s.name}</Text>
+                  <Text className="mb-0.5 font-opendyslexic-bold text-xs text-text-main">{s.name}</Text>
                   <Text className="font-opendyslexic text-[10px] text-primary">{s.desc}</Text>
                 </View>
                 <ChevronRight size={16} color={colors.textMuted} />

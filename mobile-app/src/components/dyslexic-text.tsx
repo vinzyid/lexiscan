@@ -77,7 +77,7 @@ export function DyslexicText({
             key={index}
             style={color ? { color } : undefined}
             onPress={onWordPress ? () => onWordPress(stripPunctuation(chunk)) : undefined}>
-            <Text className="font-bold">{chunk.slice(0, split)}</Text>
+            <Text className="font-opendyslexic-bold">{chunk.slice(0, split)}</Text>
             <Text>{chunk.slice(split)}</Text>
           </Text>
         );
