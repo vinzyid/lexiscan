@@ -1,0 +1,341 @@
+import { useMemo, useState } from 'react';
+import { View, Text, ScrollView, Pressable, type TextLayoutLine } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  Type,
+  Focus,
+  Ruler,
+  Palette,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  Lightbulb,
+} from 'lucide-react-native';
+
+import { useOCRStore } from '../../src/store/useStore';
+import { useThemeColors } from '../../src/theme/theme-provider';
+import { getTypeLevel } from '../../src/theme/palettes';
+import {
+  DOC_SECTION,
+  DOC_TITLE,
+  SIMPLIFY_LEVELS,
+  getSimplifyLevel,
+  type SimplifyLevelId,
+} from '../../src/data/sample-document';
+import { DyslexicText } from '../../src/components/dyslexic-text';
+import { TypographySheet } from '../../src/components/typography-sheet';
+import { ExplainSheet } from '../../src/components/explain-sheet';
+import { WordSheet } from '../../src/components/word-sheet';
+
+export default function ReaderScreen() {
+  const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
+
+  const {
+    rawText,
+    typeLevelId,
+    simplifyLevel,
+    setSimplifyLevel,
+    focusMode,
+    toggleFocusMode,
+    rulerMode,
+    toggleRulerMode,
+    bicolorMode,
+    toggleBicolorMode,
+    activeParagraphIndex,
+    setActiveParagraphIndex,
+  } = useOCRStore();
+
+  const [typographyOpen, setTypographyOpen] = useState(false);
+  const [explainOpen, setExplainOpen] = useState(false);
+  const [selectedWord, setSelectedWord] = useState<string | null>(null);
+  const [rulerLine, setRulerLine] = useState(0);
+  const [lines, setLines] = useState<TextLayoutLine[]>([]);
+
+  const typeLevel = getTypeLevel(typeLevelId);
+  const level = getSimplifyLevel(simplifyLevel);
+
+  /**
+   * Teks hasil OCR selalu tampil apa adanya: backend penyederhanaan L2–L5
+   * belum terhubung, jadi levelnya dikunci ke L1 untuk dokumen pindaian.
+   */
+  const isScanned = rawText.trim().length > 0;
+  const paragraphs = useMemo(() => {
+    if (!isScanned) return level.paragraphs;
+    return rawText
+      .split(/\n{2,}|\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+  }, [isScanned, rawText, level.paragraphs]);
+
+  const activeIndex = Math.min(activeParagraphIndex, Math.max(0, paragraphs.length - 1));
+  const shownParagraphs = paragraphs.length > 0 ? paragraphs : ['Belum ada teks untuk dibaca.'];
+
+  const moveParagraph = (delta: number) => {
+    const next = Math.min(shownParagraphs.length - 1, Math.max(0, activeIndex + delta));
+    setActiveParagraphIndex(next);
+    setRulerLine(0);
+    setLines([]);
+  };
+
+  const moveRuler = (delta: number) => {
+    const maxLine = Math.max(0, lines.length - 1);
+    setRulerLine((current) => Math.min(maxLine, Math.max(0, current + delta)));
+  };
+
+  /**
+   * onTextLayout bisa terpanggil lagi setiap render, dan array `lines` selalu
+   * objek baru — tanpa pembanding ini state-nya berubah terus dan memicu
+   * render berulang tanpa henti.
+   */
+  const syncLines = (next: TextLayoutLine[]) => {
+    setLines((current) => {
+      const unchanged =
+        current.length === next.length && current.every((line, i) => line.y === next[i].y && line.height === next[i].height);
+      return unchanged ? current : next;
+    });
+  };
+
+  return (
+    <>
+      <View className="flex-1 bg-background" style={{ paddingTop: insets.top + 8 }}>
+        {/* Judul dokumen + preset tipografi */}
+        <View className="flex-row items-center justify-between px-4 pb-3">
+          <View className="flex-1 pr-3">
+            <Text className="mb-1 font-opendyslexic text-[10px] font-bold uppercase tracking-widest text-text-muted">
+              DOKUMEN
+            </Text>
+            <Text className="font-opendyslexic text-base font-bold text-text-main" numberOfLines={1}>
+              {isScanned ? 'Hasil Pindaian' : DOC_TITLE}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => setTypographyOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Ubah tipografi"
+            className="flex-row items-center rounded-xl bg-primary/10 px-3.5 py-2">
+            <Type size={14} color={colors.primary} />
+            <Text className="ml-2 font-opendyslexic text-xs font-bold text-primary">{typeLevel.name}</Text>
+          </Pressable>
+        </View>
+
+        {/* Level penyederhanaan */}
+        <View className="px-4 pb-2">
+          <Text className="mb-2 font-opendyslexic text-[10px] text-text-muted">
+            <Text className="font-bold text-warm">🧠 LEVEL </Text>
+            <Text className="font-bold text-primary">{level.name}</Text>
+            <Text> — {level.tagline}</Text>
+          </Text>
+          <View className="flex-row">
+            {SIMPLIFY_LEVELS.map((item) => {
+              const selected = item.id === simplifyLevel;
+              const locked = isScanned && item.id !== 'L1';
+
+              return (
+                <Pressable
+                  key={item.id}
+                  disabled={locked}
+                  onPress={() => setSimplifyLevel(item.id as SimplifyLevelId)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected, disabled: locked }}
+                  accessibilityLabel={`Level ${item.id}: ${item.name}`}
+                  className={`mr-2 flex-1 items-center rounded-lg py-2 ${
+                    selected ? 'bg-primary' : 'bg-surface-alt'
+                  }`}
+                  style={locked ? { opacity: 0.35 } : undefined}>
+                  <Text
+                    className={`font-opendyslexic text-[11px] font-bold ${
+                      selected ? 'text-white' : 'text-text-muted'
+                    }`}>
+                    {item.id}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {isScanned ? (
+            <Text className="mt-2 font-opendyslexic text-[9px] text-text-muted">
+              Penyederhanaan L2–L5 belum tersedia untuk teks pindaian — ini teks aslinya.
+            </Text>
+          ) : null}
+        </View>
+
+        {/* Sakelar fitur baca */}
+        <View className="flex-row items-center border-b border-border px-4 pb-3 pt-1">
+          <FeatureChip
+            active={focusMode}
+            onPress={toggleFocusMode}
+            icon={<Focus size={13} color={focusMode ? '#FFFFFF' : colors.textMuted} />}
+            label={focusMode ? 'Fokus Aktif' : 'Fokus'}
+          />
+          <FeatureChip
+            active={rulerMode}
+            onPress={toggleRulerMode}
+            icon={<Ruler size={13} color={rulerMode ? '#FFFFFF' : colors.textMuted} />}
+            label={rulerMode ? 'Penggaris ✓' : 'Penggaris'}
+          />
+          <FeatureChip
+            active={bicolorMode}
+            onPress={toggleBicolorMode}
+            icon={<Palette size={13} color={bicolorMode ? '#FFFFFF' : colors.textMuted} />}
+            label={bicolorMode ? 'Bicolor ✓' : 'Bicolor'}
+          />
+
+          {/* Penggaris juga butuh navigasi paragraf, karena ia hanya membaca baris paragraf aktif. */}
+          {focusMode || rulerMode ? (
+            <View className="ml-auto flex-row items-center">
+              <Pressable
+                onPress={() => moveParagraph(-1)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Paragraf sebelumnya"
+                className="h-7 w-7 items-center justify-center rounded-lg bg-surface-alt">
+                <ChevronLeft size={13} color={colors.textMuted} />
+              </Pressable>
+              <Text className="mx-2 font-opendyslexic text-[10px] font-bold text-text-muted">
+                {activeIndex + 1}/{shownParagraphs.length}
+              </Text>
+              <Pressable
+                onPress={() => moveParagraph(1)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Paragraf berikutnya"
+                className="h-7 w-7 items-center justify-center rounded-lg bg-surface-alt">
+                <ChevronRight size={13} color={colors.textMuted} />
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+
+        {/* Isi bacaan */}
+        <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingTop: 20, paddingBottom: 28 }}>
+          <Text className="mb-4 font-opendyslexic text-[11px] font-bold uppercase tracking-widest text-warm">
+            {isScanned ? 'TEKS HASIL PINDAIAN' : DOC_SECTION}
+          </Text>
+
+          {shownParagraphs.map((paragraph, index) => {
+            const isActive = index === activeIndex;
+            const dimmed = focusMode && !isActive;
+            const showRuler = rulerMode && isActive && lines.length > 0;
+            const rulerTarget = lines[Math.min(rulerLine, lines.length - 1)];
+
+            return (
+              <View
+                key={index}
+                className={`mb-6 ${
+                  focusMode && isActive ? 'rounded-2xl border-l-4 border-primary bg-primary/5 p-4' : ''
+                }`}>
+                {focusMode && isActive ? (
+                  <Text className="mb-2 font-opendyslexic text-[9px] font-bold uppercase tracking-widest text-primary">
+                    PARAGRAF {index + 1} DARI {shownParagraphs.length}
+                  </Text>
+                ) : null}
+
+                <View className="relative">
+                  {showRuler && rulerTarget ? (
+                    <View
+                      pointerEvents="none"
+                      className="absolute left-0 right-0 rounded-md bg-highlight"
+                      style={{ top: rulerTarget.y, height: rulerTarget.height }}
+                    />
+                  ) : null}
+                  <DyslexicText
+                    bicolor={bicolorMode}
+                    dimmed={dimmed}
+                    onWordPress={dimmed ? undefined : setSelectedWord}
+                    onTextLayout={
+                      rulerMode && isActive ? (event) => syncLines(event.nativeEvent.lines) : undefined
+                    }>
+                    {paragraph}
+                  </DyslexicText>
+                </View>
+
+                {showRuler ? (
+                  <View className="mt-2 flex-row items-center">
+                    <Pressable
+                      onPress={() => moveRuler(-1)}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Penggaris naik satu baris"
+                      className="mr-1.5 h-7 w-7 items-center justify-center rounded-lg bg-surface-alt">
+                      <ChevronUp size={13} color={colors.textMuted} />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => moveRuler(1)}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Penggaris turun satu baris"
+                      className="mr-2 h-7 w-7 items-center justify-center rounded-lg bg-surface-alt">
+                      <ChevronDown size={13} color={colors.textMuted} />
+                    </Pressable>
+                    <Text className="font-opendyslexic text-[9px] text-text-muted">
+                      Baris {Math.min(rulerLine, lines.length - 1) + 1} dari {lines.length}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            );
+          })}
+
+          {bicolorMode ? (
+            <View className="rounded-2xl border border-border bg-surface p-3">
+              <Text className="font-opendyslexic text-[9px] leading-4 text-text-muted">
+                <Text className="font-bold text-primary">🌈 Bicolor Aktif</Text> — kata bergantian warna
+                membantu mata melacak posisi.
+              </Text>
+            </View>
+          ) : null}
+        </ScrollView>
+
+        {/* Aksi bawah */}
+        <View className="border-t border-border px-4 pb-3 pt-3">
+          <Pressable
+            onPress={() => setExplainOpen(true)}
+            accessibilityRole="button"
+            className="mb-2 flex-row items-center justify-center rounded-2xl bg-primary/10 py-3.5">
+            <Lightbulb size={15} color={colors.primary} />
+            <Text className="ml-2 font-opendyslexic text-xs font-bold text-primary">Jelaskan Teks Ini</Text>
+          </Pressable>
+          <Text className="text-center font-opendyslexic text-[9px] text-text-muted">
+            💡 Ketuk kata apapun untuk melihat lebih jelas
+          </Text>
+        </View>
+      </View>
+
+      <TypographySheet visible={typographyOpen} onClose={() => setTypographyOpen(false)} />
+      <ExplainSheet visible={explainOpen} onClose={() => setExplainOpen(false)} />
+      <WordSheet word={selectedWord} onClose={() => setSelectedWord(null)} />
+    </>
+  );
+}
+
+function FeatureChip({
+  active,
+  onPress,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onPress: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: active }}
+      className={`mr-2 flex-row items-center rounded-full px-3 py-1.5 ${
+        active ? 'bg-primary' : 'border border-border bg-surface'
+      }`}>
+      {icon}
+      <Text
+        className={`ml-1.5 font-opendyslexic text-[10px] font-bold ${
+          active ? 'text-white' : 'text-text-muted'
+        }`}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}

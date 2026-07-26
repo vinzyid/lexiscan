@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Nilai default (tema "Krem Hangat"). Saat runtime semua variabel warna di
+ * bawah ditimpa oleh ThemeProvider lewat `vars()` dari NativeWind, jadi ganti
+ * tema di Pengaturan langsung mengubah seluruh layar. Formatnya channel RGB
+ * tanpa fungsi supaya utilitas opacity (mis. bg-primary/10) tetap bekerja.
+ */
+:root {
+  --color-background: 253 251 247;
+  --color-surface: 255 255 255;
+  --color-surface-alt: 246 242 234;
+  --color-text-main: 45 45 45;
+  --color-text-muted: 122 117 108;
+  --color-border: 237 231 220;
+  --color-primary: 113 72 252;
+  --color-primary-deep: 88 51 214;
+  --color-primary-soft: 241 235 255;
+  --color-highlight: 254 243 199;
+  --color-warm: 245 158 11;
+  --color-success: 34 197 94;
+  --color-bicolor-a: 45 45 45;
+  --color-bicolor-b: 113 72 252;
+
+  --font-display:
+    Spline Sans, Inter, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji,
+    Segoe UI Symbol, Noto Color Emoji;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+  --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
+  --font-serif: Georgia, 'Times New Roman', serif;
+}
