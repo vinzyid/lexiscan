@@ -1,21 +1,14 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, Pressable, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Camera, BookOpen, Brain, Focus, Sparkles, Rainbow, Ruler, Type, ScanSearch } from 'lucide-react-native';
+import { Camera, BookOpen, Brain, Focus, Sparkles, Rainbow, Ruler, Type, ScanSearch, Lightbulb, Hand, ChevronRight } from 'lucide-react-native';
 
-import { useOCRStore, XP_PER_LEVEL } from '../../src/store/useStore';
+import { useOCRStore } from '../../src/store/useStore';
 import { useThemeColors } from '../../src/theme/theme-provider';
-import { getTypeLevel } from '../../src/theme/palettes';
-import { DAILY_TIPS, getSimplifyLevel } from '../../src/data/sample-document';
+import { DAILY_TIPS } from '../../src/data/sample-document';
 import { TypographySheet } from '../../src/components/typography-sheet';
 import { ExplainSheet } from '../../src/components/explain-sheet';
-
-/** Tip harian dirotasi per tanggal supaya stabil sepanjang hari. */
-const tipOfTheDay = () => {
-  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86_400_000);
-  return DAILY_TIPS[dayOfYear % DAILY_TIPS.length];
-};
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -24,15 +17,29 @@ export default function DashboardScreen() {
   const [typographyOpen, setTypographyOpen] = useState(false);
   const [explainOpen, setExplainOpen] = useState(false);
 
+  // Tip animasi carousel
+  const [currentTipIndex, setCurrentTipIndex] = useState(0);
+  const fadeAnim = useState(new Animated.Value(1))[0];
+
+  useEffect(() => {
+    const tipInterval = setInterval(() => {
+      Animated.sequence([
+        Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start(() => {
+        setCurrentTipIndex((prev) => (prev + 1) % DAILY_TIPS.length);
+        Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+      });
+    }, 6000); // Ganti tip setiap 6 detik
+    return () => clearInterval(tipInterval);
+  }, []);
+
   /*
    * Dari dashboard belum ada dokumen yang dibuka, jadi sheet menjelaskan
    * topik dokumen contoh memakai jawaban kurasi (tanpa memanggil API).
    */
   const explainDemoTarget = { term: 'Mitokondria', useStaticAnswers: true };
 
-  const { level, xp, streakDays, typeLevelId, simplifyLevel, focusMode, toggleFocusMode } = useOCRStore();
-  const typeLevel = getTypeLevel(typeLevelId);
-  const doc = getSimplifyLevel(simplifyLevel);
+  const { focusMode, toggleFocusMode } = useOCRStore();
 
   const features = [
     { icon: <Camera size={18} color={colors.textMain} />, label: 'Smart OCR Scan', onPress: () => router.push('/scanner') },
@@ -61,48 +68,39 @@ export default function DashboardScreen() {
         className="flex-1 bg-background px-5"
         contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 28 }}
         showsVerticalScrollIndicator={false}>
-        {/* Banner sambutan + progres */}
-        <View className="mb-6 overflow-hidden rounded-[28px] bg-primary p-6">
+
+        {/* Banner sambutan (XP/Level dihapus, diganti pesan hangat) */}
+        <View className="mb-6 overflow-hidden rounded-[28px] bg-primary p-7">
           <View className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-white/10" />
           <View className="absolute -bottom-16 -left-10 h-36 w-36 rounded-full bg-white/5" />
 
-          <View className="mb-5 flex-row items-start justify-between">
+          <View className="flex-row items-center justify-between">
             <View className="flex-1 pr-3">
-              <Text className="mb-1 font-opendyslexic text-xs text-white/80">Hei, Budi! 👋</Text>
-              <Text className="font-opendyslexic-bold text-xl leading-8 text-white">
-                Siap petualangan{'\n'}hari ini? 🚀
+              <Text className="mb-2 font-opendyslexic text-xs text-white/80">Selamat datang kembali! 👋</Text>
+              <Text className="font-opendyslexic-bold text-2xl leading-9 text-white">
+                Siap belajar{'\n'}sesuatu yang baru?
               </Text>
             </View>
-            <Text className="text-4xl">🦉</Text>
-          </View>
-
-          <View className="flex-row items-center justify-between">
-            <View className="flex-1 flex-row items-center">
-              <View className="rounded-md bg-white/20 px-2 py-1">
-                <Text className="font-opendyslexic-bold text-[10px] text-white">Lv.{level}</Text>
-              </View>
-              <View className="mx-2 h-1.5 flex-1 overflow-hidden rounded-full bg-white/20">
-                <View
-                  className="h-full rounded-full bg-white"
-                  style={{ width: `${Math.min(100, (xp / XP_PER_LEVEL) * 100)}%` }}
-                />
-              </View>
-              <Text className="font-opendyslexic text-[10px] text-white/90">{xp} XP</Text>
-            </View>
-            <View className="ml-3 rounded-full bg-white/20 px-3 py-1.5">
-              <Text className="font-opendyslexic-bold text-[10px] text-white">🔥 {streakDays} hari</Text>
+            <View className="h-16 w-16 items-center justify-center rounded-full bg-white/20">
+              <Hand size={32} color="#FFFFFF" />
             </View>
           </View>
         </View>
 
-        {/* Tip hari ini */}
+        {/* Tip hari ini - Dengan Animasi Carousel & Ikon SVG */}
         <View className="mb-6 flex-row items-start rounded-2xl border border-warm/30 bg-warm/10 p-4">
-          <Text className="mr-3 mt-0.5 text-xl">✌️</Text>
+          <View className="mr-3 mt-1 rounded-full bg-warm/20 p-2">
+            <Lightbulb size={18} color={colors.warm} />
+          </View>
           <View className="flex-1">
-            <Text className="mb-1 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-primary">
+            <Text className="mb-1.5 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-primary">
               TIP HARI INI
             </Text>
-            <Text className="font-opendyslexic text-xs leading-5 text-text-main">{tipOfTheDay()}</Text>
+            <Animated.Text
+              style={{ opacity: fadeAnim }}
+              className="font-opendyslexic text-xs leading-5 text-text-main">
+              {DAILY_TIPS[currentTipIndex]}
+            </Animated.Text>
           </View>
         </View>
 
@@ -131,7 +129,7 @@ export default function DashboardScreen() {
             <View>
               <Text className="mb-1 font-opendyslexic-bold text-sm text-text-main">Lanjut Baca</Text>
               <Text className="font-opendyslexic text-[10px] text-text-muted">
-                {doc.id} • {typeLevel.name}
+                Teks terakhir dipindai
               </Text>
             </View>
           </Pressable>
@@ -151,7 +149,6 @@ export default function DashboardScreen() {
                 item.wide ? 'w-full' : 'w-[48%]'
               }`}>
               <View className="mr-2 rounded-xl bg-surface-alt p-2">{item.icon}</View>
-              {/* Dua baris: OpenDyslexic Bold jauh lebih lebar, satu baris memotong nama fitur. */}
               <Text
                 className="flex-1 font-opendyslexic-bold text-[10px] leading-[14px] text-text-main"
                 numberOfLines={2}>
@@ -180,10 +177,11 @@ export default function DashboardScreen() {
           <Pressable
             onPress={() => router.push('/reader')}
             accessibilityRole="button"
-            className="mt-1 rounded-2xl bg-primary/10 py-3">
-            <Text className="text-center font-opendyslexic-bold text-xs text-primary">
-              Coba Sekarang →
+            className="mt-1 flex-row items-center justify-center rounded-2xl bg-primary/10 py-3">
+            <Text className="mr-2 font-opendyslexic-bold text-xs text-primary">
+              Coba Sekarang
             </Text>
+            <ChevronRight size={14} color={colors.primary} />
           </Pressable>
         </View>
       </ScrollView>

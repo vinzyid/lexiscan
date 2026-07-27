@@ -33,15 +33,7 @@ interface OCRState {
   toggleBicolorMode: () => void;
   activeParagraphIndex: number;
   setActiveParagraphIndex: (index: number) => void;
-
-  /** Gamifikasi di banner dashboard */
-  level: number;
-  xp: number;
-  streakDays: number;
-  addXp: (amount: number) => void;
 }
-
-const XP_PER_LEVEL = 250;
 
 export const useOCRStore = create<OCRState>((set) => ({
   rawText: '',
@@ -59,27 +51,14 @@ export const useOCRStore = create<OCRState>((set) => ({
   setTypeLevelId: (id) => set({ typeLevelId: id }),
 
   simplifyLevel: 'L1',
-  setSimplifyLevel: (id) => set({ simplifyLevel: id, activeParagraphIndex: 0 }),
+  setSimplifyLevel: (id) => set({ simplifyLevel: id }), // Dihapus activeParagraphIndex: 0 agar tidak meloncat ke atas saat ganti level
   focusMode: false,
   toggleFocusMode: () =>
-    set((s) => ({ focusMode: !s.focusMode, activeParagraphIndex: s.focusMode ? s.activeParagraphIndex : 0 })),
+    set((s) => ({ focusMode: !s.focusMode })), // Dihapus activeParagraphIndex: 0 agar tidak reset
   rulerMode: false,
   toggleRulerMode: () => set((s) => ({ rulerMode: !s.rulerMode })),
   bicolorMode: false,
   toggleBicolorMode: () => set((s) => ({ bicolorMode: !s.bicolorMode })),
   activeParagraphIndex: 0,
   setActiveParagraphIndex: (index) => set({ activeParagraphIndex: Math.max(0, index) }),
-
-  level: 4,
-  xp: 100,
-  streakDays: 5,
-  addXp: (amount) =>
-    set((s) => {
-      const total = s.xp + amount;
-      return total >= XP_PER_LEVEL
-        ? { level: s.level + Math.floor(total / XP_PER_LEVEL), xp: total % XP_PER_LEVEL }
-        : { xp: total };
-    }),
 }));
-
-export { XP_PER_LEVEL };

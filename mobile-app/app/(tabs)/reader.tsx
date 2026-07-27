@@ -62,21 +62,25 @@ export default function ReaderScreen() {
   const level = getSimplifyLevel(simplifyLevel);
 
   /**
-   * Dokumen contoh memakai lima level kurasi lokal (demo tetap jalan offline).
    * Teks pindaian: L1 adalah hasil OCR apa adanya; L2–L5 diminta ke backend
    * (POST /api/simplify-text) dan di-cache per level di store.
    */
   const isScanned = rawText.trim().length > 0;
+
+  // Karena fitur demo ingin kita matikan limitasinya, sekarang L2-L5 juga
+  // memanggil API untuk teks statis (teks contoh).
+  const textToSimplify = isScanned ? rawText : DOC_SECTION + "\n\n" + SIMPLIFY_LEVELS[0].paragraphs.join("\n\n");
+
   const scannedParagraphs = useMemo(
     () =>
-      rawText
+      textToSimplify
         .split(/\n{2,}|\n/)
         .map((line) => line.trim())
         .filter((line) => line.length > 0),
-    [rawText],
+    [textToSimplify],
   );
 
-  const needsAi = isScanned && simplifyLevel !== 'L1';
+  const needsAi = simplifyLevel !== 'L1';
   const aiResult = needsAi ? aiParagraphs[simplifyLevel] : undefined;
 
   const fetchSimplified = useCallback(() => {
@@ -85,22 +89,24 @@ export default function ReaderScreen() {
     setSimplifyError(null);
 
     const requestedLevel = simplifyLevel;
-    simplifyText(rawText, requestedLevel)
+    simplifyText(textToSimplify, requestedLevel)
       .then((result) => setAiParagraphs(requestedLevel, result))
       .catch((e) =>
         setSimplifyError(e instanceof AiApiError ? e.message : 'Terjadi kesalahan tak terduga.'),
       )
       .finally(() => setSimplifyLoading(false));
-  }, [rawText, simplifyLevel, setAiParagraphs]);
+  }, [textToSimplify, simplifyLevel, setAiParagraphs]);
 
   useEffect(() => {
     if (needsAi && !aiResult) fetchSimplified();
   }, [needsAi, aiResult, fetchSimplified]);
 
   const paragraphs = useMemo(() => {
-    if (!isScanned) return level.paragraphs;
+    if (simplifyLevel === 'L1') {
+        return scannedParagraphs;
+    }
     return aiResult ?? scannedParagraphs;
-  }, [isScanned, level.paragraphs, aiResult, scannedParagraphs]);
+  }, [simplifyLevel, aiResult, scannedParagraphs]);
 
   const activeIndex = Math.min(activeParagraphIndex, Math.max(0, paragraphs.length - 1));
   const shownParagraphs = paragraphs.length > 0 ? paragraphs : ['Belum ada teks untuk dibaca.'];
@@ -218,29 +224,27 @@ export default function ReaderScreen() {
           />
 
           {/* Penggaris juga butuh navigasi paragraf, karena ia hanya membaca baris paragraf aktif. */}
-          {focusMode || rulerMode ? (
-            <View className="ml-auto flex-row items-center">
-              <Pressable
-                onPress={() => moveParagraph(-1)}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Paragraf sebelumnya"
-                className="h-7 w-7 items-center justify-center rounded-lg bg-surface-alt">
-                <ChevronLeft size={13} color={colors.textMuted} />
-              </Pressable>
-              <Text className="mx-2 font-opendyslexic-bold text-[10px] text-text-muted">
-                {activeIndex + 1}/{shownParagraphs.length}
-              </Text>
-              <Pressable
-                onPress={() => moveParagraph(1)}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Paragraf berikutnya"
-                className="h-7 w-7 items-center justify-center rounded-lg bg-surface-alt">
-                <ChevronRight size={13} color={colors.textMuted} />
-              </Pressable>
-            </View>
-          ) : null}
+          <View className="ml-auto flex-row items-center">
+            <Pressable
+              onPress={() => moveParagraph(-1)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Paragraf sebelumnya"
+              className="h-7 w-7 items-center justify-center rounded-lg bg-surface-alt">
+              <ChevronLeft size={13} color={colors.textMuted} />
+            </Pressable>
+            <Text className="mx-2 font-opendyslexic-bold text-[10px] text-text-muted">
+              {activeIndex + 1}/{shownParagraphs.length}
+            </Text>
+            <Pressable
+              onPress={() => moveParagraph(1)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Paragraf berikutnya"
+              className="h-7 w-7 items-center justify-center rounded-lg bg-surface-alt">
+              <ChevronRight size={13} color={colors.textMuted} />
+            </Pressable>
+          </View>
         </View>
 
         {/* Isi bacaan */}
@@ -255,13 +259,16 @@ export default function ReaderScreen() {
             const showRuler = rulerMode && isActive && lines.length > 0;
             const rulerTarget = lines[Math.min(rulerLine, lines.length - 1)];
 
+            // Hanya tampilkan paragraf aktif jika mode fokus menyala. Jika mati, tampilkan semua.
+            if (focusMode && !isActive) return null;
+
             return (
               <View
                 key={index}
                 className={`mb-6 ${
-                  focusMode && isActive ? 'rounded-2xl border-l-4 border-primary bg-primary/5 p-4' : ''
+                  isActive ? 'rounded-2xl border-l-4 border-primary bg-primary/5 p-4' : ''
                 }`}>
-                {focusMode && isActive ? (
+                {isActive ? (
                   <Text className="mb-2 font-opendyslexic-bold text-[9px] uppercase tracking-widest text-primary">
                     PARAGRAF {index + 1} DARI {shownParagraphs.length}
                   </Text>

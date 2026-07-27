@@ -30,8 +30,8 @@ const MAX_SIMPLIFY_CHARS = 8000;
 const MAX_TERM_CHARS = 200;
 const MAX_CONTEXT_CHARS = 2000;
 
-/** Timeout 30 detik di sisi server + jeda jaringan. */
-const REQUEST_TIMEOUT_MS = 40_000;
+/** Timeout 60 detik di sisi server + jeda jaringan. */
+const REQUEST_TIMEOUT_MS = 70_000;
 
 export class AiApiError extends Error {}
 
@@ -101,4 +101,18 @@ export async function explainTerm(
   }
 
   return json.paragraphs;
+}
+
+/** POST /api/correct-typo — perbaiki typo hasil OCR dari kamera. */
+export async function correctTypo(text: string): Promise<string> {
+  const json = await postJson('/api/correct-typo', {
+    text: text.slice(0, MAX_SIMPLIFY_CHARS),
+  });
+
+  if (!Array.isArray(json?.paragraphs) || json.paragraphs.length === 0) {
+    throw new AiApiError('Server tidak mengembalikan teks hasil koreksi.');
+  }
+
+  // Gabungkan array of paragraphs menjadi satu string utuh dipisah \n\n
+  return json.paragraphs.join('\n\n');
 }

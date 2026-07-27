@@ -59,6 +59,25 @@ class AiController extends Controller
         ]);
     }
 
+    /** POST /api/correct-typo — fitur memperbaiki teks hasil scan OCR yang salah baca. */
+    public function correctTypo(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'text' => ['required', 'string', 'min:5', 'max:8000'],
+        ]);
+
+        try {
+            $paragraphs = $this->ai->correctTypo($data['text']);
+        } catch (RuntimeException $e) {
+            return $this->failure($e);
+        }
+
+        return response()->json([
+            'paragraphs' => $paragraphs,
+            'provider' => $this->ai->providerName(),
+        ]);
+    }
+
     /** GET /api/ai/health — cek cepat penyedia aktif dan kunci, tanpa memakai kuota. */
     public function health(): JsonResponse
     {

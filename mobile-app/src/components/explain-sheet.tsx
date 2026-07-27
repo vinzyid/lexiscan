@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Modal, View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
-import { ArrowLeft, ChevronRight } from 'lucide-react-native';
+import { ArrowLeft, ChevronRight, MessageSquare, Lightbulb, UserRound } from 'lucide-react-native';
 
 import { explainTerm, AiApiError } from '../api/ai';
 import { EXPLAIN_STYLES, getExplainStyle, type ExplainStyleId } from '../data/sample-document';
@@ -65,6 +65,14 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
     }
   };
 
+  // Helper function to map emoji to Lucide Icon
+  const renderStyleIcon = (id: string, size = 24, color = colors.textMain) => {
+    if (id === 'anak10') return <UserRound size={size} color={color} />;
+    if (id === 'analogi') return <MessageSquare size={size} color={color} />;
+    if (id === 'nyata') return <Lightbulb size={size} color={color} />;
+    return <Text className="text-2xl">{getExplainStyle(id as ExplainStyleId)?.emoji}</Text>;
+  };
+
   return (
     <Modal visible={!!target} animationType="slide" onRequestClose={close}>
       <View className="flex-1 bg-background">
@@ -79,7 +87,7 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
             <ArrowLeft size={16} color={colors.textMuted} />
           </Pressable>
           <View className="flex-1">
-            <Text className="font-opendyslexic-bold text-base text-text-main">AI Explain This 💡</Text>
+            <Text className="font-opendyslexic-bold text-base text-text-main">AI Explain This</Text>
             <Text className="font-opendyslexic text-[10px] text-text-muted" numberOfLines={1}>
               {active ? 'Penjelasan dari Lexi' : `Tentang: ${target?.term ?? ''}`}
             </Text>
@@ -88,9 +96,12 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
 
         {active ? (
           <ScrollView className="flex-1 px-4 pt-5" contentContainerClassName="pb-10">
-            <View className="mb-4 self-start rounded-full bg-primary/10 px-4 py-2">
+            <View className="mb-4 flex-row items-center self-start rounded-full bg-primary/10 px-4 py-2">
+              <View className="mr-2">
+                {renderStyleIcon(active.id, 14, colors.primary)}
+              </View>
               <Text className="font-opendyslexic-bold text-[11px] text-primary">
-                {active.emoji} {active.name}
+                {active.name}
               </Text>
             </View>
 
@@ -143,9 +154,10 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
 
             <View className="mt-3 flex-row justify-center">
               {EXPLAIN_STYLES.filter((s) => s.id !== active.id).map((s) => (
-                <Pressable key={s.id} onPress={() => ask(s.id)} hitSlop={6} className="mx-2">
-                  <Text className="font-opendyslexic text-[10px] text-text-muted">
-                    {s.emoji} {s.name}
+                <Pressable key={s.id} onPress={() => ask(s.id)} hitSlop={6} className="mx-2 flex-row items-center">
+                  {renderStyleIcon(s.id, 12, colors.textMuted)}
+                  <Text className="ml-1 font-opendyslexic text-[10px] text-text-muted">
+                    {s.name}
                   </Text>
                 </Pressable>
               ))}
@@ -154,9 +166,11 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
         ) : (
           <ScrollView className="flex-1 px-5 pt-8" contentContainerClassName="pb-10">
             <View className="mb-8 items-center">
-              <Text className="mb-3 text-6xl">🦉</Text>
+              <View className="mb-4 h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+                <Text className="text-5xl">🦉</Text>
+              </View>
               <Text className="font-opendyslexic-bold text-sm text-text-main">
-                Mau Lexi jelasin gimana? 🙂
+                Mau Lexi jelasin gimana?
               </Text>
             </View>
 
@@ -166,7 +180,9 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
                 onPress={() => ask(s.id)}
                 accessibilityRole="button"
                 className="mb-3 flex-row items-center rounded-3xl border border-border bg-surface p-4">
-                <Text className="mr-3 text-2xl">{s.emoji}</Text>
+                <View className="mr-4 h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                  {renderStyleIcon(s.id, 22, colors.primary)}
+                </View>
                 <View className="flex-1">
                   <Text className="mb-0.5 font-opendyslexic-bold text-xs text-text-main">{s.name}</Text>
                   <Text className="font-opendyslexic text-[10px] text-primary">{s.desc}</Text>

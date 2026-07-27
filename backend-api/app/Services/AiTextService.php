@@ -115,11 +115,39 @@ class AiTextService
         - Maksimal tiga paragraf pendek.
         - Kalimat pendek, hindari istilah teknis yang tidak dijelaskan.
         - Penjelasan harus akurat, jangan mengarang fakta.
+        - Fokus jelaskan konsep atau istilah utamanya saja.
 
         {$contextBlock}
         PROMPT;
 
         return $this->remember("explain:{$style}:" . md5($term . '|' . $context), $prompt);
+    }
+
+    /**
+     * Rapikan teks dari hasil OCR yang sering salah baca (typo).
+     *
+     * @return array<int, string> Paragraf yang sudah dikoreksi.
+     */
+    public function correctTypo(string $text): array
+    {
+        $prompt = <<<PROMPT
+        Teks di bawah ini adalah hasil scan OCR dari buku atau dokumen bahasa Indonesia.
+        Karena kualitas foto atau lensa, terkadang ada karakter yang terbaca salah
+        (contoh: angka '1' menjadi huruf 'l', huruf 'O' menjadi angka '0', huruf terpotong, atau spasi hilang).
+
+        Tugasmu adalah:
+        - Memperbaiki semua saltik (typo) dan kesalahan baca tersebut.
+        - Menyusun kembali ejaan agar sesuai EYD bahasa Indonesia yang baik dan benar.
+        - Mempertahankan jumlah paragraf dan isi informasinya, JANGAN merangkum atau menyederhanakan!
+        - Jawab langsung dengan teks yang sudah diperbaiki, tanpa kata pembuka atau penutup.
+
+        Teks asli hasil scan:
+        {$text}
+        PROMPT;
+
+        // Tidak di-cache karena kemungkinan user memfoto ulang dari sudut berbeda,
+        // tapi teksnya mirip. Biarkan selalu live ke LLM supaya fresh.
+        return $this->provider->paragraphsFor($prompt);
     }
 
     /**

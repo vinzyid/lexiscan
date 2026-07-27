@@ -16,3 +16,4 @@ Route::get('/user', function (Request $request) {
 Route::get('/ai/health', [AiController::class, 'health']);
 Route::post('/simplify-text', [AiController::class, 'simplify'])->middleware('throttle:20,1');
 Route::post('/explain-word', [AiController::class, 'explain'])->middleware('throttle:20,1');
+Route::post('/correct-typo', [AiController::class, 'correctTypo'])->middleware('throttle:20,1');

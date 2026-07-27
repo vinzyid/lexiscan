@@ -44,7 +44,7 @@ return [
         'provider' => env('AI_PROVIDER', 'gemini'),
         // Free tier kedua penyedia dibatasi, jadi hasil identik di-cache.
         'cache_ttl' => (int) env('AI_CACHE_TTL', 86400),
-        'timeout' => (int) env('AI_TIMEOUT', 30),
+        'timeout' => (int) env('AI_TIMEOUT', 60),
     ],
 
     /*
