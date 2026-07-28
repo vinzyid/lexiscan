@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { View, Text, ScrollView, Pressable, type TextLayoutLine } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -58,6 +58,9 @@ export default function ReaderScreen() {
   const [simplifyLoading, setSimplifyLoading] = useState(false);
   const [simplifyError, setSimplifyError] = useState<string | null>(null);
 
+  const scrollViewRef = useRef<ScrollView>(null);
+  const paragraphPositions = useRef<{ [key: number]: number }>({});
+
   const typeLevel = getTypeLevel(typeLevelId);
   const level = getSimplifyLevel(simplifyLevel);
 
@@ -116,6 +119,15 @@ export default function ReaderScreen() {
     setActiveParagraphIndex(next);
     setRulerLine(0);
     setLines([]);
+
+    // Auto-scroll ke posisi paragraf yang baru jika posisinya sudah tersimpan
+    setTimeout(() => {
+      const yPosition = paragraphPositions.current[next];
+      if (yPosition !== undefined && scrollViewRef.current) {
+        // Kurangi sedikit offset agar judul paragraf (Paragraf X dari Y) juga terlihat utuh
+        scrollViewRef.current.scrollTo({ y: Math.max(0, yPosition - 30), animated: true });
+      }
+    }, 100);
   };
 
   const moveRuler = (delta: number) => {
@@ -223,32 +235,19 @@ export default function ReaderScreen() {
             label={bicolorMode ? 'Bicolor ✓' : 'Bicolor'}
           />
 
-          {/* Penggaris juga butuh navigasi paragraf, karena ia hanya membaca baris paragraf aktif. */}
+          {/* Indikator posisi paragraf (tanpa tombol panah ganda yang membingungkan) */}
           <View className="ml-auto flex-row items-center">
-            <Pressable
-              onPress={() => moveParagraph(-1)}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Paragraf sebelumnya"
-              className="h-7 w-7 items-center justify-center rounded-lg bg-surface-alt">
-              <ChevronLeft size={13} color={colors.textMuted} />
-            </Pressable>
-            <Text className="mx-2 font-opendyslexic-bold text-[10px] text-text-muted">
+            <Text className="font-opendyslexic-bold text-[10px] text-text-muted">
               {activeIndex + 1}/{shownParagraphs.length}
             </Text>
-            <Pressable
-              onPress={() => moveParagraph(1)}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Paragraf berikutnya"
-              className="h-7 w-7 items-center justify-center rounded-lg bg-surface-alt">
-              <ChevronRight size={13} color={colors.textMuted} />
-            </Pressable>
           </View>
         </View>
 
         {/* Isi bacaan */}
-        <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingTop: 20, paddingBottom: 28 }}>
+        <ScrollView
+          ref={scrollViewRef}
+          className="flex-1 px-5"
+          contentContainerStyle={{ paddingTop: 20, paddingBottom: 28 }}>
           <Text className="mb-4 font-opendyslexic-bold text-[11px] uppercase tracking-widest text-warm">
             {isScanned ? 'TEKS HASIL PINDAIAN' : DOC_SECTION}
           </Text>
@@ -265,6 +264,10 @@ export default function ReaderScreen() {
             return (
               <View
                 key={index}
+                onLayout={(event) => {
+                  const layout = event.nativeEvent.layout;
+                  paragraphPositions.current[index] = layout.y;
+                }}
                 className={`mb-6 ${
                   isActive ? 'rounded-2xl border-l-4 border-primary bg-primary/5 p-4' : ''
                 }`}>
@@ -314,6 +317,30 @@ export default function ReaderScreen() {
                     <Text className="font-opendyslexic text-[9px] text-text-muted">
                       Baris {Math.min(rulerLine, lines.length - 1) + 1} dari {lines.length}
                     </Text>
+                  </View>
+                ) : null}
+
+                {/* Tombol navigasi paragraf di bawah paragraf aktif — selalu ada di setiap paragraf yang difokuskan/diaktifkan */}
+                {isActive ? (
+                  <View className="mt-6 flex-row items-center justify-between border-t border-border/50 pt-4">
+                    <Pressable
+                      onPress={() => moveParagraph(-1)}
+                      disabled={activeIndex === 0}
+                      accessibilityRole="button"
+                      accessibilityLabel="Paragraf sebelumnya"
+                      className="h-11 flex-1 flex-row items-center justify-center gap-2 mr-2 rounded-xl bg-primary/10 disabled:opacity-30">
+                      <ChevronLeft size={18} color={colors.primary} />
+                      <Text className="font-opendyslexic-bold text-[11px] text-primary">SEBELUM</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => moveParagraph(1)}
+                      disabled={activeIndex >= shownParagraphs.length - 1}
+                      accessibilityRole="button"
+                      accessibilityLabel="Paragraf berikutnya"
+                      className="h-11 flex-1 flex-row items-center justify-center gap-2 ml-2 rounded-xl bg-primary/10 disabled:opacity-30">
+                      <Text className="font-opendyslexic-bold text-[11px] text-primary">BERIKUT</Text>
+                      <ChevronRight size={18} color={colors.primary} />
+                    </Pressable>
                   </View>
                 ) : null}
               </View>

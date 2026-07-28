@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, Pressable, ScrollView, Alert, ActivityIndicator, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,6 +7,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Check, Upload, Camera as CameraIcon, ScanLine, ChevronRight } from 'lucide-react-native';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
 import * as DocumentPicker from 'expo-document-picker';
+import { ImageManipulator } from 'expo-image-manipulator';
 
 import { useOCRStore } from '../../src/store/useStore';
 import { useThemeColors } from '../../src/theme/theme-provider';
@@ -83,7 +85,18 @@ export default function ScannerScreen() {
       const photo = await cameraRef.current.takePictureAsync();
       if (!photo?.uri) throw new Error('Kamera tidak mengembalikan gambar.');
 
-      const result = await TextRecognition.recognize(photo.uri);
+      // Crop ke area tengah (60% dari lebar & tinggi) — sesuai batas kotak panduan
+      const cropWidth = photo.width * 0.6;
+      const cropHeight = photo.height * 0.6;
+      const originX = photo.width * 0.2;
+      const originY = photo.height * 0.2;
+
+      const context = ImageManipulator.manipulate(photo.uri)
+        .crop({ originX, originY, width: cropWidth, height: cropHeight });
+      const imageRef = await context.renderAsync();
+      const cropped = await imageRef.saveAsync({ format: 'jpeg' as any });
+
+      const result = await TextRecognition.recognize(cropped.uri);
       const rawText = result?.text?.trim() ?? '';
 
       if (!rawText) {

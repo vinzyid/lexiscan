@@ -79,7 +79,7 @@ return [
      */
     'openrouter' => [
         'key' => env('OPENROUTER_API_KEY'),
-        'model' => env('OPENROUTER_MODEL', 'google/gemma-4-26b-a4b-it:free'),
+        'model' => env('OPENROUTER_MODEL', 'x-ai/grok-2-1212'),
     ],
 
 ];

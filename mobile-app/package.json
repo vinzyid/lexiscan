@@ -15,12 +15,14 @@
     "expo-font": "~57.0.1",
     "expo-glass-effect": "~57.0.1",
     "expo-image": "~57.0.1",
+    "expo-image-manipulator": "~57.0.6",
     "expo-linking": "~57.0.4",
     "expo-router": "~57.0.8",
     "expo-splash-screen": "~57.0.5",
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.1",
     "expo-system-ui": "~57.0.1",
+    "expo-updates": "~57.0.10",
     "expo-web-browser": "~57.0.2",
     "lucide-react-native": "^1.27.0",
     "nativewind": "^4.2.6",
@@ -37,7 +39,10 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@types/estree": "^1.0.9",
     "@types/react": "~19.2.2",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~57.0.0",
     "typescript": "~6.0.3"
   },
   "scripts": {

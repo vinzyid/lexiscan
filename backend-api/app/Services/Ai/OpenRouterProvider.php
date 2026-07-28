@@ -53,27 +53,12 @@ class OpenRouterProvider implements AiProvider
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => 'Kamu membantu pembaca disleksia. Jawab hanya dengan JSON sesuai skema yang diminta, tanpa penjelasan tambahan.',
+                        'content' => 'Kamu membantu pembaca disleksia. Jawab hanya dengan JSON dalam format {"paragraphs": ["teks paragraf 1", "teks paragraf 2"]}, tanpa penjelasan tambahan.',
                     ],
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'response_format' => [
-                    'type' => 'json_schema',
-                    'json_schema' => [
-                        'name' => 'paragraphs',
-                        'strict' => true,
-                        'schema' => [
-                            'type' => 'object',
-                            'properties' => [
-                                'paragraphs' => [
-                                    'type' => 'array',
-                                    'items' => ['type' => 'string'],
-                                ],
-                            ],
-                            'required' => ['paragraphs'],
-                            'additionalProperties' => false,
-                        ],
-                    ],
+                    'type' => 'json_object',
                 ],
             ]);
 
