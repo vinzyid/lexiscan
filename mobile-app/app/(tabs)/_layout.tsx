@@ -10,7 +10,7 @@ export default function TabLayout() {
       <Tabs.Screen name="index" options={{ title: 'Beranda' }} />
       <Tabs.Screen name="scanner" options={{ title: 'Pindai' }} />
       <Tabs.Screen name="reader" options={{ title: 'Baca' }} />
-      <Tabs.Screen name="settings" options={{ title: 'Pengaturan' }} />
+      <Tabs.Screen name="settings" options={{ title: 'Atur' }} />
     </Tabs>
   );
 }

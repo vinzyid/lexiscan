@@ -42,5 +42,8 @@ example
 /ios
 /android
 
-#file 
+#file
 .mockup v1/*
+
+# Dump logcat hasil debugging — besar dan hanya relevan di mesin lokal.
+logcat*.txt

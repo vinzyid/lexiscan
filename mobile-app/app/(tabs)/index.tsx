@@ -1,193 +1,427 @@
-import { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, Pressable, Animated } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Animated, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Camera, BookOpen, Brain, Focus, Sparkles, Rainbow, Ruler, Type, ScanSearch, Lightbulb, Hand, ChevronRight } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BookOpen, Camera, ChevronRight, Sparkles } from 'lucide-react-native';
 
 import { useOCRStore } from '../../src/store/useStore';
 import { useThemeColors } from '../../src/theme/theme-provider';
+import { FEATURE_ACCENTS, GRADIENTS, getTypeLevel } from '../../src/theme/palettes';
 import { DAILY_TIPS } from '../../src/data/sample-document';
 import { TypographySheet } from '../../src/components/typography-sheet';
 import { ExplainSheet } from '../../src/components/explain-sheet';
+import { Blob, HexDecor, Ring, ScreenBackdrop, Sparkle, WaveCut } from '../../src/components/figma-decor';
+import {
+  ArtBicolorWords,
+  ArtReadingRuler,
+  ArtWordIsolation,
+  IlluExplain,
+  IlluFocus,
+  IlluScan,
+  IlluSimplify,
+  IlluTypo,
+  LexiMascot,
+} from '../../src/components/illustrations';
+
+/** Margin kiri/kanan halaman (Figma: kartu 358 pada kanvas 390). */
+const PAGE_PADDING = 16;
 
 export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
+  const { width } = useWindowDimensions();
+
   const [typographyOpen, setTypographyOpen] = useState(false);
   const [explainOpen, setExplainOpen] = useState(false);
 
-  // Tip animasi carousel
-  const [currentTipIndex, setCurrentTipIndex] = useState(0);
-  const fadeAnim = useState(new Animated.Value(1))[0];
+  const { focusMode, toggleFocusMode, typeLevelId, simplifyLevel } = useOCRStore();
+  const typeLevel = getTypeLevel(typeLevelId);
+
+  /** Lebar kartu sesungguhnya (Figma: 358 pada layar 390). */
+  const cardWidth = width - PAGE_PADDING * 2;
+
+  const [tipIndex, setTipIndex] = useState(0);
+  const fade = useState(new Animated.Value(1))[0];
 
   useEffect(() => {
-    const tipInterval = setInterval(() => {
-      Animated.sequence([
-        Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-      ]).start(() => {
-        setCurrentTipIndex((prev) => (prev + 1) % DAILY_TIPS.length);
-        Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+    const timer = setInterval(() => {
+      Animated.timing(fade, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
+        setTipIndex((prev) => (prev + 1) % DAILY_TIPS.length);
+        Animated.timing(fade, { toValue: 1, duration: 300, useNativeDriver: true }).start();
       });
-    }, 6000); // Ganti tip setiap 6 detik
-    return () => clearInterval(tipInterval);
-  }, []);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [fade]);
 
   /*
-   * Dari dashboard belum ada dokumen yang dibuka, jadi sheet menjelaskan
-   * topik dokumen contoh memakai jawaban kurasi (tanpa memanggil API).
+   * Dari dashboard belum ada dokumen yang dibuka, jadi sheet menjelaskan topik
+   * dokumen contoh memakai jawaban kurasi (tanpa memanggil API).
    */
   const explainDemoTarget = { term: 'Mitokondria', useStaticAnswers: true };
 
-  const { focusMode, toggleFocusMode } = useOCRStore();
-
   const features = [
-    { icon: <Camera size={18} color={colors.textMain} />, label: 'Smart OCR Scan', onPress: () => router.push('/scanner') },
-    { icon: <Type size={18} color={colors.primary} />, label: 'Adaptive Typography', onPress: () => setTypographyOpen(true) },
-    { icon: <Brain size={18} color={colors.warm} />, label: 'AI Simplification', onPress: () => router.push('/reader') },
     {
-      icon: <Focus size={18} color={colors.primary} />,
-      label: 'Focus Reading',
+      accent: FEATURE_ACCENTS.scan,
+      Illu: IlluScan,
+      label: 'Smart OCR Scan',
+      desc: 'Foto dokumen jadi teks digital seketika',
+      onPress: () => router.push('/scanner'),
+    },
+    {
+      accent: FEATURE_ACCENTS.typography,
+      Illu: IlluTypo,
+      label: 'Adaptive Typography',
+      desc: 'Font & spasi khusus penderita disleksia',
+      onPress: () => setTypographyOpen(true),
+    },
+    {
+      accent: FEATURE_ACCENTS.simplify,
+      Illu: IlluSimplify,
+      label: 'AI Simplify',
+      desc: '5 level penyederhanaan teks oleh AI',
+      onPress: () => router.push('/reader'),
+    },
+    {
+      accent: FEATURE_ACCENTS.focus,
+      Illu: IlluFocus,
+      label: 'Focus Mode',
+      desc: 'Baca satu paragraf tanpa gangguan',
       onPress: () => {
         if (!focusMode) toggleFocusMode();
         router.push('/reader');
       },
     },
-    { icon: <Sparkles size={18} color={colors.warm} />, label: 'AI Explain This', onPress: () => setExplainOpen(true), wide: true },
+    {
+      accent: FEATURE_ACCENTS.explain,
+      Illu: IlluExplain,
+      label: 'AI Explain This',
+      desc: '3 gaya penjelasan dari Lexi si asisten',
+      onPress: () => setExplainOpen(true),
+    },
   ];
 
-  const innovations = [
-    { icon: <Rainbow size={20} color={colors.primary} />, title: 'Bicolor Words', desc: 'Warna bergantian per kata bantu mata melacak baris' },
-    { icon: <Ruler size={20} color={colors.textMuted} />, title: 'Reading Ruler', desc: 'Penggaris baca gerak mengikuti posisimu' },
-    { icon: <ScanSearch size={20} color={colors.textMuted} />, title: 'Word Isolation', desc: 'Ketuk kata apapun — lihat besar + suku kata' },
-  ];
+  const today = new Date().toLocaleDateString('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
 
   return (
     <>
-      <ScrollView
-        className="flex-1 bg-background px-5"
-        contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 28 }}
-        showsVerticalScrollIndicator={false}>
+      <View className="flex-1 bg-background">
+        <ScreenBackdrop />
 
-        {/* Banner sambutan (XP/Level dihapus, diganti pesan hangat) */}
-        <View className="mb-6 overflow-hidden rounded-[28px] bg-primary p-7">
-          <View className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-white/10" />
-          <View className="absolute -bottom-16 -left-10 h-36 w-36 rounded-full bg-white/5" />
-
-          <View className="flex-row items-center justify-between">
-            <View className="flex-1 pr-3">
-              <Text className="mb-2 font-opendyslexic text-xs text-white/80">Selamat datang kembali! 👋</Text>
-              <Text className="font-opendyslexic-bold text-2xl leading-9 text-white">
-                Siap belajar{'\n'}sesuatu yang baru?
-              </Text>
-            </View>
-            <View className="h-16 w-16 items-center justify-center rounded-full bg-white/20">
-              <Hand size={32} color="#FFFFFF" />
-            </View>
-          </View>
-        </View>
-
-        {/* Tip hari ini - Dengan Animasi Carousel & Ikon SVG */}
-        <View className="mb-6 flex-row items-start rounded-2xl border border-warm/30 bg-warm/10 p-4">
-          <View className="mr-3 mt-1 rounded-full bg-warm/20 p-2">
-            <Lightbulb size={18} color={colors.warm} />
-          </View>
-          <View className="flex-1">
-            <Text className="mb-1.5 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-primary">
-              TIP HARI INI
-            </Text>
-            <Animated.Text
-              style={{ opacity: fadeAnim }}
-              className="font-opendyslexic text-xs leading-5 text-text-main">
-              {DAILY_TIPS[currentTipIndex]}
-            </Animated.Text>
-          </View>
-        </View>
-
-        {/* Dua aksi utama */}
-        <View className="mb-8 flex-row justify-between">
-          <Pressable
-            onPress={() => router.push('/scanner')}
-            accessibilityRole="button"
-            className="aspect-square w-[48%] justify-between rounded-3xl bg-primary p-5">
-            <View className="h-10 w-10 items-center justify-center rounded-xl bg-black/10">
-              <Camera size={20} color="#FFFFFF" />
-            </View>
+        <ScrollView
+          contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}>
+          {/* ── Sapaan + avatar ─────────────────────────────────────────── */}
+          <View className="flex-row items-center justify-between px-5 pb-4">
             <View>
-              <Text className="mb-1 font-opendyslexic-bold text-sm text-white">Pindai Dokumen</Text>
-              <Text className="font-opendyslexic text-[10px] text-white/70">Foto → Teks</Text>
+              <Text className="font-ui-medium text-xs text-text-muted">{today}</Text>
+              <Text className="font-ui-bold text-[22px] leading-[33px] text-text-main">
+                Hei, Rama!
+              </Text>
             </View>
-          </Pressable>
+            <LinearGradient
+              colors={[...GRADIENTS.avatar.colors]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 16,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <Text className="font-ui-bold text-base text-white">R</Text>
+            </LinearGradient>
+          </View>
 
-          <Pressable
-            onPress={() => router.push('/reader')}
-            accessibilityRole="button"
-            className="aspect-square w-[48%] justify-between rounded-3xl border border-border bg-surface p-5">
-            <View className="h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-              <BookOpen size={20} color={colors.primary} />
-            </View>
+          {/* ── Banner utama ────────────────────────────────────────────── */}
+          <View className="px-4">
+            <LinearGradient
+              colors={[...GRADIENTS.hero.colors]}
+              locations={[...GRADIENTS.hero.locations]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ borderRadius: 24, overflow: 'hidden' }}>
+              {/* Hiasan latar banner */}
+              <Ring size={110} style={{ position: 'absolute', top: -18, right: 4 }} />
+              <Blob size={110} style={{ position: 'absolute', top: -30, right: -6 }} />
+              <Blob size={80} opacity={0.04} style={{ position: 'absolute', bottom: 8, left: -20 }} />
+              <HexDecor size={36} style={{ position: 'absolute', top: 38, left: 197 }} />
+              <HexDecor size={24} opacity={0.08} style={{ position: 'absolute', bottom: 30, left: 234 }} />
+              <Sparkle size={10} style={{ position: 'absolute', top: 19, right: 100 }} />
+              <Sparkle size={8} style={{ position: 'absolute', top: 80, right: 44 }} />
+              <Sparkle size={7} style={{ position: 'absolute', bottom: 22, left: 222 }} />
+
+              {/* Lexi di kanan, sedikit di atas kaki banner (Figma: x=230, y=62) */}
+              <View style={{ position: 'absolute', right: 8, bottom: 28 }}>
+                <LexiMascot size={120} />
+              </View>
+
+              {/* Chip status di kanan atas — urutan Figma: Sedang lalu L3 AI */}
+              <View className="absolute right-4 top-[11px] flex-row" style={{ gap: 6 }}>
+                <GlassChip subtle>
+                  <Text className="font-ui-semibold text-[11px] text-white/75">
+                    {typeLevel.name}
+                  </Text>
+                </GlassChip>
+                <GlassChip>
+                  <Sparkles size={10} color="#fcd34d" fill="#fcd34d" />
+                  <Text className="font-ui-bold text-[11px] text-white/90">
+                    {simplifyLevel} AI
+                  </Text>
+                </GlassChip>
+              </View>
+
+              <View className="p-5" style={{ width: cardWidth * 0.62 }}>
+                <View className="mb-[15px] flex-row">
+                  <View
+                    className="flex-row items-center rounded-[14px] border border-white/20 bg-white/10 px-2.5 py-1"
+                    style={{ gap: 6 }}>
+                    <View className="h-1.5 w-1.5 rounded-full bg-[#34d399]" />
+                    <Text className="font-ui-bold text-[10px] text-white/80">SIAP BELAJAR</Text>
+                  </View>
+                </View>
+
+                <Text className="font-ui-bold text-[26px] leading-[30px] text-white">
+                  Siap Petualangan{'\n'}hari ini?
+                </Text>
+
+                <View className="mt-[22px] flex-row" style={{ gap: 8 }}>
+                  <Pressable
+                    onPress={() => router.push('/scanner')}
+                    accessibilityRole="button"
+                    className="h-10 flex-row items-center rounded-2xl bg-white px-4"
+                    style={{ gap: 6 }}>
+                    <Camera size={14} color="#6d28d9" />
+                    <Text className="font-ui-bold text-[13px] text-[#6d28d9]">Pindai</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => router.push('/reader')}
+                    accessibilityRole="button"
+                    className="h-10 flex-row items-center rounded-2xl border border-white/25 bg-white/[0.14] px-4"
+                    style={{ gap: 6 }}>
+                    <BookOpen size={14} color="#ffffff" />
+                    <Text className="font-ui-bold text-[13px] text-white">Baca</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Gelombang sewarna latar yang menutup kaki banner */}
+              <WaveCut width={cardWidth} color={colors.background} />
+            </LinearGradient>
+          </View>
+
+          {/* ── 5 fitur utama ───────────────────────────────────────────── */}
+          <View className="flex-row items-end justify-between px-4 pb-3 pt-5">
             <View>
-              <Text className="mb-1 font-opendyslexic-bold text-sm text-text-main">Lanjut Baca</Text>
-              <Text className="font-opendyslexic text-[10px] text-text-muted">
-                Teks terakhir dipindai
+              <Text className="font-ui-bold text-[10px] text-text-muted">5 FITUR UTAMA</Text>
+              <Text className="font-ui-bold text-base text-text-main">
+                Semua yang kamu butuhkan
               </Text>
             </View>
-          </Pressable>
-        </View>
+            <View className="rounded-[14px] bg-primary/[0.09] px-3 py-1.5">
+              <Text className="font-ui-bold text-[11px] text-primary">Gratis</Text>
+            </View>
+          </View>
 
-        {/* 5 fitur utama */}
-        <Text className="mb-4 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-text-main">
-          5 FITUR UTAMA
-        </Text>
-        <View className="mb-8 flex-row flex-wrap justify-between">
-          {features.map((item) => (
-            <Pressable
-              key={item.label}
-              onPress={item.onPress}
-              accessibilityRole="button"
-              className={`mb-3 flex-row items-center rounded-2xl border border-border bg-surface p-3 ${
-                item.wide ? 'w-full' : 'w-[48%]'
-              }`}>
-              <View className="mr-2 rounded-xl bg-surface-alt p-2">{item.icon}</View>
-              <Text
-                className="flex-1 font-opendyslexic-bold text-[10px] leading-[14px] text-text-main"
-                numberOfLines={2}>
-                {item.label}
-              </Text>
+          <View className="px-4" style={{ gap: 10 }}>
+            {features.map(({ accent, Illu, label, desc, onPress }) => (
+              <Pressable
+                key={label}
+                onPress={onPress}
+                accessibilityRole="button"
+                className="h-[76px] flex-row items-center rounded-2xl bg-surface px-3.5"
+                style={{ gap: 14 }}>
+                <LinearGradient
+                  colors={[...accent.gradient]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: 16,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                  <Illu size={37} />
+                </LinearGradient>
+
+                <View className="flex-1">
+                  <Text className="font-ui-bold text-[13.5px] leading-5 text-text-main">
+                    {label}
+                  </Text>
+                  <Text className="mt-0.5 font-ui-medium text-[11.5px] leading-[17px] text-text-muted">
+                    {desc}
+                  </Text>
+                </View>
+
+                <View
+                  className="h-7 w-7 items-center justify-center rounded-[14px]"
+                  style={{ backgroundColor: accent.chevron }}>
+                  <ChevronRight size={13} color="#ffffff" />
+                </View>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* ── Inovasi eksklusif ───────────────────────────────────────── */}
+          <View className="px-4 pb-3 pt-6">
+            <Text className="font-ui-bold text-[10px] text-text-muted">INOVASI EKSKLUSIF</Text>
+            <Text className="font-ui-bold text-base text-text-main">Khusus untuk disleksia</Text>
+          </View>
+
+          {/* Bicolor Words — kartu lebar */}
+          <View className="px-4">
+            <Pressable onPress={() => router.push('/reader')} accessibilityRole="button">
+              <LinearGradient
+                colors={[...GRADIENTS.brand.colors]}
+                locations={[...GRADIENTS.brand.locations]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ borderRadius: 16, overflow: 'hidden' }}>
+                <View className="h-[78px] justify-center">
+                  <Blob size={90} opacity={0.05} style={{ position: 'absolute', top: -24, right: 8 }} />
+                  <HexDecor size={26} opacity={0.14} style={{ position: 'absolute', top: 8, left: 29 }} />
+                  <View className="px-[18px]">
+                    <ArtBicolorWords width={cardWidth - 36} />
+                  </View>
+                </View>
+                <View className="border-t border-white/10 bg-black/20 px-3.5 py-[11px]">
+                  <Text className="font-ui-bold text-[13px] leading-5 text-white">
+                    Bicolor Words
+                  </Text>
+                  <Text className="mt-0.5 font-ui-medium text-[11px] leading-[17px] text-white/70">
+                    Warna bergantian per kata untuk tracking lebih mudah
+                  </Text>
+                </View>
+              </LinearGradient>
             </Pressable>
-          ))}
-        </View>
+          </View>
 
-        {/* Inovasi khusus disleksia */}
-        <View className="rounded-3xl border border-border bg-surface p-5">
-          <Text className="mb-5 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-text-main">
-            INOVASI KHUSUS DISLEKSIA
-          </Text>
-          {innovations.map((item) => (
-            <View key={item.title} className="mb-5 flex-row items-center">
-              <View className="mr-4 h-10 w-10 items-center justify-center rounded-full bg-surface-alt">
-                {item.icon}
-              </View>
-              <View className="flex-1">
-                <Text className="mb-0.5 font-opendyslexic-bold text-xs text-text-main">{item.title}</Text>
-                <Text className="font-opendyslexic text-[9px] leading-4 text-text-muted">{item.desc}</Text>
+          {/* Reading Ruler + Word Isolation */}
+          <View className="flex-row px-4 pt-3" style={{ gap: 10 }}>
+            <InnovationTile
+              gradient={GRADIENTS.ruler}
+              title="Reading Ruler"
+              desc="Penggaris baca intuitif"
+              onPress={() => router.push('/reader')}
+              art={<ArtReadingRuler width={90} />}
+            />
+            <InnovationTile
+              gradient={GRADIENTS.isolation}
+              title="Word Isolation"
+              desc="Ketuk kata saat membaca"
+              onPress={() => router.push('/reader')}
+              art={<ArtWordIsolation size={70} />}
+            />
+          </View>
+
+          {/* ── Tip hari ini ────────────────────────────────────────────── */}
+          <View className="px-4 pt-6">
+            <View className="overflow-hidden rounded-2xl border border-border/10 bg-surface">
+              <LinearGradient
+                colors={[...GRADIENTS.brand.colors]}
+                locations={[...GRADIENTS.brand.locations]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{
+                  height: 35,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}>
+                <Sparkle size={10} opacity={0.85} />
+                <Text className="font-ui-bold text-[10px] text-white/95">TIP HARI INI</Text>
+                <Sparkle size={10} opacity={0.85} />
+              </LinearGradient>
+
+              <View className="flex-row items-center p-4" style={{ gap: 12 }}>
+                <View className="h-9 w-9 items-center justify-center rounded-[14px] bg-primary/[0.09]">
+                  <TipLines color={colors.primary} />
+                </View>
+                <Animated.Text
+                  style={{ opacity: fade }}
+                  className="flex-1 font-ui text-[13px] leading-[21px] text-text-main">
+                  {DAILY_TIPS[tipIndex]}
+                </Animated.Text>
               </View>
             </View>
-          ))}
-          <Pressable
-            onPress={() => router.push('/reader')}
-            accessibilityRole="button"
-            className="mt-1 flex-row items-center justify-center rounded-2xl bg-primary/10 py-3">
-            <Text className="mr-2 font-opendyslexic-bold text-xs text-primary">
-              Coba Sekarang
-            </Text>
-            <ChevronRight size={14} color={colors.primary} />
-          </Pressable>
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      </View>
 
       <TypographySheet visible={typographyOpen} onClose={() => setTypographyOpen(false)} />
-      <ExplainSheet target={explainOpen ? explainDemoTarget : null} onClose={() => setExplainOpen(false)} />
+      <ExplainSheet
+        target={explainOpen ? explainDemoTarget : null}
+        onClose={() => setExplainOpen(false)}
+      />
     </>
+  );
+}
+
+/** Chip kaca di atas gradien banner (Figma: bg putih 12%, garis putih 18%). */
+function GlassChip({ children, subtle }: { children: React.ReactNode; subtle?: boolean }) {
+  return (
+    <View
+      className={`h-[31px] flex-row items-center rounded-[14px] px-2.5 ${
+        subtle ? 'border border-white/[0.12] bg-white/[0.09]' : 'border border-white/[0.18] bg-white/[0.12]'
+      }`}
+      style={{ gap: 6 }}>
+      {children}
+    </View>
+  );
+}
+
+/** Kartu inovasi setengah lebar (Figma: 174x138). */
+function InnovationTile({
+  gradient,
+  title,
+  desc,
+  art,
+  onPress,
+}: {
+  gradient: { colors: readonly string[]; locations: readonly number[] };
+  title: string;
+  desc: string;
+  art: React.ReactNode;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable className="flex-1" onPress={onPress} accessibilityRole="button">
+      <LinearGradient
+        colors={[...gradient.colors] as [string, string, ...string[]]}
+        locations={[...gradient.locations] as [number, number, ...number[]]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ borderRadius: 16, overflow: 'hidden' }}>
+        <View className="h-20 items-center justify-center">
+          <Blob size={70} opacity={0.08} style={{ position: 'absolute', top: -18, right: -12 }} />
+          {art}
+        </View>
+        <View className="border-t border-white/10 bg-black/20 px-3 py-2.5">
+          <Text className="font-ui-bold text-[13px] leading-5 text-white">{title}</Text>
+          <Text className="mt-0.5 font-ui-medium text-[10px] leading-[15px] text-white/65">
+            {desc}
+          </Text>
+        </View>
+      </LinearGradient>
+    </Pressable>
+  );
+}
+
+/** Tiga garis miring kecil di ubin tip (Figma: tiga VECTOR bergaris primary). */
+function TipLines({ color }: { color: string }) {
+  return (
+    <View style={{ width: 17, gap: 3 }}>
+      <View style={{ height: 1.3, width: 13, borderRadius: 1, backgroundColor: color }} />
+      <View style={{ height: 1.3, width: 9, borderRadius: 1, backgroundColor: color }} />
+      <View style={{ height: 1.3, width: 10, borderRadius: 1, backgroundColor: color }} />
+    </View>
   );
 }

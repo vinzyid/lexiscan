@@ -43,6 +43,8 @@ export function useThemeColors() {
   const themeId = useOCRStore((s) => s.themeId);
   const theme = getTheme(themeId);
   const rgb = (channels: string) => `rgb(${channels.split(' ').join(', ')})`;
+  const rgba = (channels: string, alpha: number) =>
+    `rgba(${channels.split(' ').join(', ')}, ${alpha})`;
 
   return {
     isDark: theme.isDark,
@@ -53,7 +55,8 @@ export function useThemeColors() {
     surfaceAlt: rgb(theme.tokens.surfaceAlt),
     textMain: rgb(theme.tokens.textMain),
     textMuted: rgb(theme.tokens.textMuted),
-    border: rgb(theme.tokens.border),
+    /** Figma memakai textMain @ 8% untuk semua garis pemisah. */
+    border: rgba(theme.tokens.border, 0.08),
     primary: rgb(theme.tokens.primary),
     primaryDeep: rgb(theme.tokens.primaryDeep),
     primarySoft: rgb(theme.tokens.primarySoft),

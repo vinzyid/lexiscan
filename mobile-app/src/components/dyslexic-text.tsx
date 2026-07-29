@@ -21,9 +21,31 @@ type Props = {
 const stripPunctuation = (word: string) => word.replace(/[^\p{L}\p{N}-]/gu, '');
 
 /**
- * Satu paragraf dengan aturan tipografi disleksia: line-height lega, letter
- * spacing renggang, dan penebalan awal kata (visual fixation) pada preset
- * Sedang & Berat.
+ * Pecah paragraf jadi potongan kata + spasi, sambil menomori kata (spasi tidak
+ * dihitung). Nomor inilah yang menentukan giliran warna pada Bicolor Words.
+ */
+function toChunks(text: string) {
+  let counter = 0;
+
+  return text
+    .split(/(\s+)/)
+    .filter((chunk) => chunk.length > 0)
+    .map((chunk) => {
+      const isSpace = /^\s+$/.test(chunk);
+      const entry = { chunk, isSpace, wordIndex: counter };
+      if (!isSpace) counter += 1;
+      return entry;
+    });
+}
+
+/**
+ * Satu paragraf teks bacaan dengan aturan tipografi dari Figma:
+ *
+ * - Atkinson Hyperlegible, line-height lega (1.85–2.4×) dan letter spacing renggang.
+ * - Visual fixation: **huruf pertama** tiap kata memakai berat Bold, sisanya
+ *   Regular. Ini persis pola characterStyleOverrides di file Figma — bukan
+ *   separuh kata — dan hanya aktif di preset Sedang & Berat.
+ * - Bicolor Words: kata ganjil/genap berganti warna (bicolorA / bicolorB).
  */
 export function DyslexicText({
   children,
@@ -37,11 +59,11 @@ export function DyslexicText({
   const level = levelOverride ?? getTypeLevel(typeLevelId);
   const colors = useThemeColors();
 
-  const words = children.split(/(\s+)/).filter((chunk) => chunk.length > 0);
+  const chunks = toChunks(children);
 
   return (
     <Text
-      className="font-opendyslexic"
+      className="font-read"
       onTextLayout={onTextLayout}
       style={{
         fontSize: level.fontSize,
@@ -50,10 +72,9 @@ export function DyslexicText({
         color: dimmed ? colors.textMuted : colors.textMain,
         opacity: dimmed ? 0.35 : 1,
       }}>
-      {words.map((chunk, index) => {
-        if (/^\s+$/.test(chunk)) return <Text key={index}> </Text>;
+      {chunks.map(({ chunk, isSpace, wordIndex }, index) => {
+        if (isSpace) return <Text key={index}> </Text>;
 
-        const wordIndex = words.slice(0, index).filter((c) => !/^\s+$/.test(c)).length;
         const color = dimmed
           ? undefined
           : bicolor
@@ -62,23 +83,20 @@ export function DyslexicText({
               : colors.bicolorB
             : undefined;
 
-        if (!level.boldFixation) {
+        const press = onWordPress ? () => onWordPress(stripPunctuation(chunk)) : undefined;
+
+        if (!level.bodyBold) {
           return (
-            <Text key={index} style={color ? { color } : undefined} onPress={onWordPress ? () => onWordPress(stripPunctuation(chunk)) : undefined}>
+            <Text key={index} style={color ? { color } : undefined} onPress={press}>
               {chunk}
             </Text>
           );
         }
 
-        const split = Math.min(chunk.length, Math.max(1, Math.ceil(chunk.length / 2)));
-
         return (
-          <Text
-            key={index}
-            style={color ? { color } : undefined}
-            onPress={onWordPress ? () => onWordPress(stripPunctuation(chunk)) : undefined}>
-            <Text className="font-opendyslexic-bold">{chunk.slice(0, split)}</Text>
-            <Text>{chunk.slice(split)}</Text>
+          <Text key={index} style={color ? { color } : undefined} onPress={press}>
+            <Text className="font-read-bold">{chunk.slice(0, 1)}</Text>
+            <Text>{chunk.slice(1)}</Text>
           </Text>
         );
       })}

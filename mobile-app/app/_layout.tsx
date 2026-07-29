@@ -5,6 +5,18 @@ import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 
+import {
+  Fredoka_300Light,
+  Fredoka_400Regular,
+  Fredoka_500Medium,
+  Fredoka_600SemiBold,
+  Fredoka_700Bold,
+} from '@expo-google-fonts/fredoka';
+import {
+  AtkinsonHyperlegible_400Regular,
+  AtkinsonHyperlegible_700Bold,
+} from '@expo-google-fonts/atkinson-hyperlegible';
+
 import { ThemeProvider, useThemeColors } from '../src/theme/theme-provider';
 
 SplashScreen.preventAutoHideAsync();
@@ -24,14 +36,22 @@ function RootNavigator() {
 
 export default function RootLayout() {
   /*
-   * Bold didaftarkan sebagai family terpisah, bukan sebagai varian berat dari
-   * "OpenDyslexic". Di Android, fontFamily kustom + fontWeight bold tanpa faces
-   * terdaftar bikin RN mundur ke font sistem, jadi setiap teks tebal harus
-   * menyebut family ini secara eksplisit lewat class `font-opendyslexic-bold`.
+   * Dua keluarga font sesuai Figma: Fredoka untuk seluruh antarmuka, Atkinson
+   * Hyperlegible khusus teks bacaan (huruf-huruf yang mirip dibedakan bentuknya
+   * — b/d, p/q, I/l — jadi lebih aman untuk pembaca disleksia).
+   *
+   * Tiap berat didaftarkan sebagai family tersendiri. Di Android, fontFamily
+   * kustom + fontWeight tanpa face terdaftar bikin RN mundur ke font sistem,
+   * jadi berat selalu disebut lewat class (`font-ui-bold`, `font-read-bold`).
    */
   const [loaded, error] = useFonts({
-    OpenDyslexic: require('../assets/fonts/OpenDyslexic-Regular.otf'),
-    'OpenDyslexic-Bold': require('../assets/fonts/OpenDyslexic-Bold.otf'),
+    Fredoka_300Light,
+    Fredoka_400Regular,
+    Fredoka_500Medium,
+    Fredoka_600SemiBold,
+    Fredoka_700Bold,
+    AtkinsonHyperlegible_400Regular,
+    AtkinsonHyperlegible_700Bold,
   });
 
   useEffect(() => {

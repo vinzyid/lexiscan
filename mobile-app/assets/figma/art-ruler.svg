@@ -1,0 +1,20 @@
+<svg width="90" height="56" viewBox="0 0 90 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Icon" clip-path="url(#clip0_0_4)">
+<path id="Vector" d="M77.5 6H8.5C7.11929 6 6 7.11929 6 8.5C6 9.88071 7.11929 11 8.5 11H77.5C78.8807 11 80 9.88071 80 8.5C80 7.11929 78.8807 6 77.5 6Z" fill="white" fill-opacity="0.35"/>
+<path id="Vector_2" d="M63.5 14H8.5C7.11929 14 6 15.1193 6 16.5C6 17.8807 7.11929 19 8.5 19H63.5C64.8807 19 66 17.8807 66 16.5C66 15.1193 64.8807 14 63.5 14Z" fill="white" fill-opacity="0.25"/>
+<path id="Vector_3" d="M90 22H0V31H90V22Z" fill="white" fill-opacity="0.2"/>
+<path id="Vector_4" d="M90 22H0V31H90V22Z" stroke="white" stroke-opacity="0.65" stroke-width="1.2"/>
+<path id="Vector_5" d="M71 23.5H9C7.34315 23.5 6 24.8431 6 26.5C6 28.1569 7.34315 29.5 9 29.5H71C72.6569 29.5 74 28.1569 74 26.5C74 24.8431 72.6569 23.5 71 23.5Z" fill="white" fill-opacity="0.55"/>
+<path id="Vector_6" d="M0 22H4" stroke="white" stroke-opacity="0.55"/>
+<path id="Vector_7" d="M0 25H4" stroke="white" stroke-opacity="0.55"/>
+<path id="Vector_8" d="M0 28H4" stroke="white" stroke-opacity="0.55"/>
+<path id="Vector_9" d="M0 31H4" stroke="white" stroke-opacity="0.55"/>
+<path id="Vector_10" d="M55.5 34H8.5C7.11929 34 6 35.1193 6 36.5C6 37.8807 7.11929 39 8.5 39H55.5C56.8807 39 58 37.8807 58 36.5C58 35.1193 56.8807 34 55.5 34Z" fill="white" fill-opacity="0.2"/>
+<path id="Vector_11" d="M41.5 43H8.5C7.11929 43 6 44.1193 6 45.5C6 46.8807 7.11929 48 8.5 48H41.5C42.8807 48 44 46.8807 44 45.5C44 44.1193 42.8807 43 41.5 43Z" fill="white" fill-opacity="0.14"/>
+</g>
+<defs>
+<clipPath id="clip0_0_4">
+<rect width="90" height="56" fill="white"/>
+</clipPath>
+</defs>
+</svg>

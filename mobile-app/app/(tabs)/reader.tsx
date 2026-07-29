@@ -1,26 +1,26 @@
-import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { View, Text, ScrollView, Pressable, type TextLayoutLine } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, ScrollView, Text, View, type TextLayoutLine } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
-  Type,
-  Focus,
-  Ruler,
-  Palette,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
+  BookOpen,
   ChevronDown,
+  ChevronUp,
+  Focus,
   Lightbulb,
+  Palette,
+  Ruler,
+  Sparkles,
+  Type,
 } from 'lucide-react-native';
 
 import { useOCRStore } from '../../src/store/useStore';
 import { useThemeColors } from '../../src/theme/theme-provider';
-import { getTypeLevel } from '../../src/theme/palettes';
+import { GRADIENTS, getTypeLevel } from '../../src/theme/palettes';
 import {
   DOC_SECTION,
   DOC_TITLE,
   SIMPLIFY_LEVELS,
-  getSimplifyLevel,
   type SimplifyLevelId,
 } from '../../src/data/sample-document';
 import { simplifyText, AiApiError } from '../../src/api/ai';
@@ -28,6 +28,7 @@ import { DyslexicText } from '../../src/components/dyslexic-text';
 import { TypographySheet } from '../../src/components/typography-sheet';
 import { ExplainSheet, type ExplainTarget } from '../../src/components/explain-sheet';
 import { WordSheet } from '../../src/components/word-sheet';
+import { Blob, Ring, Sparkle } from '../../src/components/figma-decor';
 
 export default function ReaderScreen() {
   const insets = useSafeAreaInsets();
@@ -62,7 +63,6 @@ export default function ReaderScreen() {
   const paragraphPositions = useRef<{ [key: number]: number }>({});
 
   const typeLevel = getTypeLevel(typeLevelId);
-  const level = getSimplifyLevel(simplifyLevel);
 
   /**
    * Teks pindaian: L1 adalah hasil OCR apa adanya; L2–L5 diminta ke backend
@@ -70,9 +70,9 @@ export default function ReaderScreen() {
    */
   const isScanned = rawText.trim().length > 0;
 
-  // Karena fitur demo ingin kita matikan limitasinya, sekarang L2-L5 juga
-  // memanggil API untuk teks statis (teks contoh).
-  const textToSimplify = isScanned ? rawText : DOC_SECTION + "\n\n" + SIMPLIFY_LEVELS[0].paragraphs.join("\n\n");
+  const textToSimplify = isScanned
+    ? rawText
+    : DOC_SECTION + '\n\n' + SIMPLIFY_LEVELS[0].paragraphs.join('\n\n');
 
   const scannedParagraphs = useMemo(
     () =>
@@ -105,9 +105,7 @@ export default function ReaderScreen() {
   }, [needsAi, aiResult, fetchSimplified]);
 
   const paragraphs = useMemo(() => {
-    if (simplifyLevel === 'L1') {
-        return scannedParagraphs;
-    }
+    if (simplifyLevel === 'L1') return scannedParagraphs;
     return aiResult ?? scannedParagraphs;
   }, [simplifyLevel, aiResult, scannedParagraphs]);
 
@@ -120,11 +118,9 @@ export default function ReaderScreen() {
     setRulerLine(0);
     setLines([]);
 
-    // Auto-scroll ke posisi paragraf yang baru jika posisinya sudah tersimpan
     setTimeout(() => {
       const yPosition = paragraphPositions.current[next];
       if (yPosition !== undefined && scrollViewRef.current) {
-        // Kurangi sedikit offset agar judul paragraf (Paragraf X dari Y) juga terlihat utuh
         scrollViewRef.current.scrollTo({ y: Math.max(0, yPosition - 30), animated: true });
       }
     }, 100);
@@ -143,114 +139,183 @@ export default function ReaderScreen() {
   const syncLines = (next: TextLayoutLine[]) => {
     setLines((current) => {
       const unchanged =
-        current.length === next.length && current.every((line, i) => line.y === next[i].y && line.height === next[i].height);
+        current.length === next.length &&
+        current.every((line, i) => line.y === next[i].y && line.height === next[i].height);
       return unchanged ? current : next;
     });
   };
 
   return (
     <>
-      <View className="flex-1 bg-background" style={{ paddingTop: insets.top + 8 }}>
-        {/* Judul dokumen + preset tipografi */}
-        <View className="flex-row items-center justify-between px-4 pb-3">
-          <View className="flex-1 pr-3">
-            <Text className="mb-1 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-text-muted">
-              DOKUMEN
-            </Text>
-            <Text className="font-opendyslexic-bold text-base text-text-main" numberOfLines={1}>
-              {isScanned ? 'Hasil Pindaian' : DOC_TITLE}
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => setTypographyOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Ubah tipografi"
-            className="flex-row items-center rounded-xl bg-primary/10 px-3.5 py-2">
-            <Type size={14} color={colors.primary} />
-            <Text className="ml-2 font-opendyslexic-bold text-xs text-primary">{typeLevel.name}</Text>
-          </Pressable>
-        </View>
+      <View className="flex-1 bg-background">
+        {/* ── Header dokumen ────────────────────────────────────────────── */}
+        <LinearGradient
+          colors={[...GRADIENTS.readerHeader.colors]}
+          locations={[...GRADIENTS.readerHeader.locations]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ paddingTop: insets.top + 8, overflow: 'hidden' }}>
+          <Blob size={90} opacity={0.06} style={{ position: 'absolute', top: -22, right: 12 }} />
+          <Ring size={70} style={{ position: 'absolute', top: 6, right: -10 }} />
+          <Sparkle size={7} style={{ position: 'absolute', top: 18, right: 96 }} />
+          <Sparkle size={4} style={{ position: 'absolute', bottom: 20, right: 140 }} />
 
-        {/* Level penyederhanaan */}
-        <View className="px-4 pb-2">
-          <Text className="mb-2 font-opendyslexic text-[10px] text-text-muted">
-            <Text className="font-opendyslexic-bold text-warm">🧠 LEVEL </Text>
-            <Text className="font-opendyslexic-bold text-primary">{level.name}</Text>
-            <Text> — {level.tagline}</Text>
-          </Text>
-          <View className="flex-row">
-            {SIMPLIFY_LEVELS.map((item) => {
-              const selected = item.id === simplifyLevel;
+          <View className="flex-row items-center p-4" style={{ gap: 12 }}>
+            <View className="flex-1">
+              <View className="flex-row">
+                <View
+                  className="flex-row items-center rounded-[14px] border border-white/[0.15] bg-white/10 px-2.5 py-1"
+                  style={{ gap: 6 }}>
+                  <BookOpen size={10} color="#ffffff" />
+                  <Text className="font-ui-bold text-[9.5px] text-white">SEDANG DIBACA</Text>
+                </View>
+              </View>
+              <Text className="mt-1.5 font-ui-bold text-[15px] text-white" numberOfLines={1}>
+                {isScanned ? 'Hasil Pindaian' : DOC_TITLE}
+              </Text>
+            </View>
 
-              return (
-                <Pressable
-                  key={item.id}
-                  onPress={() => setSimplifyLevel(item.id as SimplifyLevelId)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected }}
-                  accessibilityLabel={`Level ${item.id}: ${item.name}`}
-                  className={`mr-2 flex-1 items-center rounded-lg py-2 ${
-                    selected ? 'bg-primary' : 'bg-surface-alt'
-                  }`}>
-                  <Text
-                    className={`font-opendyslexic-bold text-[11px] ${selected ? 'text-white' : 'text-text-muted'}`}>
-                    {item.id}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            <Pressable
+              onPress={() => setTypographyOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Ubah tipografi"
+              className="h-9 flex-row items-center rounded-[14px] border border-white/20 bg-white/[0.14] px-3"
+              style={{ gap: 6 }}>
+              <Type size={13} color="#ffffff" />
+              <Text className="font-ui-bold text-xs text-white">{typeLevel.name}</Text>
+            </Pressable>
           </View>
+        </LinearGradient>
+
+        {/* ── Bilah kontrol ─────────────────────────────────────────────── */}
+        <View
+          className="border-b bg-surface/60 px-4 py-2.5"
+          style={{ borderBottomColor: colors.border }}>
+          {/* Level penyederhanaan */}
+          <View className="flex-row items-center" style={{ gap: 6 }}>
+            <View
+              className="h-[29px] flex-row items-center rounded-[14px] border border-primary/20 bg-primary/[0.12] px-2.5"
+              style={{ gap: 6 }}>
+              <Sparkles size={11} color={colors.primary} />
+              <Text className="font-ui-bold text-[10px] text-primary">AI</Text>
+            </View>
+
+            <View className="h-9 flex-1 flex-row rounded-[14px] bg-primary/[0.06] p-1" style={{ gap: 4 }}>
+              {SIMPLIFY_LEVELS.map((item) => {
+                const selected = item.id === simplifyLevel;
+
+                return (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => setSimplifyLevel(item.id as SimplifyLevelId)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`Level ${item.id}: ${item.name}`}
+                    className="flex-1">
+                    {selected ? (
+                      <LinearGradient
+                        colors={[...GRADIENTS.activePill.colors]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={{
+                          flex: 1,
+                          borderRadius: 10,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                        <Text className="font-ui-bold text-xs text-white">{item.id}</Text>
+                      </LinearGradient>
+                    ) : (
+                      <View className="flex-1 items-center justify-center rounded-[10px]">
+                        <Text className="font-ui-bold text-xs text-text-muted">{item.id}</Text>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Sakelar fitur baca + navigasi paragraf */}
+          <View className="mt-2.5 flex-row items-center" style={{ gap: 6 }}>
+            <FeatureChip
+              active={focusMode}
+              onPress={toggleFocusMode}
+              icon={<Focus size={12} color={focusMode ? '#ffffff' : colors.textMuted} />}
+              label="Fokus"
+            />
+            <FeatureChip
+              active={rulerMode}
+              onPress={toggleRulerMode}
+              icon={<Ruler size={12} color={rulerMode ? '#ffffff' : colors.textMuted} />}
+              label="Penggaris"
+            />
+            <FeatureChip
+              active={bicolorMode}
+              onPress={toggleBicolorMode}
+              icon={<Palette size={12} color={bicolorMode ? '#ffffff' : colors.textMuted} />}
+              label="Bicolor"
+            />
+
+            <View className="ml-auto flex-row items-center" style={{ gap: 4 }}>
+              <Pressable
+                onPress={() => moveParagraph(-1)}
+                disabled={activeIndex === 0}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel="Paragraf sebelumnya"
+                className="h-8 w-8 items-center justify-center rounded-[14px] bg-primary/[0.07] disabled:opacity-40">
+                <ChevronUp size={13} color={colors.primary} />
+              </Pressable>
+              <Text className="font-ui-bold text-[10px] text-text-muted">
+                {activeIndex + 1}/{shownParagraphs.length}
+              </Text>
+              <Pressable
+                onPress={() => moveParagraph(1)}
+                disabled={activeIndex >= shownParagraphs.length - 1}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel="Paragraf berikutnya"
+                className="h-8 w-8 items-center justify-center rounded-[14px] bg-primary/[0.07] disabled:opacity-40">
+                <ChevronDown size={13} color={colors.primary} />
+              </Pressable>
+            </View>
+          </View>
+
           {needsAi && simplifyLoading ? (
-            <Text className="mt-2 font-opendyslexic text-[9px] text-primary">
-              🦉 Lexi sedang menyederhanakan teksnya… sementara ini teks asli dulu.
+            <Text className="mt-2 font-ui text-[10px] text-primary">
+              Lexi sedang menyederhanakan teksnya… sementara ini teks asli dulu.
             </Text>
           ) : null}
           {needsAi && !simplifyLoading && simplifyError ? (
             <Pressable onPress={fetchSimplified} accessibilityRole="button" hitSlop={6}>
-              <Text className="mt-2 font-opendyslexic text-[9px] text-text-muted">
-                ⚠️ {simplifyError} <Text className="font-opendyslexic-bold text-primary">Ketuk untuk coba lagi.</Text>
+              <Text className="mt-2 font-ui text-[10px] text-text-muted">
+                {simplifyError}{' '}
+                <Text className="font-ui-bold text-primary">Ketuk untuk coba lagi.</Text>
               </Text>
             </Pressable>
           ) : null}
         </View>
 
-        {/* Sakelar fitur baca */}
-        <View className="flex-row items-center border-b border-border px-4 pb-3 pt-1">
-          <FeatureChip
-            active={focusMode}
-            onPress={toggleFocusMode}
-            icon={<Focus size={13} color={focusMode ? '#FFFFFF' : colors.textMuted} />}
-            label={focusMode ? 'Fokus Aktif' : 'Fokus'}
-          />
-          <FeatureChip
-            active={rulerMode}
-            onPress={toggleRulerMode}
-            icon={<Ruler size={13} color={rulerMode ? '#FFFFFF' : colors.textMuted} />}
-            label={rulerMode ? 'Penggaris ✓' : 'Penggaris'}
-          />
-          <FeatureChip
-            active={bicolorMode}
-            onPress={toggleBicolorMode}
-            icon={<Palette size={13} color={bicolorMode ? '#FFFFFF' : colors.textMuted} />}
-            label={bicolorMode ? 'Bicolor ✓' : 'Bicolor'}
-          />
-
-          {/* Indikator posisi paragraf (tanpa tombol panah ganda yang membingungkan) */}
-          <View className="ml-auto flex-row items-center">
-            <Text className="font-opendyslexic-bold text-[10px] text-text-muted">
-              {activeIndex + 1}/{shownParagraphs.length}
-            </Text>
-          </View>
-        </View>
-
-        {/* Isi bacaan */}
+        {/* ── Isi bacaan ────────────────────────────────────────────────── */}
         <ScrollView
           ref={scrollViewRef}
-          className="flex-1 px-5"
-          contentContainerStyle={{ paddingTop: 20, paddingBottom: 28 }}>
-          <Text className="mb-4 font-opendyslexic-bold text-[11px] uppercase tracking-widest text-warm">
-            {isScanned ? 'TEKS HASIL PINDAIAN' : DOC_SECTION}
-          </Text>
+          className="flex-1"
+          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+          {/* Judul bagian dokumen */}
+          <View
+            className="flex-row items-center rounded-[14px] bg-primary/[0.06] px-3 py-2"
+            style={{ gap: 8 }}>
+            <LinearGradient
+              colors={[...GRADIENTS.activePill.colors]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={{ width: 4, height: 40, borderRadius: 2 }}
+            />
+            <Text className="flex-1 font-read-bold text-[13px] leading-5 text-text-main">
+              {isScanned ? 'Teks hasil pindaian' : 'Mitokondria — Pembangkit Energi Sel'}
+            </Text>
+          </View>
 
           {shownParagraphs.map((paragraph, index) => {
             const isActive = index === activeIndex;
@@ -258,21 +323,23 @@ export default function ReaderScreen() {
             const showRuler = rulerMode && isActive && lines.length > 0;
             const rulerTarget = lines[Math.min(rulerLine, lines.length - 1)];
 
-            // Hanya tampilkan paragraf aktif jika mode fokus menyala. Jika mati, tampilkan semua.
-            if (focusMode && !isActive) return null;
-
             return (
               <View
                 key={index}
                 onLayout={(event) => {
-                  const layout = event.nativeEvent.layout;
-                  paragraphPositions.current[index] = layout.y;
+                  paragraphPositions.current[index] = event.nativeEvent.layout.y;
                 }}
-                className={`mb-6 ${
-                  isActive ? 'rounded-2xl border-l-4 border-primary bg-primary/5 p-4' : ''
-                }`}>
+                className={
+                  isActive
+                    ? 'mt-4 rounded-2xl border border-primary/20 bg-primary/[0.05] p-4'
+                    : 'mt-6'
+                }>
+                {/*
+                  Mode Fokus meredupkan paragraf lain, bukan menyembunyikannya —
+                  pembaca tetap bisa melihat konteks di sekitarnya.
+                */}
                 {isActive ? (
-                  <Text className="mb-2 font-opendyslexic-bold text-[9px] uppercase tracking-widest text-primary">
+                  <Text className="mb-2.5 font-ui-bold text-[10px] text-primary">
                     PARAGRAF {index + 1} DARI {shownParagraphs.length}
                   </Text>
                 ) : null}
@@ -290,75 +357,47 @@ export default function ReaderScreen() {
                     dimmed={dimmed}
                     onWordPress={dimmed ? undefined : setSelectedWord}
                     onTextLayout={
-                      rulerMode && isActive ? (event) => syncLines(event.nativeEvent.lines) : undefined
+                      rulerMode && isActive
+                        ? (event) => syncLines(event.nativeEvent.lines)
+                        : undefined
                     }>
                     {paragraph}
                   </DyslexicText>
                 </View>
 
                 {showRuler ? (
-                  <View className="mt-2 flex-row items-center">
+                  <View className="mt-3 flex-row items-center" style={{ gap: 6 }}>
                     <Pressable
                       onPress={() => moveRuler(-1)}
                       hitSlop={8}
                       accessibilityRole="button"
                       accessibilityLabel="Penggaris naik satu baris"
-                      className="mr-1.5 h-7 w-7 items-center justify-center rounded-lg bg-surface-alt">
-                      <ChevronUp size={13} color={colors.textMuted} />
+                      className="h-7 w-7 items-center justify-center rounded-[10px] bg-primary/[0.07]">
+                      <ChevronUp size={13} color={colors.primary} />
                     </Pressable>
                     <Pressable
                       onPress={() => moveRuler(1)}
                       hitSlop={8}
                       accessibilityRole="button"
                       accessibilityLabel="Penggaris turun satu baris"
-                      className="mr-2 h-7 w-7 items-center justify-center rounded-lg bg-surface-alt">
-                      <ChevronDown size={13} color={colors.textMuted} />
+                      className="h-7 w-7 items-center justify-center rounded-[10px] bg-primary/[0.07]">
+                      <ChevronDown size={13} color={colors.primary} />
                     </Pressable>
-                    <Text className="font-opendyslexic text-[9px] text-text-muted">
+                    <Text className="font-ui text-[10px] text-text-muted">
                       Baris {Math.min(rulerLine, lines.length - 1) + 1} dari {lines.length}
                     </Text>
-                  </View>
-                ) : null}
-
-                {/* Tombol navigasi paragraf di bawah paragraf aktif — selalu ada di setiap paragraf yang difokuskan/diaktifkan */}
-                {isActive ? (
-                  <View className="mt-6 flex-row items-center justify-between border-t border-border/50 pt-4">
-                    <Pressable
-                      onPress={() => moveParagraph(-1)}
-                      disabled={activeIndex === 0}
-                      accessibilityRole="button"
-                      accessibilityLabel="Paragraf sebelumnya"
-                      className="h-11 flex-1 flex-row items-center justify-center gap-2 mr-2 rounded-xl bg-primary/10 disabled:opacity-30">
-                      <ChevronLeft size={18} color={colors.primary} />
-                      <Text className="font-opendyslexic-bold text-[11px] text-primary">SEBELUM</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => moveParagraph(1)}
-                      disabled={activeIndex >= shownParagraphs.length - 1}
-                      accessibilityRole="button"
-                      accessibilityLabel="Paragraf berikutnya"
-                      className="h-11 flex-1 flex-row items-center justify-center gap-2 ml-2 rounded-xl bg-primary/10 disabled:opacity-30">
-                      <Text className="font-opendyslexic-bold text-[11px] text-primary">BERIKUT</Text>
-                      <ChevronRight size={18} color={colors.primary} />
-                    </Pressable>
                   </View>
                 ) : null}
               </View>
             );
           })}
-
-          {bicolorMode ? (
-            <View className="rounded-2xl border border-border bg-surface p-3">
-              <Text className="font-opendyslexic text-[9px] leading-4 text-text-muted">
-                <Text className="font-opendyslexic-bold text-primary">🌈 Bicolor Aktif</Text> — kata bergantian warna
-                membantu mata melacak posisi.
-              </Text>
-            </View>
-          ) : null}
         </ScrollView>
 
-        {/* Aksi bawah */}
-        <View className="border-t border-border px-4 pb-3 pt-3">
+        {/* ── Aksi bawah ────────────────────────────────────────────────── */}
+        <LinearGradient
+          colors={['rgba(0,0,0,0)', colors.background]}
+          locations={[0, 0.45]}
+          style={{ paddingHorizontal: 16, paddingTop: 24, paddingBottom: 12 }}>
           <Pressable
             onPress={() =>
               setExplainTarget({
@@ -368,15 +407,35 @@ export default function ReaderScreen() {
                 useStaticAnswers: !isScanned,
               })
             }
-            accessibilityRole="button"
-            className="mb-2 flex-row items-center justify-center rounded-2xl bg-primary/10 py-3.5">
-            <Lightbulb size={15} color={colors.primary} />
-            <Text className="ml-2 font-opendyslexic-bold text-xs text-primary">Jelaskan Teks Ini</Text>
+            accessibilityRole="button">
+            <LinearGradient
+              colors={['rgba(124,58,237,0.12)', 'rgba(79,70,229,0.12)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{
+                height: 53,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: 'rgba(124,58,237,0.2)',
+              }}>
+              <Lightbulb size={17} color={colors.primary} />
+              <Text className="font-ui-bold text-[15px] text-primary">Jelaskan Teks Ini</Text>
+            </LinearGradient>
           </Pressable>
-          <Text className="text-center font-opendyslexic text-[9px] text-text-muted">
-            💡 Ketuk kata apapun untuk melihat lebih jelas
-          </Text>
-        </View>
+
+          <View
+            className="mt-3 h-[37px] flex-row items-center justify-center rounded-[14px] bg-primary/[0.04]"
+            style={{ gap: 8 }}>
+            <Lightbulb size={13} color={colors.textMuted} />
+            <Text className="font-ui text-[11px] text-text-muted">
+              Ketuk kata untuk melihat suku kata
+            </Text>
+          </View>
+        </LinearGradient>
       </View>
 
       <TypographySheet visible={typographyOpen} onClose={() => setTypographyOpen(false)} />
@@ -393,6 +452,7 @@ export default function ReaderScreen() {
   );
 }
 
+/** Chip sakelar fitur baca — aktif jadi pil gradien, mati jadi ungu 7%. */
 function FeatureChip({
   active,
   onPress,
@@ -404,19 +464,39 @@ function FeatureChip({
   icon: React.ReactNode;
   label: string;
 }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="switch"
-      accessibilityState={{ checked: active }}
-      className={`mr-2 flex-row items-center rounded-full px-3 py-1.5 ${
-        active ? 'bg-primary' : 'border border-border bg-surface'
-      }`}>
+  const content = (
+    <>
       {icon}
-      <Text
-        className={`ml-1.5 font-opendyslexic-bold text-[10px] ${active ? 'text-white' : 'text-text-muted'}`}>
+      <Text className={`font-ui-bold text-[11px] ${active ? 'text-white' : 'text-text-muted'}`}>
         {label}
       </Text>
+    </>
+  );
+
+  return (
+    <Pressable onPress={onPress} accessibilityRole="switch" accessibilityState={{ checked: active }}>
+      {active ? (
+        <LinearGradient
+          colors={[...GRADIENTS.activePill.colors]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={{
+            height: 29,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            paddingHorizontal: 10,
+            borderRadius: 14,
+          }}>
+          {content}
+        </LinearGradient>
+      ) : (
+        <View
+          className="h-[29px] flex-row items-center rounded-[14px] bg-primary/[0.07] px-2.5"
+          style={{ gap: 4 }}>
+          {content}
+        </View>
+      )}
     </Pressable>
   );
 }

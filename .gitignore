@@ -1,1 +1,19 @@
 mockup v1/
+
+# Dump mentah Figma REST API (~7 MB). Aset yang benar-benar dipakai sudah
+# di-export ke mobile-app/assets/figma/, jadi dump ini tidak perlu ikut repo.
+figma_response.json
+
+# Installer Composer — unduh ulang dari getcomposer.org bila perlu.
+composer.phar
+*.phar
+
+# Agent tasks
+task.md
+
+# Progress image
+berapa persen sudah progress lexiscan.png
+
+# AI Assistants
+.claude/
+.mcp.json

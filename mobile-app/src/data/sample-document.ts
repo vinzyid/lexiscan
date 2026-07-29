@@ -135,11 +135,12 @@ export const SCAN_TIPS = [
   'Pastikan cahaya cukup terang',
   'Semua teks masuk dalam bingkai',
   'Sistem otomatis perbaiki kemiringan',
-  'Hasil langsung tampil dengan font disleksia',
+  'Hasil tampil dengan font disleksia',
 ];
 
 /** Tip harian di dashboard — dirotasi berdasarkan tanggal, bukan acak. */
 export const DAILY_TIPS = [
+  'Cahaya hangat lebih nyaman dari layar putih terang.',
   'Gunakan jari untuk mengikuti baris yang sedang kamu baca.',
   'Bicolor Words membantu matamu melacak posisi dalam kalimat.',
   'Kalau satu kalimat terasa berat, naikkan level penyederhanaan satu tingkat.',

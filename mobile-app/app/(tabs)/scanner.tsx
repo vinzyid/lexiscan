@@ -1,21 +1,54 @@
-
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView, Alert, ActivityIndicator, Animated } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Check, Upload, Camera as CameraIcon, ScanLine, ChevronRight } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import {
+  ArrowRight,
+  Camera as CameraIcon,
+  Check,
+  Crop,
+  RotateCw,
+  ScanLine,
+  Sparkles,
+  Sun,
+  Upload,
+} from 'lucide-react-native';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
 import * as DocumentPicker from 'expo-document-picker';
 import { ImageManipulator } from 'expo-image-manipulator';
 
 import { useOCRStore } from '../../src/store/useStore';
 import { useThemeColors } from '../../src/theme/theme-provider';
-import { getTypeLevel } from '../../src/theme/palettes';
+import { GRADIENTS, getTypeLevel } from '../../src/theme/palettes';
 import { PREPROCESSING_STEPS, SCAN_TIPS } from '../../src/data/sample-document';
 import { correctTypo } from '../../src/api/ai';
+import { Blob, HexDecor, Ring, ScreenBackdrop, Sparkle } from '../../src/components/figma-decor';
+import { IlluScan } from '../../src/components/illustrations';
 
 type Phase = 'idle' | 'scanning' | 'done';
+
+/** Header layar Pindai — lebih ungu dari banner dashboard. */
+const SCAN_HEADER = ['#3b0764', '#4c1d95', '#1e3a8a'] as const;
+/** Kotak pratinjau kamera. */
+const VIEWFINDER = ['#0c0c1e', '#141430'] as const;
+
+/** Ubin ikon 36x36 tiap baris tip — satu warna per tip, urut seperti Figma. */
+const TIP_TILES = [
+  { gradient: ['#f59e0b', '#fbbf24'] as const, Icon: Sun },
+  { gradient: ['#059669', '#10b981'] as const, Icon: Crop },
+  { gradient: ['#7c3aed', '#8b5cf6'] as const, Icon: RotateCw },
+  { gradient: ['#4f46e5', '#6366f1'] as const, Icon: Sparkles },
+];
 
 export default function ScannerScreen() {
   const insets = useSafeAreaInsets();
@@ -29,46 +62,39 @@ export default function ScannerScreen() {
   const [detected, setDetected] = useState('');
   const [stepsDone, setStepsDone] = useState(0);
 
-  // State to force re-render camera when returning to tab
+  // Kamera dilepas saat tab kehilangan fokus supaya pratinjau tidak membeku.
   const [isFocused, setIsFocused] = useState(true);
 
   const setRawText = useOCRStore((s) => s.setRawText);
   const typeLevel = getTypeLevel(useOCRStore((s) => s.typeLevelId));
 
-  // State untuk indikator memperbaiki typo di background
   const [isCorrectingTypo, setIsCorrectingTypo] = useState(false);
 
-  // Animasi untuk layar sukses
-  const successScale = useRef(new Animated.Value(0.5)).current;
-  const successOpacity = useRef(new Animated.Value(0)).current;
+  /*
+   * `useState` dengan initializer, bukan `useRef(...).current` — nilainya tetap
+   * bertahan antar render tapi tidak menyentuh ref saat render berlangsung.
+   */
+  const [successScale] = useState(() => new Animated.Value(0.5));
+  const [successOpacity] = useState(() => new Animated.Value(0));
 
   useFocusEffect(
     useCallback(() => {
       setIsFocused(true);
       return () => setIsFocused(false);
-    }, [])
+    }, []),
   );
 
   useEffect(() => {
     if (phase === 'done') {
       Animated.parallel([
-        Animated.spring(successScale, {
-          toValue: 1,
-          tension: 50,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-        Animated.timing(successOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
+        Animated.spring(successScale, { toValue: 1, tension: 50, friction: 7, useNativeDriver: true }),
+        Animated.timing(successOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
       ]).start();
     } else {
       successScale.setValue(0.5);
       successOpacity.setValue(0);
     }
-  }, [phase]);
+  }, [phase, successScale, successOpacity]);
 
   // Ceklis preprocessing dimunculkan bertahap supaya prosesnya terlihat, bukan melompat.
   useEffect(() => {
@@ -76,6 +102,17 @@ export default function ScannerScreen() {
     const timer = setTimeout(() => setStepsDone((n) => n + 1), 260);
     return () => clearTimeout(timer);
   }, [phase, stepsDone]);
+
+  const correctTypoInBackground = async (text: string) => {
+    try {
+      setIsCorrectingTypo(true);
+      setDetected(await correctTypo(text));
+    } catch (e) {
+      console.warn('Gagal memperbaiki typo via AI, memakai text asli dari OCR.', e);
+    } finally {
+      setIsCorrectingTypo(false);
+    }
+  };
 
   const handleScan = async () => {
     if (!cameraRef.current) return;
@@ -85,14 +122,13 @@ export default function ScannerScreen() {
       const photo = await cameraRef.current.takePictureAsync();
       if (!photo?.uri) throw new Error('Kamera tidak mengembalikan gambar.');
 
-      // Crop ke area tengah (60% dari lebar & tinggi) — sesuai batas kotak panduan
-      const cropWidth = photo.width * 0.6;
-      const cropHeight = photo.height * 0.6;
-      const originX = photo.width * 0.2;
-      const originY = photo.height * 0.2;
-
-      const context = ImageManipulator.manipulate(photo.uri)
-        .crop({ originX, originY, width: cropWidth, height: cropHeight });
+      // Crop ke area tengah (60% dari lebar & tinggi) — sesuai batas kotak panduan.
+      const context = ImageManipulator.manipulate(photo.uri).crop({
+        originX: photo.width * 0.2,
+        originY: photo.height * 0.2,
+        width: photo.width * 0.6,
+        height: photo.height * 0.6,
+      });
       const imageRef = await context.renderAsync();
       const cropped = await imageRef.saveAsync({ format: 'jpeg' as any });
 
@@ -105,29 +141,13 @@ export default function ScannerScreen() {
         return;
       }
 
-      // Langsung munculkan ke halaman berhasil dengan teks mentah dulu
       setDetected(rawText);
       setStepsDone(0);
       setPhase('done');
-
-      // Lalu perbaiki typo di background
       correctTypoInBackground(rawText);
     } catch (error) {
       setPhase('idle');
       Alert.alert('Gagal memindai', error instanceof Error ? error.message : 'Terjadi kesalahan.');
-    }
-  };
-
-  const correctTypoInBackground = async (rawText: string) => {
-    try {
-      setIsCorrectingTypo(true);
-      const finalCleanText = await correctTypo(rawText);
-      // Update text yang di layar dengan hasil yang sudah diperbaiki
-      setDetected(finalCleanText);
-    } catch (e) {
-      console.warn('Gagal memperbaiki typo via AI, memakai text asli dari OCR.', e);
-    } finally {
-      setIsCorrectingTypo(false);
     }
   };
 
@@ -138,15 +158,10 @@ export default function ScannerScreen() {
         copyToCacheDirectory: true,
       });
 
-      if (result.canceled || !result.assets || result.assets.length === 0) {
-        return; // User membatalkan pemilihan
-      }
-
-      const file = result.assets[0];
+      if (result.canceled || !result.assets?.length) return;
 
       setPhase('scanning');
-
-      const recognitionResult = await TextRecognition.recognize(file.uri);
+      const recognitionResult = await TextRecognition.recognize(result.assets[0].uri);
       const rawText = recognitionResult?.text?.trim() ?? '';
 
       if (!rawText) {
@@ -158,11 +173,13 @@ export default function ScannerScreen() {
       setDetected(rawText);
       setStepsDone(0);
       setPhase('done');
-
       correctTypoInBackground(rawText);
     } catch (error) {
       setPhase('idle');
-      Alert.alert('Gagal membaca gambar', error instanceof Error ? error.message : 'Terjadi kesalahan.');
+      Alert.alert(
+        'Gagal membaca gambar',
+        error instanceof Error ? error.message : 'Terjadi kesalahan.',
+      );
     }
   };
 
@@ -171,223 +188,360 @@ export default function ScannerScreen() {
     router.push('/reader');
   };
 
-  const resetScan = () => {
-    setPhase('idle');
-    setDetected('');
-    setStepsDone(0);
-  };
-
-  if (!permission) {
-    return <View className="flex-1 bg-background" />;
-  }
+  if (!permission) return <View className="flex-1 bg-background" />;
 
   if (!permission.granted) {
     return (
       <View className="flex-1 items-center justify-center bg-background px-8">
-        <View className="mb-4 h-24 w-24 items-center justify-center rounded-full bg-primary/10">
+        <ScreenBackdrop />
+        <View className="mb-5 h-24 w-24 items-center justify-center rounded-3xl bg-primary/10">
           <CameraIcon size={40} color={colors.primary} />
         </View>
-        <Text className="mb-6 text-center font-opendyslexic text-sm leading-6 text-text-main">
+        <Text className="mb-6 text-center font-ui text-sm leading-6 text-text-main">
           LexiScan butuh izin kamera untuk memindai dokumen fisikmu.
         </Text>
-        <Pressable
-          onPress={requestPermission}
-          accessibilityRole="button"
-          className="rounded-2xl bg-primary px-6 py-3.5">
-          <Text className="font-opendyslexic-bold text-sm text-white">Berikan Izin Kamera</Text>
+        <Pressable onPress={requestPermission} accessibilityRole="button">
+          <PrimaryButtonSurface>
+            <Text className="font-ui-bold text-[15px] text-white">Berikan Izin Kamera</Text>
+          </PrimaryButtonSurface>
         </Pressable>
       </View>
     );
   }
 
   const paragraphCount = detected.split(/\n{2,}|\n/).filter((line) => line.trim().length > 0).length;
+  const busy = phase === 'scanning' || isCorrectingTypo;
 
   return (
-    <ScrollView
-      className="flex-1 bg-background px-4"
-      contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 24 }}
-      showsVerticalScrollIndicator={false}>
-      <View className="mb-5 flex-row items-center">
-        <View className="mr-3 h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
-          <ScanLine size={24} color={colors.primary} />
-        </View>
-        <View className="flex-1">
-          <Text className="mb-1 font-opendyslexic-bold text-2xl text-text-main">Smart OCR Scan</Text>
-          <Text className="font-opendyslexic text-xs text-text-muted">
-            Foto dokumen fisik → teks digital ramah disleksia
-          </Text>
-        </View>
-      </View>
+    <View className="flex-1 bg-background">
+      <ScreenBackdrop />
 
-      {phase === 'done' ? (
-        <Animated.View style={{ opacity: successOpacity, transform: [{ scale: successScale }] }}>
-          <View className="mb-4 h-52 items-center justify-center rounded-3xl bg-[#111122]">
-            <View className="mb-3 h-20 w-20 items-center justify-center rounded-full bg-success/20">
-              <Check size={40} color="#10b981" />
-            </View>
-            <Text className="font-opendyslexic-bold text-sm text-success">
-              {isCorrectingTypo ? 'Memperbaiki Teks...' : 'Berhasil!'}
-            </Text>
+      <ScrollView contentContainerStyle={{ paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+        {/* ── Header ────────────────────────────────────────────────────── */}
+        <LinearGradient
+          colors={[...SCAN_HEADER]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ paddingTop: insets.top + 8, overflow: 'hidden' }}>
+          <Blob size={100} opacity={0.06} style={{ position: 'absolute', top: -26, right: 10 }} />
+          <Ring size={80} style={{ position: 'absolute', top: 20, right: -14 }} />
+          <HexDecor size={22} style={{ position: 'absolute', bottom: 26, right: 120 }} />
+          <View style={{ position: 'absolute', right: 22, bottom: 18, opacity: 0.9 }}>
+            <IlluScan size={80} />
           </View>
+          <Sparkle size={10} style={{ position: 'absolute', top: 24, right: 92 }} />
+          <Sparkle size={5} style={{ position: 'absolute', bottom: 30, right: 40 }} />
 
-          <View className="mb-4 rounded-3xl border border-border bg-surface p-5">
-            <View className="mb-3 flex-row items-center justify-between">
-              <Text className="font-opendyslexic-bold text-[10px] uppercase tracking-widest text-primary">
-                📄 TEKS TERDETEKSI
-              </Text>
-              {isCorrectingTypo && (
-                <View className="flex-row items-center">
-                  <ActivityIndicator size="small" color={colors.primary} className="mr-2" />
-                  <Text className="font-opendyslexic-bold text-[10px] text-primary">
-                    AI sedang merapikan teks...
-                  </Text>
-                </View>
-              )}
-            </View>
-            <Text
-              className="mb-4 font-opendyslexic text-text-main"
-              numberOfLines={4}
-              style={{ fontSize: 14, lineHeight: 14 * typeLevel.lineHeightRatio, letterSpacing: 0.4 }}>
-              {detected}
-            </Text>
+          <View className="px-5 pb-6 pt-5">
             <View className="flex-row">
-              <View className="mr-2 rounded-full bg-primary/10 px-3 py-1.5">
-                <Text className="font-opendyslexic-bold text-[10px] text-primary">
-                  {paragraphCount} paragraf
-                </Text>
-              </View>
-              <View className="rounded-full bg-primary/10 px-3 py-1.5">
-                <Text className="font-opendyslexic-bold text-[10px] text-primary">Tipografi otomatis</Text>
+              <View
+                className="flex-row items-center rounded-[14px] border border-white/[0.18] bg-white/[0.12] px-3 py-1.5"
+                style={{ gap: 8 }}>
+                <ScanLine size={12} color="#ffffff" />
+                <Text className="font-ui-bold text-[11px] text-white/85">SMART OCR SCAN</Text>
               </View>
             </View>
-          </View>
-
-          <View className="mb-5 rounded-3xl border border-border bg-surface p-5">
-            <Text className="mb-4 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-primary">
-              🔒 PREPROCESSING OTOMATIS
+            <Text className="mt-3 font-ui-bold text-2xl text-white">Pindai Dokumen</Text>
+            <Text className="mt-0.5 font-ui text-[13px] text-white/55">
+              Foto fisik jadi teks digital ramah disleksia
             </Text>
-            {PREPROCESSING_STEPS.map((step, index) => {
-              const done = index < stepsDone;
-              return (
-                <View key={step} className="mb-3 flex-row items-center" style={{ opacity: done ? 1 : 0.35 }}>
-                  <View
-                    className={`mr-3 h-5 w-5 items-center justify-center rounded-md ${
-                      done ? 'bg-success' : 'bg-surface-alt'
-                    }`}>
-                    {done ? <Check size={12} color="#FFFFFF" /> : null}
-                  </View>
-                  <Text className="flex-1 font-opendyslexic text-xs text-text-main">{step}</Text>
+          </View>
+        </LinearGradient>
+
+        <View className="px-4 pt-5" style={{ gap: 20 }}>
+          {phase === 'done' ? (
+            <Animated.View
+              style={{ opacity: successOpacity, transform: [{ scale: successScale }], gap: 20 }}>
+              {/* Konfirmasi berhasil */}
+              <LinearGradient
+                colors={[...VIEWFINDER]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  height: 210,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 24,
+                  borderWidth: 1,
+                  borderColor: '#10b981',
+                }}>
+                <View
+                  className="h-12 w-12 items-center justify-center rounded-full"
+                  style={{ backgroundColor: 'rgba(16,185,129,0.15)' }}>
+                  <Check size={26} color="#10b981" strokeWidth={3} />
                 </View>
-              );
-            })}
-          </View>
+                <Text className="mt-2 font-ui-bold text-sm" style={{ color: '#10b981' }}>
+                  {isCorrectingTypo ? 'Merapikan teks…' : 'Berhasil!'}
+                </Text>
+              </LinearGradient>
 
-          <Pressable
-            onPress={openReader}
-            accessibilityRole="button"
-            className="mb-3 flex-row items-center justify-center rounded-2xl bg-primary py-4">
-            <Text className="mr-2 font-opendyslexic-bold text-base text-white">Buka & Baca Sekarang</Text>
-            <ChevronRight size={18} color="#FFFFFF" />
-          </Pressable>
-          <Pressable onPress={resetScan} accessibilityRole="button" className="rounded-2xl py-3">
-            <Text className="text-center font-opendyslexic-bold text-xs text-text-muted">
-              ← Pindai dokumen lain
-            </Text>
-          </Pressable>
-        </Animated.View>
-      ) : (
-        <>
-          {/* Pilihan sumber */}
-          <View className="mb-5 flex-row rounded-2xl border border-border bg-surface p-1">
-            <SourceTab
-              active={tab === 'camera'}
-              onPress={() => setTab('camera')}
-              icon={<CameraIcon size={15} color={tab === 'camera' ? '#FFFFFF' : colors.textMuted} />}
-              label="Kamera"
-            />
-            <SourceTab
-              active={tab === 'upload'}
-              onPress={() => setTab('upload')}
-              icon={<Upload size={15} color={tab === 'upload' ? '#FFFFFF' : colors.textMuted} />}
-              label="Unggah"
-            />
-          </View>
+              {/* Teks terdeteksi */}
+              <View
+                className="rounded-2xl bg-surface p-4"
+                style={{ borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)' }}>
+                <View className="flex-row items-center" style={{ gap: 8 }}>
+                  <View className="h-2 w-2 rounded-full" style={{ backgroundColor: '#10b981' }} />
+                  <Text className="font-ui-bold text-[10px]" style={{ color: '#10b981' }}>
+                    TEKS TERDETEKSI
+                  </Text>
+                  {isCorrectingTypo ? (
+                    <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 'auto' }} />
+                  ) : null}
+                </View>
 
-          {/* Pratinjau */}
-          <View className="mb-5 aspect-[4/3] w-full overflow-hidden rounded-3xl bg-[#111122]">
-            {tab === 'camera' && isFocused ? (
-              <View style={{ flex: 1 }}>
-                <CameraView ref={cameraRef} style={{ flex: 1 }} facing="back" />
-                <View className="absolute h-full w-full items-center justify-center" pointerEvents="none">
-                  <View className="h-40 w-40 items-center justify-center rounded-2xl border-2 border-dashed border-white/50">
-                    <ScanLine size={26} color="rgba(255,255,255,0.6)" />
-                  </View>
-                  <Text className="mt-4 font-opendyslexic text-xs text-white/70">Arahkan ke dokumen</Text>
+                <Text
+                  className="mt-3 font-read text-text-main"
+                  numberOfLines={4}
+                  style={{
+                    fontSize: 14,
+                    lineHeight: 14 * typeLevel.lineHeightRatio,
+                    letterSpacing: 0.4,
+                  }}>
+                  {detected}
+                </Text>
+
+                <View
+                  className="mt-3 flex-row border-t pt-3"
+                  style={{ gap: 8, borderTopColor: colors.border }}>
+                  <StatChip label={`${paragraphCount} paragraf`} color="#10b981" tint="rgba(16,185,129,0.1)" />
+                  <StatChip
+                    label="Font otomatis"
+                    color={colors.primary}
+                    tint="rgba(124,58,237,0.08)"
+                  />
+                  <StatChip label="Siap AI" color={colors.primary} tint="rgba(124,58,237,0.08)" />
                 </View>
               </View>
-            ) : (
-              <View className="flex-1 items-center justify-center">
-                <Upload size={44} color={colors.primary} />
-                <Text className="mt-4 font-opendyslexic text-xs text-white/70">PDF, JPG, atau PNG</Text>
-              </View>
-            )}
-          </View>
 
-          {/* Tips */}
-          <View className="mb-5 rounded-3xl border border-border bg-surface p-5">
-            <Text className="mb-4 font-opendyslexic-bold text-[10px] uppercase tracking-widest text-primary">
-              TIPS SCAN TERBAIK
-            </Text>
-            {SCAN_TIPS.map((tip) => (
-              <View key={tip} className="mb-3 flex-row items-center">
-                <View className="mr-3 rounded-full bg-primary/10 p-1">
-                  <Check size={11} color={colors.primary} />
+              {/* Preprocessing */}
+              <View
+                className="rounded-2xl bg-surface p-4"
+                style={{ borderWidth: 1, borderColor: colors.border }}>
+                <Text className="font-ui-bold text-[10px] text-text-muted">
+                  PREPROCESSING OTOMATIS
+                </Text>
+
+                <View className="mt-3.5" style={{ gap: 10 }}>
+                  {PREPROCESSING_STEPS.map((step, index) => {
+                    const done = index < stepsDone;
+
+                    return (
+                      <View
+                        key={step}
+                        className="h-14 flex-row items-center rounded-[14px] px-3"
+                        style={{
+                          gap: 12,
+                          backgroundColor: done ? 'rgba(16,185,129,0.06)' : 'transparent',
+                          opacity: done ? 1 : 0.4,
+                        }}>
+                        <GradientTile gradient={['#10b981', '#059669']}>
+                          <Check size={15} color="#ffffff" strokeWidth={3} />
+                        </GradientTile>
+                        <Text
+                          className="flex-1 font-ui-bold text-[13px]"
+                          style={{ color: done ? '#10b981' : colors.textMuted }}>
+                          {step}
+                        </Text>
+                        {done ? <Check size={14} color="#10b981" /> : null}
+                      </View>
+                    );
+                  })}
                 </View>
-                <Text className="flex-1 font-opendyslexic text-xs text-text-main">{tip}</Text>
               </View>
-            ))}
-          </View>
 
-          {tab === 'camera' ? (
-            <Pressable
-              onPress={handleScan}
-              disabled={phase === 'scanning' || isCorrectingTypo}
-              accessibilityRole="button"
-              className={`flex-row items-center justify-center rounded-2xl py-4 ${
-                phase === 'scanning' || isCorrectingTypo ? 'bg-primary/50' : 'bg-primary'
-              }`}>
-              {phase === 'scanning' || isCorrectingTypo ? <ActivityIndicator color="#FFFFFF" className="mr-3" /> : null}
-              <Text className="mr-2 font-opendyslexic-bold text-base text-white">
-                {phase === 'scanning'
-                  ? 'Memproses…'
-                  : isCorrectingTypo
-                    ? 'Memperbaiki Typo (AI)…'
-                    : 'Mulai Scan'}
-              </Text>
-              {!(phase === 'scanning' || isCorrectingTypo) && <CameraIcon size={18} color="#FFFFFF" />}
-            </Pressable>
+              <Pressable onPress={openReader} accessibilityRole="button">
+                <PrimaryButtonSurface>
+                  <ArrowRight size={18} color="#ffffff" />
+                  <Text className="font-ui-bold text-[15px] text-white">Buka dan Baca</Text>
+                </PrimaryButtonSurface>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  setPhase('idle');
+                  setDetected('');
+                  setStepsDone(0);
+                }}
+                accessibilityRole="button"
+                className="py-1">
+                <Text className="text-center font-ui-bold text-xs text-text-muted">
+                  ← Pindai dokumen lain
+                </Text>
+              </Pressable>
+            </Animated.View>
           ) : (
-            <Pressable
-              onPress={handleUpload}
-              disabled={phase === 'scanning' || isCorrectingTypo}
-              accessibilityRole="button"
-              className={`flex-row items-center justify-center rounded-2xl py-4 ${
-                phase === 'scanning' || isCorrectingTypo ? 'bg-primary/50' : 'bg-primary'
-              }`}>
-              {phase === 'scanning' || isCorrectingTypo ? <ActivityIndicator color="#FFFFFF" className="mr-3" /> : null}
-              <Text className="mr-2 font-opendyslexic-bold text-base text-white">
-                {phase === 'scanning'
-                  ? 'Memproses…'
-                  : isCorrectingTypo
-                    ? 'Memperbaiki Typo (AI)…'
-                    : 'Pilih Gambar'}
-              </Text>
-              {!(phase === 'scanning' || isCorrectingTypo) && <Upload size={18} color="#FFFFFF" />}
-            </Pressable>
+            <>
+              {/* Pilihan sumber */}
+              <View
+                className="h-[54px] flex-row rounded-2xl bg-primary/[0.05] p-1.5"
+                style={{ gap: 6, borderWidth: 1, borderColor: colors.border }}>
+                <SourceTab
+                  active={tab === 'camera'}
+                  onPress={() => setTab('camera')}
+                  icon={
+                    <CameraIcon size={15} color={tab === 'camera' ? '#ffffff' : colors.textMuted} />
+                  }
+                  label="Kamera"
+                />
+                <SourceTab
+                  active={tab === 'upload'}
+                  onPress={() => setTab('upload')}
+                  icon={<Upload size={15} color={tab === 'upload' ? '#ffffff' : colors.textMuted} />}
+                  label="Unggah File"
+                />
+              </View>
+
+              {/* Pratinjau */}
+              <LinearGradient
+                colors={[...VIEWFINDER]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  height: 210,
+                  borderRadius: 24,
+                  overflow: 'hidden',
+                  borderWidth: 1,
+                  borderColor: 'rgba(124,58,237,0.45)',
+                }}>
+                {tab === 'camera' && isFocused ? (
+                  <CameraView ref={cameraRef} style={{ flex: 1 }} facing="back" />
+                ) : null}
+
+                <View
+                  className="absolute h-full w-full items-center justify-center"
+                  pointerEvents="none">
+                  {/* Empat siku panduan bingkai */}
+                  <CornerBracket style={{ top: 16, left: 16 }} corners="tl" />
+                  <CornerBracket style={{ top: 16, right: 16 }} corners="tr" />
+                  <CornerBracket style={{ bottom: 16, left: 16 }} corners="bl" />
+                  <CornerBracket style={{ bottom: 16, right: 16 }} corners="br" />
+
+                  {tab === 'camera' ? (
+                    <>
+                      <ScanLine size={38} color="rgba(255,255,255,0.28)" />
+                      <Text className="mt-2.5 font-ui text-xs text-white/[0.28]">
+                        Arahkan ke dokumen
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={38} color="rgba(255,255,255,0.28)" />
+                      <Text className="mt-2.5 font-ui text-xs text-white/[0.28]">
+                        PDF, JPG, atau PNG
+                      </Text>
+                    </>
+                  )}
+                </View>
+              </LinearGradient>
+
+              {/* Tips */}
+              <View
+                className="rounded-2xl bg-surface p-4"
+                style={{ borderWidth: 1, borderColor: colors.border }}>
+                <Text className="font-ui-bold text-[10px] text-text-muted">TIPS SCAN TERBAIK</Text>
+                <View className="mt-3.5" style={{ gap: 10 }}>
+                  {SCAN_TIPS.map((tip, index) => {
+                    const { gradient, Icon } = TIP_TILES[index % TIP_TILES.length];
+
+                    return (
+                      <View key={tip} className="flex-row items-center" style={{ gap: 12 }}>
+                        <GradientTile gradient={gradient}>
+                          <Icon size={15} color="#ffffff" />
+                        </GradientTile>
+                        <Text className="flex-1 font-ui text-[13px] text-text-muted">{tip}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <Pressable
+                onPress={tab === 'camera' ? handleScan : handleUpload}
+                disabled={busy}
+                accessibilityRole="button">
+                <PrimaryButtonSurface dimmed={busy}>
+                  {busy ? (
+                    <ActivityIndicator color="#ffffff" />
+                  ) : tab === 'camera' ? (
+                    <CameraIcon size={18} color="#ffffff" />
+                  ) : (
+                    <Upload size={18} color="#ffffff" />
+                  )}
+                  <Text className="font-ui-bold text-[15px] text-white">
+                    {phase === 'scanning'
+                      ? 'Memproses…'
+                      : isCorrectingTypo
+                        ? 'Memperbaiki typo (AI)…'
+                        : tab === 'camera'
+                          ? 'Mulai Scan'
+                          : 'Pilih Gambar'}
+                  </Text>
+                </PrimaryButtonSurface>
+              </Pressable>
+            </>
           )}
-        </>
-      )}
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+/** Tombol utama 55px bergradien ungu→indigo. */
+function PrimaryButtonSurface({
+  children,
+  dimmed,
+}: {
+  children: React.ReactNode;
+  dimmed?: boolean;
+}) {
+  return (
+    <LinearGradient
+      colors={[...GRADIENTS.activePill.colors]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+      style={{
+        height: 55,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        borderRadius: 16,
+        opacity: dimmed ? 0.55 : 1,
+      }}>
+      {children}
+    </LinearGradient>
+  );
+}
+
+/** Ubin ikon 36x36 dengan kilau putih di sudut kiri atas. */
+function GradientTile({
+  gradient,
+  children,
+}: {
+  gradient: readonly [string, string];
+  children: React.ReactNode;
+}) {
+  return (
+    <LinearGradient
+      colors={[...gradient]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{
+        width: 36,
+        height: 36,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+      }}>
+      <LinearGradient
+        colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ position: 'absolute', width: 36, height: 36 }}
+      />
+      {children}
+    </LinearGradient>
   );
 }
 
@@ -402,17 +556,87 @@ function SourceTab({
   icon: React.ReactNode;
   label: string;
 }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="tab"
-      accessibilityState={{ selected: active }}
-      className={`flex-1 flex-row items-center justify-center rounded-xl py-3 ${active ? 'bg-primary' : ''}`}>
+  const content = (
+    <>
       {icon}
-      <Text
-        className={`ml-2 font-opendyslexic-bold text-sm ${active ? 'text-white' : 'text-text-muted'}`}>
+      <Text className={`font-ui-bold text-sm ${active ? 'text-white' : 'text-text-muted'}`}>
         {label}
       </Text>
+    </>
+  );
+
+  return (
+    <Pressable
+      className="flex-1"
+      onPress={onPress}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}>
+      {active ? (
+        <LinearGradient
+          colors={[...GRADIENTS.activePill.colors]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            borderRadius: 14,
+          }}>
+          {content}
+        </LinearGradient>
+      ) : (
+        <View
+          className="flex-1 flex-row items-center justify-center rounded-[14px]"
+          style={{ gap: 8 }}>
+          {content}
+        </View>
+      )}
     </Pressable>
+  );
+}
+
+/** Chip statistik di kartu "Teks Terdeteksi". */
+function StatChip({ label, color, tint }: { label: string; color: string; tint: string }) {
+  return (
+    <View className="rounded-[10px] px-2.5 py-1" style={{ backgroundColor: tint }}>
+      <Text className="font-ui-bold text-[11px]" style={{ color }}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+/** Siku 28x28 di sudut kotak pratinjau. */
+function CornerBracket({
+  style,
+  corners,
+}: {
+  style: object;
+  corners: 'tl' | 'tr' | 'bl' | 'br';
+}) {
+  const line = 'rgba(124,58,237,1)';
+
+  return (
+    <View
+      style={[
+        {
+          position: 'absolute',
+          width: 28,
+          height: 28,
+          borderColor: line,
+          borderTopWidth: corners.startsWith('t') ? 2 : 0,
+          borderBottomWidth: corners.startsWith('b') ? 2 : 0,
+          borderLeftWidth: corners.endsWith('l') ? 2 : 0,
+          borderRightWidth: corners.endsWith('r') ? 2 : 0,
+          borderTopLeftRadius: corners === 'tl' ? 5 : 0,
+          borderTopRightRadius: corners === 'tr' ? 5 : 0,
+          borderBottomLeftRadius: corners === 'bl' ? 5 : 0,
+          borderBottomRightRadius: corners === 'br' ? 5 : 0,
+        },
+        style,
+      ]}
+    />
   );
 }

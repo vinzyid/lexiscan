@@ -22,10 +22,10 @@ export function TypographySheet({ visible, onClose }: { visible: boolean; onClos
         <View className="max-h-[88%] rounded-t-[32px] bg-background px-5 pb-8 pt-6">
           <View className="mb-5 flex-row items-start justify-between">
             <View className="flex-1 pr-3">
-              <Text className="mb-1 font-opendyslexic-bold text-xl text-text-main">
+              <Text className="mb-1 font-ui-bold text-xl text-text-main">
                 Adaptive Typography
               </Text>
-              <Text className="font-opendyslexic text-[11px] text-primary">
+              <Text className="font-ui text-[11px] text-primary">
                 Sesuaikan teks untuk kenyamananmu
               </Text>
             </View>
@@ -49,28 +49,28 @@ export function TypographySheet({ visible, onClose }: { visible: boolean; onClos
                   onPress={() => setTypeLevelId(level.id)}
                   accessibilityRole="radio"
                   accessibilityState={{ selected }}
-                  className={`mb-3 rounded-3xl border p-4 ${
-                    selected ? 'border-primary bg-primary/5' : 'border-border bg-surface'
+                  className={`mb-3 rounded-2xl border p-4 ${
+                    selected ? 'border-primary bg-primary/5' : 'border-border/10 bg-surface'
                   }`}>
                   <View className="mb-1 flex-row items-start justify-between">
                     <Text
-                      className={`font-opendyslexic-bold text-sm ${selected ? 'text-primary' : 'text-text-main'}`}>
+                      className={`font-ui-bold text-sm ${selected ? 'text-primary' : 'text-text-main'}`}>
                       {selected ? `✓ ${level.name}` : level.name}
                     </Text>
                     <View className="flex-row">
                       <View className="mr-2 rounded-lg bg-surface-alt px-2 py-1">
-                        <Text className="font-opendyslexic text-[10px] text-text-muted">
+                        <Text className="font-ui text-[10px] text-text-muted">
                           {level.fontSize}px
                         </Text>
                       </View>
                       <View className="rounded-lg bg-surface-alt px-2 py-1">
-                        <Text className="font-opendyslexic text-[10px] text-text-muted">
-                          {level.lineHeightRatio.toFixed(2)}
+                        <Text className="font-ui text-[10px] text-text-muted">
+                          {level.spacingLabel}
                         </Text>
                       </View>
                     </View>
                   </View>
-                  <Text className="mb-3 font-opendyslexic text-[10px] text-text-muted">{level.desc}</Text>
+                  <Text className="mb-3 font-ui text-[10px] text-text-muted">{level.desc}</Text>
                   <DyslexicText levelOverride={level}>Membaca jadi lebih mudah.</DyslexicText>
                 </Pressable>
               );
@@ -115,12 +115,12 @@ function ToggleRow({
   trackColor: string;
 }) {
   return (
-    <View className="mb-3 flex-row items-center justify-between rounded-3xl border border-border bg-surface p-4">
+    <View className="mb-3 flex-row items-center justify-between rounded-3xl border border-border/10 bg-surface p-4">
       <View className="flex-1 pr-3">
-        <Text className="mb-0.5 font-opendyslexic-bold text-xs text-text-main">
+        <Text className="mb-0.5 font-ui-bold text-xs text-text-main">
           {emoji} {title}
         </Text>
-        <Text className="font-opendyslexic text-[10px] text-text-muted">{desc}</Text>
+        <Text className="font-ui text-[10px] text-text-muted">{desc}</Text>
       </View>
       <Switch
         value={value}
