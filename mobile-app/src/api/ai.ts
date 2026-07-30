@@ -1,29 +1,29 @@
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
 
-import type { SimplifyLevelId } from '../data/sample-document';
-import type { ExplainStyleId } from '../data/sample-document';
+import type { ExplainStyleId, SimplifyLevelId } from '../data/sample-document';
 
 /**
  * Alamat backend Laravel.
  *
  * Urutan prioritas:
- * 1. EXPO_PUBLIC_API_URL di .env — untuk backend yang di-deploy atau setup khusus.
+ * 1. EXPO_PUBLIC_API_URL — nilainya ditanam saat build, jadi ini satu-satunya
+ *    cara yang jalan di APK standalone. Untuk build EAS, isinya diatur di
+ *    `eas.json` (bukan `.env`, yang tidak ikut ter-clone karena di-gitignore).
  * 2. Host Metro bundler (Constants.expoConfig.hostUri) — otomatis benar di
  *    emulator MAUPUN HP fisik, karena perangkat yang bisa memuat JS bundle
  *    pasti bisa mencapai IP yang sama. Backend tinggal jalan di mesin yang
  *    sama dengan `php artisan serve --host=0.0.0.0`.
- * 3. Fallback terakhir: alias localhost milik emulator Android.
+ *
+ * `null` kalau keduanya tidak ada, yaitu APK standalone yang dibangun tanpa
+ * EXPO_PUBLIC_API_URL. Sebelumnya kasus itu diam-diam memakai `10.0.2.2`,
+ * alias emulator Android untuk mesin host — di HP fisik alamat itu tidak
+ * menunjuk ke mana pun, sehingga salah konfigurasi build muncul sebagai
+ * "tidak bisa terhubung ke server" tanpa petunjuk penyebab sebenarnya.
  */
 const metroHost = Constants.expoConfig?.hostUri?.split(':')[0];
 
-export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL ??
-  (metroHost
-    ? `http://${metroHost}:8000`
-    : Platform.OS === 'android'
-      ? 'http://10.0.2.2:8000'
-      : 'http://127.0.0.1:8000');
+export const API_BASE_URL: string | null =
+  process.env.EXPO_PUBLIC_API_URL ?? (metroHost ? `http://${metroHost}:8000` : null);
 
 /** Batas validasi di backend (routes simplify-text dan explain-word). */
 const MAX_SIMPLIFY_CHARS = 8000;
@@ -36,6 +36,17 @@ const REQUEST_TIMEOUT_MS = 70_000;
 export class AiApiError extends Error {}
 
 async function postJson(path: string, body: Record<string, unknown>): Promise<any> {
+  if (!API_BASE_URL) {
+    /*
+     * Hanya bisa terjadi karena salah konfigurasi saat build, bukan karena
+     * keadaan jaringan. Jadi pesannya menyebut penyebab dan tindakannya,
+     * bukan menyarankan pengguna memeriksa koneksi.
+     */
+    throw new AiApiError(
+      'Alamat backend belum ditanam di aplikasi ini. Set EXPO_PUBLIC_API_URL saat build (di eas.json untuk build EAS), lalu build ulang.',
+    );
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -47,7 +58,9 @@ async function postJson(path: string, body: Record<string, unknown>): Promise<an
       body: JSON.stringify(body),
       signal: controller.signal,
     });
-  } catch (error) {
+  } catch {
+    // Penyebabnya dibedakan lewat signal, bukan lewat isi error: pesan fetch
+    // di React Native tidak konsisten antar-platform.
     throw new AiApiError(
       controller.signal.aborted
         ? 'Server terlalu lama merespons. Coba lagi sebentar.'
