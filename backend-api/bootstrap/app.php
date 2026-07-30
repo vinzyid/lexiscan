@@ -3,7 +3,10 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -19,4 +22,33 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        /*
+         * Aplikasi mobile menampilkan field `message` apa adanya ke pengguna, jadi
+         * kegagalan yang bisa dilihat pembaca perlu berbahasa Indonesia. Pesan
+         * bawaan untuk kasus di bawah semuanya berbahasa Inggris.
+         */
+        $exceptions->render(function (ThrottleRequestsException $e, Request $request) {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            $retryAfter = (int) ($e->getHeaders()['Retry-After'] ?? 60);
+
+            return response()->json([
+                'message' => "Terlalu banyak permintaan. Tunggu {$retryAfter} detik lalu coba lagi.",
+            ], 429, $e->getHeaders());
+        });
+
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
+            return $request->is('api/*')
+                ? response()->json(['message' => 'Alamat endpoint tidak ditemukan di server.'], 404)
+                : null;
+        });
+
+        $exceptions->render(function (MethodNotAllowedHttpException $e, Request $request) {
+            return $request->is('api/*')
+                ? response()->json(['message' => 'Metode HTTP ini tidak didukung untuk endpoint tersebut.'], 405)
+                : null;
+        });
     })->create();

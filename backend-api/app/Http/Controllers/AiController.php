@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Services\AiTextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use RuntimeException;
+use Throwable;
 
 class AiController extends Controller
 {
@@ -78,14 +80,40 @@ class AiController extends Controller
         ]);
     }
 
-    /** GET /api/ai/health — cek cepat penyedia aktif dan kunci, tanpa memakai kuota. */
+    /**
+     * GET /api/ai/health — cek cepat penyedia aktif dan kunci, tanpa memakai kuota.
+     *
+     * Status cache ikut dilaporkan: cache adalah satu-satunya infrastruktur di
+     * jalur request endpoint AI, dan pernah membuat seluruh fitur mati gara-gara
+     * store-nya menunjuk database yang tidak terjangkau. Sekarang kegagalannya
+     * tidak lagi fatal, tapi tetap perlu terlihat di sini.
+     */
     public function health(): JsonResponse
     {
         return response()->json([
             'provider' => $this->ai->providerName(),
             'model' => $this->ai->model(),
             'configured' => $this->ai->isConfigured(),
+            'cache' => [
+                'store' => config('cache.default'),
+                'writable' => $this->cacheWritable(),
+            ],
+            // Diekspos supaya klien bisa memeriksa pilihannya masih cocok
+            // dengan backend tanpa harus menebak dari pesan 422.
+            'levels' => $this->ai->availableSimplifyLevels(),
+            'styles' => $this->ai->availableExplainStyles(),
         ]);
+    }
+
+    private function cacheWritable(): bool
+    {
+        try {
+            Cache::put('ai:health', true, 60);
+
+            return Cache::get('ai:health') === true;
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     /**

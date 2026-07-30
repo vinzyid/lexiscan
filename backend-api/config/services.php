@@ -51,10 +51,13 @@ return [
      * Model default sengaja Flash: itu yang tersedia di free tier Google AI
      * Studio (seri Pro sudah berbayar) dan cukup cepat untuk dipakai
      * interaktif di dalam aplikasi.
+     *
+     * Jangan turunkan ke gemini-2.5-flash — Google sudah menutupnya untuk
+     * pengguna baru dan membalas 404 "no longer available to new users".
      */
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
-        'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+        'model' => env('GEMINI_MODEL', 'gemini-3.6-flash'),
     ],
 
     /*
@@ -65,6 +68,16 @@ return [
     'grok' => [
         'key' => env('XAI_API_KEY'),
         'model' => env('XAI_MODEL', 'grok-4.5'),
+    ],
+
+    /*
+     * Mistral AI (La Plateforme). OpenAI-compatible, mendukung json_object.
+     * Daftar model per akun berbeda — cek milik sendiri dengan:
+     *   curl https://api.mistral.ai/v1/models -H "Authorization: Bearer $MISTRAL_API_KEY"
+     */
+    'mistral' => [
+        'key' => env('MISTRAL_API_KEY'),
+        'model' => env('MISTRAL_MODEL', 'mistral-small-latest'),
     ],
 
     /*

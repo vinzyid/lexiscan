@@ -7,6 +7,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use Throwable;
 
 /**
  * Prompt engineering untuk dua fitur AI LexiScan.
@@ -147,10 +148,12 @@ class AiTextService
 
         // Tidak di-cache karena kemungkinan user memfoto ulang dari sudut berbeda,
         // tapi teksnya mirip. Biarkan selalu live ke LLM supaya fresh.
-        return $this->provider->paragraphsFor($prompt);
+        return $this->ask($prompt);
     }
 
     /**
+     * Ambil dari cache kalau ada, kalau tidak tanya penyedia lalu simpan.
+     *
      * @return array<int, string>
      */
     private function remember(string $suffix, string $prompt): array
@@ -162,8 +165,42 @@ class AiTextService
          */
         $key = "ai:{$this->provider->name()}:{$this->provider->model()}:{$suffix}";
 
+        /*
+         * Cache di sini murni penghematan kuota, bukan sumber kebenaran. Store yang
+         * mati (Redis padam, tabel `cache` di database yang tidak terjangkau) dulu
+         * keluar sebagai 500 berisi stack trace dan mematikan fitur AI sepenuhnya —
+         * padahal penyedia LLM-nya sendiri sehat. Jadi kegagalan store ditelan:
+         * dicatat ke log, lalu permintaan tetap diteruskan tanpa cache.
+         */
         try {
-            return Cache::remember($key, (int) config('services.ai.cache_ttl'), fn (): array => $this->provider->paragraphsFor($prompt));
+            if (is_array($hit = Cache::get($key)) && $hit !== []) {
+                return $hit;
+            }
+        } catch (Throwable $e) {
+            $this->warnCacheUnavailable('baca', $e);
+        }
+
+        $paragraphs = $this->ask($prompt);
+
+        try {
+            Cache::put($key, $paragraphs, (int) config('services.ai.cache_ttl'));
+        } catch (Throwable $e) {
+            $this->warnCacheUnavailable('tulis', $e);
+        }
+
+        return $paragraphs;
+    }
+
+    /**
+     * Satu-satunya tempat penyedia dipanggil, supaya kegagalan jaringan
+     * diterjemahkan jadi pesan yang layak dibaca pengguna di semua fitur.
+     *
+     * @return array<int, string>
+     */
+    private function ask(string $prompt): array
+    {
+        try {
+            return $this->provider->paragraphsFor($prompt);
         } catch (ConnectionException $e) {
             /*
              * Gagal sebelum ada respons HTTP: internet mati, timeout, atau
@@ -177,11 +214,22 @@ class AiTextService
             ]);
 
             throw new RuntimeException(
-                str_contains($e->getMessage(), 'certificate')
-                    ? 'PHP tidak punya sertifikat CA, jadi koneksi HTTPS ditolak. Atur curl.cainfo di php.ini.'
-                    : 'Tidak bisa menghubungi server AI. Periksa koneksi internet lalu coba lagi.',
+                match (true) {
+                    str_contains($e->getMessage(), 'certificate') => 'PHP tidak punya sertifikat CA, jadi koneksi HTTPS ditolak. Atur curl.cainfo di php.ini.',
+                    str_contains($e->getMessage(), 'Operation timed out'),
+                    str_contains($e->getMessage(), 'timed out') => 'Server AI tidak merespons dalam ' . config('services.ai.timeout') . ' detik. Coba teks yang lebih pendek.',
+                    default => 'Tidak bisa menghubungi server AI. Periksa koneksi internet lalu coba lagi.',
+                },
                 previous: $e,
             );
         }
+    }
+
+    private function warnCacheUnavailable(string $operation, Throwable $e): void
+    {
+        Log::warning("Cache AI tidak bisa di-{$operation}, permintaan diteruskan tanpa cache", [
+            'store' => config('cache.default'),
+            'error' => $e->getMessage(),
+        ]);
     }
 }

@@ -2,7 +2,6 @@
 
 namespace App\Services\Ai;
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -39,14 +38,13 @@ class OpenRouterProvider implements AiProvider
             throw new RuntimeException('OPENROUTER_API_KEY belum diisi di file .env backend.');
         }
 
-        $response = Http::timeout((int) config('services.ai.timeout'))
+        $response = LlmHttp::client($this->name())
             ->withToken((string) config('services.openrouter.key'))
             ->withHeaders([
                 // Dipakai OpenRouter untuk atribusi; tidak wajib, tapi disarankan.
                 'HTTP-Referer' => (string) config('app.url'),
                 'X-Title' => (string) config('app.name'),
             ])
-            ->acceptJson()
             ->post(self::ENDPOINT, [
                 'model' => $this->model(),
                 'temperature' => 0.3,

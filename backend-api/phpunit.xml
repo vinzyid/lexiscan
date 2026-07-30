@@ -32,5 +32,22 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+
+        <!-- Pesan 422 tampil apa adanya di aplikasi mobile, jadi bahasanya ikut diuji. -->
+        <env name="APP_LOCALE" value="id"/>
+
+        <!--
+            Kunci palsu supaya kunci sungguhan di .env tidak pernah ikut terpakai
+            saat menjalankan test. Semua panggilan HTTP tetap di-fake; lihat
+            Http::preventStrayRequests() di tests/TestCase.php.
+        -->
+        <env name="AI_PROVIDER" value="gemini"/>
+        <env name="AI_TIMEOUT" value="5"/>
+        <env name="AI_CACHE_TTL" value="600"/>
+        <env name="GEMINI_API_KEY" value="test-gemini-key"/>
+        <env name="GEMINI_MODEL" value="gemini-3.6-flash"/>
+        <env name="XAI_API_KEY" value="test-xai-key"/>
+        <env name="OPENROUTER_API_KEY" value="test-openrouter-key"/>
+        <env name="OPENROUTER_MODEL" value="test/model:free"/>
     </php>
 </phpunit>

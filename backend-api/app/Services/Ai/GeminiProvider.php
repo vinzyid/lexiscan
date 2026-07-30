@@ -2,7 +2,6 @@
 
 namespace App\Services\Ai;
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -35,9 +34,8 @@ class GeminiProvider implements AiProvider
             throw new RuntimeException('GEMINI_API_KEY belum diisi di file .env backend.');
         }
 
-        $response = Http::timeout((int) config('services.ai.timeout'))
+        $response = LlmHttp::client($this->name())
             ->withHeaders(['x-goog-api-key' => (string) config('services.gemini.key')])
-            ->acceptJson()
             ->post(self::ENDPOINT . '/' . $this->model() . ':generateContent', [
                 'contents' => [
                     ['parts' => [['text' => $prompt]]],
@@ -68,13 +66,43 @@ class GeminiProvider implements AiProvider
             throw new RuntimeException($this->humanError($response->status(), $response->json('error.message')));
         }
 
-        $raw = $response->json('candidates.0.content.parts.0.text');
-
-        if (blank($raw)) {
-            throw new RuntimeException('Gemini tidak mengembalikan teks. Coba lagi sebentar.');
+        if (blank($raw = $this->answerText($response->json('candidates.0.content.parts')))) {
+            // MAX_TOKENS dan SAFETY berhenti tanpa teks; keduanya perlu tindakan berbeda.
+            throw new RuntimeException(match ($response->json('candidates.0.finishReason')) {
+                'MAX_TOKENS' => 'Teksnya terlalu panjang untuk diproses sekaligus. Pindai bagian yang lebih pendek.',
+                'SAFETY', 'PROHIBITED_CONTENT' => 'Gemini menolak memproses teks ini karena filter keamanan.',
+                default => 'Gemini tidak mengembalikan teks. Coba lagi sebentar.',
+            });
         }
 
         return ParagraphPayload::extract($raw, 'Gemini');
+    }
+
+    /**
+     * Seri Gemini 3.x menalar sebelum menjawab, dan penalaran itu bisa datang
+     * sebagai part tersendiri bertanda `thought: true` di depan jawabannya.
+     * Mengambil `parts.0` secara buta akan menangkap penalaran itu, bukan JSON
+     * yang diminta, jadi ambil part pertama yang benar-benar berisi jawaban.
+     *
+     * @param  mixed  $parts
+     */
+    private function answerText($parts): ?string
+    {
+        if (! is_array($parts)) {
+            return null;
+        }
+
+        foreach ($parts as $part) {
+            if (! is_array($part) || ($part['thought'] ?? false) === true) {
+                continue;
+            }
+
+            if (filled($part['text'] ?? null)) {
+                return (string) $part['text'];
+            }
+        }
+
+        return null;
     }
 
     private function humanError(int $status, ?string $detail): string

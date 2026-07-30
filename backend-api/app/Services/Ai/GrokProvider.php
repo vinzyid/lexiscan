@@ -2,7 +2,6 @@
 
 namespace App\Services\Ai;
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -36,9 +35,8 @@ class GrokProvider implements AiProvider
             throw new RuntimeException('XAI_API_KEY belum diisi di file .env backend.');
         }
 
-        $response = Http::timeout((int) config('services.ai.timeout'))
+        $response = LlmHttp::client($this->name())
             ->withToken((string) config('services.grok.key'))
-            ->acceptJson()
             ->post(self::ENDPOINT, [
                 'model' => $this->model(),
                 'temperature' => 0.3,
