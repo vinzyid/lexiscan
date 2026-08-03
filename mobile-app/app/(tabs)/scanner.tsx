@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  Pressable,
   ScrollView,
   Text,
   View,
@@ -28,9 +27,10 @@ import * as DocumentPicker from 'expo-document-picker';
 import { ImageManipulator } from 'expo-image-manipulator';
 
 import { useOCRStore } from '../../src/store/useStore';
+import { PressableScale } from '../../src/components/pressable-scale';
 import { useThemeColors } from '../../src/theme/theme-provider';
 import { GRADIENTS, getTypeLevel } from '../../src/theme/palettes';
-import { PREPROCESSING_STEPS, SCAN_TIPS } from '../../src/data/sample-document';
+import { useT } from '../../src/i18n';
 import { correctTypo } from '../../src/api/ai';
 import { Blob, HexDecor, Ring, ScreenBackdrop, Sparkle } from '../../src/components/figma-decor';
 import { IlluScan } from '../../src/components/illustrations';
@@ -50,11 +50,13 @@ const TIP_TILES = [
   { gradient: ['#4f46e5', '#6366f1'] as const, Icon: Sparkles },
 ];
 
+
 export default function ScannerScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const router = useRouter();
   const cameraRef = useRef<CameraView>(null);
+  const t = useT();
 
   const [permission, requestPermission] = useCameraPermissions();
   const [tab, setTab] = useState<'camera' | 'upload'>('camera');
@@ -98,17 +100,17 @@ export default function ScannerScreen() {
 
   // Ceklis preprocessing dimunculkan bertahap supaya prosesnya terlihat, bukan melompat.
   useEffect(() => {
-    if (phase !== 'done' || stepsDone >= PREPROCESSING_STEPS.length) return;
+    if (phase !== 'done' || stepsDone >= t.scanner.processSteps.length) return;
     const timer = setTimeout(() => setStepsDone((n) => n + 1), 260);
     return () => clearTimeout(timer);
-  }, [phase, stepsDone]);
+  }, [phase, stepsDone, t.scanner.processSteps.length]);
 
   const correctTypoInBackground = async (text: string) => {
     try {
       setIsCorrectingTypo(true);
       setDetected(await correctTypo(text));
     } catch (e) {
-      console.warn('Gagal memperbaiki typo via AI, memakai text asli dari OCR.', e);
+      console.warn(t.scanner.typoWarning, e);
     } finally {
       setIsCorrectingTypo(false);
     }
@@ -120,7 +122,7 @@ export default function ScannerScreen() {
     try {
       setPhase('scanning');
       const photo = await cameraRef.current.takePictureAsync();
-      if (!photo?.uri) throw new Error('Kamera tidak mengembalikan gambar.');
+      if (!photo?.uri) throw new Error(t.scanner.cameraNoImage);
 
       // Crop ke area tengah (60% dari lebar & tinggi) — sesuai batas kotak panduan.
       const context = ImageManipulator.manipulate(photo.uri).crop({
@@ -137,7 +139,7 @@ export default function ScannerScreen() {
 
       if (!rawText) {
         setPhase('idle');
-        Alert.alert('Tidak ada teks', 'Coba dekatkan kamera dan pastikan cahaya cukup terang.');
+        Alert.alert(t.scanner.noTextTitle, t.scanner.noTextCamera);
         return;
       }
 
@@ -147,7 +149,7 @@ export default function ScannerScreen() {
       correctTypoInBackground(rawText);
     } catch (error) {
       setPhase('idle');
-      Alert.alert('Gagal memindai', error instanceof Error ? error.message : 'Terjadi kesalahan.');
+      Alert.alert(t.scanner.scanFailTitle, error instanceof Error ? error.message : t.scanner.genericError);
     }
   };
 
@@ -166,7 +168,7 @@ export default function ScannerScreen() {
 
       if (!rawText) {
         setPhase('idle');
-        Alert.alert('Tidak ada teks', 'Gambar ini tampaknya tidak memiliki teks atau terlalu buram.');
+        Alert.alert(t.scanner.noTextTitle, t.scanner.noTextUpload);
         return;
       }
 
@@ -177,8 +179,8 @@ export default function ScannerScreen() {
     } catch (error) {
       setPhase('idle');
       Alert.alert(
-        'Gagal membaca gambar',
-        error instanceof Error ? error.message : 'Terjadi kesalahan.',
+        t.scanner.uploadFailTitle,
+        error instanceof Error ? error.message : t.scanner.genericError,
       );
     }
   };
@@ -198,13 +200,17 @@ export default function ScannerScreen() {
           <CameraIcon size={40} color={colors.primary} />
         </View>
         <Text className="mb-6 text-center font-ui text-sm leading-6 text-text-main">
-          LexiScan butuh izin kamera untuk memindai dokumen fisikmu.
+          {t.scanner.permissionText}
         </Text>
-        <Pressable onPress={requestPermission} accessibilityRole="button">
+        <PressableScale
+          onPress={requestPermission}
+          accessibilityRole="button"
+          accessibilityLabel={t.scanner.permissionButton}
+          scaleTo={0.97}>
           <PrimaryButtonSurface>
-            <Text className="font-ui-bold text-[15px] text-white">Berikan Izin Kamera</Text>
+            <Text className="font-ui-bold text-base text-white">{t.scanner.permissionButton}</Text>
           </PrimaryButtonSurface>
-        </Pressable>
+        </PressableScale>
       </View>
     );
   }
@@ -237,13 +243,13 @@ export default function ScannerScreen() {
               <View
                 className="flex-row items-center rounded-[14px] border border-white/[0.18] bg-white/[0.12] px-3 py-1.5"
                 style={{ gap: 8 }}>
-                <ScanLine size={12} color="#ffffff" />
-                <Text className="font-ui-bold text-[11px] text-white/85">SMART OCR SCAN</Text>
+                <ScanLine size={13} color="#ffffff" />
+                <Text className="font-ui-bold text-[13px] text-white/85">{t.scanner.badge}</Text>
               </View>
             </View>
-            <Text className="mt-3 font-ui-bold text-2xl text-white">Pindai Dokumen</Text>
-            <Text className="mt-0.5 font-ui text-[13px] text-white/55">
-              Foto fisik jadi teks digital ramah disleksia
+            <Text className="mt-3 font-ui-bold text-2xl text-white">{t.scanner.title}</Text>
+            <Text className="mt-1 font-ui-medium text-sm text-white/60">
+              {t.scanner.subtitle}
             </Text>
           </View>
         </LinearGradient>
@@ -271,7 +277,7 @@ export default function ScannerScreen() {
                   <Check size={26} color="#10b981" strokeWidth={3} />
                 </View>
                 <Text className="mt-2 font-ui-bold text-sm" style={{ color: '#10b981' }}>
-                  {isCorrectingTypo ? 'Merapikan teks…' : 'Berhasil!'}
+                  {isCorrectingTypo ? t.scanner.tidyingUp : t.scanner.success}
                 </Text>
               </LinearGradient>
 
@@ -281,8 +287,8 @@ export default function ScannerScreen() {
                 style={{ borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)' }}>
                 <View className="flex-row items-center" style={{ gap: 8 }}>
                   <View className="h-2 w-2 rounded-full" style={{ backgroundColor: '#10b981' }} />
-                  <Text className="font-ui-bold text-[10px]" style={{ color: '#10b981' }}>
-                    TEKS TERDETEKSI
+                  <Text className="font-ui-bold text-[13px]" style={{ color: '#10b981' }}>
+                    {t.scanner.detected}
                   </Text>
                   {isCorrectingTypo ? (
                     <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 'auto' }} />
@@ -303,13 +309,13 @@ export default function ScannerScreen() {
                 <View
                   className="mt-3 flex-row border-t pt-3"
                   style={{ gap: 8, borderTopColor: colors.border }}>
-                  <StatChip label={`${paragraphCount} paragraf`} color="#10b981" tint="rgba(16,185,129,0.1)" />
+                  <StatChip label={t.scanner.paragraphCount(paragraphCount)} color="#10b981" tint="rgba(16,185,129,0.1)" />
                   <StatChip
-                    label="Font otomatis"
+                    label={t.scanner.autoFont}
                     color={colors.primary}
                     tint="rgba(124,58,237,0.08)"
                   />
-                  <StatChip label="Siap AI" color={colors.primary} tint="rgba(124,58,237,0.08)" />
+                  <StatChip label={t.scanner.aiReady} color={colors.primary} tint="rgba(124,58,237,0.08)" />
                 </View>
               </View>
 
@@ -317,12 +323,10 @@ export default function ScannerScreen() {
               <View
                 className="rounded-2xl bg-surface p-4"
                 style={{ borderWidth: 1, borderColor: colors.border }}>
-                <Text className="font-ui-bold text-[10px] text-text-muted">
-                  PREPROCESSING OTOMATIS
-                </Text>
+                <Text className="font-ui-bold text-[13px] text-text-muted">{t.scanner.processTitle}</Text>
 
                 <View className="mt-3.5" style={{ gap: 10 }}>
-                  {PREPROCESSING_STEPS.map((step, index) => {
+                  {t.scanner.processSteps.map((step, index) => {
                     const done = index < stepsDone;
 
                     return (
@@ -349,25 +353,30 @@ export default function ScannerScreen() {
                 </View>
               </View>
 
-              <Pressable onPress={openReader} accessibilityRole="button">
+              <PressableScale
+                onPress={openReader}
+                accessibilityRole="button"
+                accessibilityLabel={t.scanner.openAndReadLabel}
+                scaleTo={0.97}>
                 <PrimaryButtonSurface>
-                  <ArrowRight size={18} color="#ffffff" />
-                  <Text className="font-ui-bold text-[15px] text-white">Buka dan Baca</Text>
+                  <ArrowRight size={20} color="#ffffff" />
+                  <Text className="font-ui-bold text-base text-white">{t.scanner.openAndRead}</Text>
                 </PrimaryButtonSurface>
-              </Pressable>
+              </PressableScale>
 
-              <Pressable
+              <PressableScale
                 onPress={() => {
                   setPhase('idle');
                   setDetected('');
                   setStepsDone(0);
                 }}
                 accessibilityRole="button"
-                className="py-1">
-                <Text className="text-center font-ui-bold text-xs text-text-muted">
-                  ← Pindai dokumen lain
+                accessibilityLabel={t.scanner.scanAnother}
+                className="h-11 items-center justify-center">
+                <Text className="text-center font-ui-bold text-sm text-text-muted">
+                  {t.scanner.scanAnother}
                 </Text>
-              </Pressable>
+              </PressableScale>
             </Animated.View>
           ) : (
             <>
@@ -381,13 +390,13 @@ export default function ScannerScreen() {
                   icon={
                     <CameraIcon size={15} color={tab === 'camera' ? '#ffffff' : colors.textMuted} />
                   }
-                  label="Kamera"
+                  label={t.scanner.camera}
                 />
                 <SourceTab
                   active={tab === 'upload'}
                   onPress={() => setTab('upload')}
                   icon={<Upload size={15} color={tab === 'upload' ? '#ffffff' : colors.textMuted} />}
-                  label="Unggah File"
+                  label={t.scanner.upload}
                 />
               </View>
 
@@ -420,14 +429,14 @@ export default function ScannerScreen() {
                     <>
                       <ScanLine size={38} color="rgba(255,255,255,0.28)" />
                       <Text className="mt-2.5 font-ui text-xs text-white/[0.28]">
-                        Arahkan ke dokumen
+                        {t.scanner.aimAtDocument}
                       </Text>
                     </>
                   ) : (
                     <>
                       <Upload size={38} color="rgba(255,255,255,0.28)" />
                       <Text className="mt-2.5 font-ui text-xs text-white/[0.28]">
-                        PDF, JPG, atau PNG
+                        {t.scanner.fileTypes}
                       </Text>
                     </>
                   )}
@@ -438,9 +447,11 @@ export default function ScannerScreen() {
               <View
                 className="rounded-2xl bg-surface p-4"
                 style={{ borderWidth: 1, borderColor: colors.border }}>
-                <Text className="font-ui-bold text-[10px] text-text-muted">TIPS SCAN TERBAIK</Text>
+                <Text className="font-ui-bold text-[13px] text-text-muted">
+                  {t.scanner.tipsTitle}
+                </Text>
                 <View className="mt-3.5" style={{ gap: 10 }}>
-                  {SCAN_TIPS.map((tip, index) => {
+                  {t.scanner.tips.map((tip, index) => {
                     const { gradient, Icon } = TIP_TILES[index % TIP_TILES.length];
 
                     return (
@@ -455,29 +466,31 @@ export default function ScannerScreen() {
                 </View>
               </View>
 
-              <Pressable
+              <PressableScale
                 onPress={tab === 'camera' ? handleScan : handleUpload}
                 disabled={busy}
-                accessibilityRole="button">
+                accessibilityRole="button"
+                accessibilityLabel={tab === 'camera' ? t.scanner.startScanLabel : t.scanner.pickImageLabel}
+                scaleTo={0.97}>
                 <PrimaryButtonSurface dimmed={busy}>
                   {busy ? (
                     <ActivityIndicator color="#ffffff" />
                   ) : tab === 'camera' ? (
-                    <CameraIcon size={18} color="#ffffff" />
+                    <CameraIcon size={20} color="#ffffff" />
                   ) : (
-                    <Upload size={18} color="#ffffff" />
+                    <Upload size={20} color="#ffffff" />
                   )}
-                  <Text className="font-ui-bold text-[15px] text-white">
+                  <Text className="font-ui-bold text-base text-white">
                     {phase === 'scanning'
-                      ? 'Memproses…'
+                      ? t.scanner.processing
                       : isCorrectingTypo
-                        ? 'Memperbaiki typo (AI)…'
+                        ? t.scanner.tidyingUp
                         : tab === 'camera'
-                          ? 'Mulai Scan'
-                          : 'Pilih Gambar'}
+                          ? t.scanner.startScan
+                          : t.scanner.pickImage}
                   </Text>
                 </PrimaryButtonSurface>
-              </Pressable>
+              </PressableScale>
             </>
           )}
         </View>
@@ -566,11 +579,14 @@ function SourceTab({
   );
 
   return (
-    <Pressable
+    <PressableScale
+      wrapperStyle={{ flex: 1 }}
       className="flex-1"
       onPress={onPress}
       accessibilityRole="tab"
-      accessibilityState={{ selected: active }}>
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
+      scaleTo={0.96}>
       {active ? (
         <LinearGradient
           colors={[...GRADIENTS.activePill.colors]}
@@ -593,7 +609,7 @@ function SourceTab({
           {content}
         </View>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 

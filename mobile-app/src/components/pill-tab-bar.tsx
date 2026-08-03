@@ -1,16 +1,18 @@
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Home, Camera, BookOpen, Settings } from 'lucide-react-native';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 
 import { useThemeColors } from '../theme/theme-provider';
 import { GRADIENTS } from '../theme/palettes';
+import { PressableScale } from './pressable-scale';
+import { useT } from '../i18n';
 
 const TABS = {
-  index: { Icon: Home, label: 'Beranda' },
-  scanner: { Icon: Camera, label: 'Pindai' },
-  reader: { Icon: BookOpen, label: 'Baca' },
-  settings: { Icon: Settings, label: 'Atur' },
+  index: { Icon: Home, key: 'home' },
+  scanner: { Icon: Camera, key: 'scan' },
+  reader: { Icon: BookOpen, key: 'read' },
+  settings: { Icon: Settings, key: 'settings' },
 } as const;
 
 /**
@@ -19,6 +21,7 @@ const TABS = {
  */
 export function PillTabBar({ state, navigation, insets }: BottomTabBarProps) {
   const colors = useThemeColors();
+  const t = useT();
 
   /*
    * Di tema terang bilah ini sewarna kartu (lebih terang dari latar); di Mode
@@ -39,7 +42,8 @@ export function PillTabBar({ state, navigation, insets }: BottomTabBarProps) {
         const tab = TABS[route.name as keyof typeof TABS];
         if (!tab) return null;
 
-        const { Icon, label } = tab;
+        const { Icon, key } = tab;
+        const label = t.tabs[key];
         const isFocused = state.index === index;
 
         const onPress = () => {
@@ -53,43 +57,39 @@ export function PillTabBar({ state, navigation, insets }: BottomTabBarProps) {
           }
         };
 
-        const content = (
-          <>
-            <Icon size={18} color={isFocused ? '#ffffff' : colors.textMuted} strokeWidth={1.8} />
-            {isFocused ? <Text className="font-ui-bold text-xs text-white">{label}</Text> : null}
-          </>
-        );
-
         return (
-          <Pressable
+          <PressableScale
             key={route.key}
             accessibilityRole="button"
             accessibilityState={isFocused ? { selected: true } : {}}
             accessibilityLabel={label}
             onPress={onPress}
-            hitSlop={8}>
+            scaleTo={0.92}>
             {isFocused ? (
               <LinearGradient
                 colors={[...GRADIENTS.navPill.colors]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={{
-                  height: 36,
+                  height: 48,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 6,
-                  paddingHorizontal: 12,
-                  borderRadius: 22,
+                  paddingHorizontal: 14,
+                  borderRadius: 24,
                 }}>
-                {content}
+                <Icon size={19} color="#ffffff" strokeWidth={1.8} />
+                <Text className="font-ui-bold text-[13px] text-white">{label}</Text>
               </LinearGradient>
             ) : (
-              <View className="h-9 w-[75px] flex-row items-center justify-center rounded-[22px]">
-                {content}
+              /* Tab tidak aktif tetap menampilkan namanya: ikon sendirian memaksa menebak. */
+              <View className="h-12 w-[70px] items-center justify-center rounded-3xl">
+                <Icon size={19} color={colors.textMuted} strokeWidth={1.8} />
+                <Text className="mt-0.5 font-ui-medium text-[11px] text-text-muted">{label}</Text>
               </View>
             )}
-          </Pressable>
+          </PressableScale>
         );
       })}
     </View>

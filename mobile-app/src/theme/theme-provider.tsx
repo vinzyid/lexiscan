@@ -49,7 +49,6 @@ export function useThemeColors() {
   return {
     isDark: theme.isDark,
     id: theme.id,
-    name: theme.name,
     background: rgb(theme.tokens.background),
     surface: rgb(theme.tokens.surface),
     surfaceAlt: rgb(theme.tokens.surfaceAlt),

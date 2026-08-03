@@ -1,14 +1,23 @@
 import { useEffect, useState } from 'react';
-import { Animated, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+// `Animated` bawaan RN dipakai untuk tip harian, Reanimated untuk kartu fitur.
+import Reanimated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
 import { BookOpen, Camera, ChevronRight, Sparkles } from 'lucide-react-native';
 
 import { useOCRStore } from '../../src/store/useStore';
 import { useThemeColors } from '../../src/theme/theme-provider';
-import { FEATURE_ACCENTS, GRADIENTS, getTypeLevel } from '../../src/theme/palettes';
-import { DAILY_TIPS } from '../../src/data/sample-document';
+import { FEATURE_ACCENTS, GRADIENTS } from '../../src/theme/palettes';
+import { useT } from '../../src/i18n';
+import { PressableScale } from '../../src/components/pressable-scale';
 import { TypographySheet } from '../../src/components/typography-sheet';
 import { ExplainSheet } from '../../src/components/explain-sheet';
 import { Blob, HexDecor, Ring, ScreenBackdrop, Sparkle, WaveCut } from '../../src/components/figma-decor';
@@ -32,12 +41,12 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const { width } = useWindowDimensions();
+  const t = useT();
 
   const [typographyOpen, setTypographyOpen] = useState(false);
   const [explainOpen, setExplainOpen] = useState(false);
 
   const { focusMode, toggleFocusMode, typeLevelId, simplifyLevel } = useOCRStore();
-  const typeLevel = getTypeLevel(typeLevelId);
 
   /** Lebar kartu sesungguhnya (Figma: 358 pada layar 390). */
   const cardWidth = width - PAGE_PADDING * 2;
@@ -48,46 +57,46 @@ export default function DashboardScreen() {
   useEffect(() => {
     const timer = setInterval(() => {
       Animated.timing(fade, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
-        setTipIndex((prev) => (prev + 1) % DAILY_TIPS.length);
+        setTipIndex((prev) => (prev + 1) % t.dailyTips.length);
         Animated.timing(fade, { toValue: 1, duration: 300, useNativeDriver: true }).start();
       });
     }, 6000);
     return () => clearInterval(timer);
-  }, [fade]);
+  }, [fade, t.dailyTips.length]);
 
   /*
    * Dari dashboard belum ada dokumen yang dibuka, jadi sheet menjelaskan topik
    * dokumen contoh memakai jawaban kurasi (tanpa memanggil API).
    */
-  const explainDemoTarget = { term: 'Mitokondria', useStaticAnswers: true };
+  const explainDemoTarget = { term: t.sampleDoc.term, useStaticAnswers: true };
 
   const features = [
     {
       accent: FEATURE_ACCENTS.scan,
       Illu: IlluScan,
-      label: 'Smart OCR Scan',
-      desc: 'Foto dokumen jadi teks digital seketika',
+      label: t.dashboard.features.scan.label,
+      desc: t.dashboard.features.scan.desc,
       onPress: () => router.push('/scanner'),
     },
     {
       accent: FEATURE_ACCENTS.typography,
       Illu: IlluTypo,
-      label: 'Adaptive Typography',
-      desc: 'Font & spasi khusus penderita disleksia',
+      label: t.dashboard.features.typography.label,
+      desc: t.dashboard.features.typography.desc,
       onPress: () => setTypographyOpen(true),
     },
     {
       accent: FEATURE_ACCENTS.simplify,
       Illu: IlluSimplify,
-      label: 'AI Simplify',
-      desc: '5 level penyederhanaan teks oleh AI',
+      label: t.dashboard.features.simplify.label,
+      desc: t.dashboard.features.simplify.desc,
       onPress: () => router.push('/reader'),
     },
     {
       accent: FEATURE_ACCENTS.focus,
       Illu: IlluFocus,
-      label: 'Focus Mode',
-      desc: 'Baca satu paragraf tanpa gangguan',
+      label: t.dashboard.features.focus.label,
+      desc: t.dashboard.features.focus.desc,
       onPress: () => {
         if (!focusMode) toggleFocusMode();
         router.push('/reader');
@@ -96,13 +105,13 @@ export default function DashboardScreen() {
     {
       accent: FEATURE_ACCENTS.explain,
       Illu: IlluExplain,
-      label: 'AI Explain This',
-      desc: '3 gaya penjelasan dari Lexi si asisten',
+      label: t.dashboard.features.explain.label,
+      desc: t.dashboard.features.explain.desc,
       onPress: () => setExplainOpen(true),
     },
   ];
 
-  const today = new Date().toLocaleDateString('id-ID', {
+  const today = new Date().toLocaleDateString(t.locale, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -119,9 +128,9 @@ export default function DashboardScreen() {
           {/* ── Sapaan + avatar ─────────────────────────────────────────── */}
           <View className="flex-row items-center justify-between px-5 pb-4">
             <View>
-              <Text className="font-ui-medium text-xs text-text-muted">{today}</Text>
+              <Text className="font-ui-medium text-[13px] text-text-muted">{today}</Text>
               <Text className="font-ui-bold text-[22px] leading-[33px] text-text-main">
-                Hei, Rama!
+                {t.dashboard.greeting}
               </Text>
             </View>
             <LinearGradient
@@ -165,14 +174,12 @@ export default function DashboardScreen() {
               {/* Chip status di kanan atas — urutan Figma: Sedang lalu L3 AI */}
               <View className="absolute right-4 top-[11px] flex-row" style={{ gap: 6 }}>
                 <GlassChip subtle>
-                  <Text className="font-ui-semibold text-[11px] text-white/75">
-                    {typeLevel.name}
-                  </Text>
+                  <Text className="font-ui-semibold text-xs text-white/75">{t.typeLevels[typeLevelId].name}</Text>
                 </GlassChip>
                 <GlassChip>
-                  <Sparkles size={10} color="#fcd34d" fill="#fcd34d" />
-                  <Text className="font-ui-bold text-[11px] text-white/90">
-                    {simplifyLevel} AI
+                  <Sparkles size={11} color="#fcd34d" fill="#fcd34d" />
+                  <Text className="font-ui-bold text-xs text-white/90">
+                    {t.simplifyLevels[simplifyLevel].short}
                   </Text>
                 </GlassChip>
               </View>
@@ -183,31 +190,33 @@ export default function DashboardScreen() {
                     className="flex-row items-center rounded-[14px] border border-white/20 bg-white/10 px-2.5 py-1"
                     style={{ gap: 6 }}>
                     <View className="h-1.5 w-1.5 rounded-full bg-[#34d399]" />
-                    <Text className="font-ui-bold text-[10px] text-white/80">SIAP BELAJAR</Text>
+                    <Text className="font-ui-bold text-xs text-white/80">{t.dashboard.statusBadge}</Text>
                   </View>
                 </View>
 
                 <Text className="font-ui-bold text-[26px] leading-[30px] text-white">
-                  Siap Petualangan{'\n'}hari ini?
+                  {t.dashboard.heroTitle}
                 </Text>
 
                 <View className="mt-[22px] flex-row" style={{ gap: 8 }}>
-                  <Pressable
+                  <PressableScale
                     onPress={() => router.push('/scanner')}
                     accessibilityRole="button"
-                    className="h-10 flex-row items-center rounded-2xl bg-white px-4"
+                    accessibilityLabel={t.dashboard.scanButtonLabel}
+                    className="h-11 flex-row items-center rounded-2xl bg-white px-4"
                     style={{ gap: 6 }}>
-                    <Camera size={14} color="#6d28d9" />
-                    <Text className="font-ui-bold text-[13px] text-[#6d28d9]">Pindai</Text>
-                  </Pressable>
-                  <Pressable
+                    <Camera size={16} color="#6d28d9" />
+                    <Text className="font-ui-bold text-sm text-[#6d28d9]">{t.dashboard.scanButton}</Text>
+                  </PressableScale>
+                  <PressableScale
                     onPress={() => router.push('/reader')}
                     accessibilityRole="button"
-                    className="h-10 flex-row items-center rounded-2xl border border-white/25 bg-white/[0.14] px-4"
+                    accessibilityLabel={t.dashboard.readButtonLabel}
+                    className="h-11 flex-row items-center rounded-2xl border border-white/25 bg-white/[0.14] px-4"
                     style={{ gap: 6 }}>
-                    <BookOpen size={14} color="#ffffff" />
-                    <Text className="font-ui-bold text-[13px] text-white">Baca</Text>
-                  </Pressable>
+                    <BookOpen size={16} color="#ffffff" />
+                    <Text className="font-ui-bold text-sm text-white">{t.dashboard.readButton}</Text>
+                  </PressableScale>
                 </View>
               </View>
 
@@ -219,65 +228,43 @@ export default function DashboardScreen() {
           {/* ── 5 fitur utama ───────────────────────────────────────────── */}
           <View className="flex-row items-end justify-between px-4 pb-3 pt-5">
             <View>
-              <Text className="font-ui-bold text-[10px] text-text-muted">5 FITUR UTAMA</Text>
-              <Text className="font-ui-bold text-base text-text-main">
-                Semua yang kamu butuhkan
+              <Text className="font-ui-bold text-xs text-text-muted">{t.dashboard.featuresEyebrow}</Text>
+              <Text className="font-ui-bold text-[17px] text-text-main">
+                {t.dashboard.featuresTitle}
               </Text>
             </View>
             <View className="rounded-[14px] bg-primary/[0.09] px-3 py-1.5">
-              <Text className="font-ui-bold text-[11px] text-primary">Gratis</Text>
+              <Text className="font-ui-bold text-[13px] text-primary">{t.common.free}</Text>
             </View>
           </View>
 
           <View className="px-4" style={{ gap: 10 }}>
-            {features.map(({ accent, Illu, label, desc, onPress }) => (
-              <Pressable
+            {features.map(({ accent, Illu, label, desc, onPress }, index) => (
+              <FeatureCard
                 key={label}
+                index={index}
+                accent={accent}
+                Illu={Illu}
+                label={label}
+                desc={desc}
                 onPress={onPress}
-                accessibilityRole="button"
-                className="h-[76px] flex-row items-center rounded-2xl bg-surface px-3.5"
-                style={{ gap: 14 }}>
-                <LinearGradient
-                  colors={[...accent.gradient]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                  <Illu size={37} />
-                </LinearGradient>
-
-                <View className="flex-1">
-                  <Text className="font-ui-bold text-[13.5px] leading-5 text-text-main">
-                    {label}
-                  </Text>
-                  <Text className="mt-0.5 font-ui-medium text-[11.5px] leading-[17px] text-text-muted">
-                    {desc}
-                  </Text>
-                </View>
-
-                <View
-                  className="h-7 w-7 items-center justify-center rounded-[14px]"
-                  style={{ backgroundColor: accent.chevron }}>
-                  <ChevronRight size={13} color="#ffffff" />
-                </View>
-              </Pressable>
+              />
             ))}
           </View>
 
           {/* ── Inovasi eksklusif ───────────────────────────────────────── */}
           <View className="px-4 pb-3 pt-6">
-            <Text className="font-ui-bold text-[10px] text-text-muted">INOVASI EKSKLUSIF</Text>
-            <Text className="font-ui-bold text-base text-text-main">Khusus untuk disleksia</Text>
+            <Text className="font-ui-bold text-xs text-text-muted">{t.dashboard.innovationEyebrow}</Text>
+            <Text className="font-ui-bold text-[17px] text-text-main">{t.dashboard.innovationTitle}</Text>
           </View>
 
-          {/* Bicolor Words — kartu lebar */}
+          {/* Kata Dua Warna — kartu lebar */}
           <View className="px-4">
-            <Pressable onPress={() => router.push('/reader')} accessibilityRole="button">
+            <PressableScale
+              onPress={() => router.push('/reader')}
+              accessibilityRole="button"
+              accessibilityLabel={t.dashboard.innovations.bicolor.label}
+              scaleTo={0.98}>
               <LinearGradient
                 colors={[...GRADIENTS.brand.colors]}
                 locations={[...GRADIENTS.brand.locations]}
@@ -291,31 +278,31 @@ export default function DashboardScreen() {
                     <ArtBicolorWords width={cardWidth - 36} />
                   </View>
                 </View>
-                <View className="border-t border-white/10 bg-black/20 px-3.5 py-[11px]">
-                  <Text className="font-ui-bold text-[13px] leading-5 text-white">
-                    Bicolor Words
+                <View className="border-t border-white/10 bg-black/20 px-3.5 py-3">
+                  <Text className="font-ui-bold text-[15px] leading-5 text-white">
+                    {t.dashboard.innovations.bicolor.title}
                   </Text>
-                  <Text className="mt-0.5 font-ui-medium text-[11px] leading-[17px] text-white/70">
-                    Warna bergantian per kata untuk tracking lebih mudah
+                  <Text className="mt-0.5 font-ui-medium text-[13px] leading-[19px] text-white/70">
+                    {t.dashboard.innovations.bicolor.desc}
                   </Text>
                 </View>
               </LinearGradient>
-            </Pressable>
+            </PressableScale>
           </View>
 
-          {/* Reading Ruler + Word Isolation */}
+          {/* Penggaris Baca + Sorot Kata */}
           <View className="flex-row px-4 pt-3" style={{ gap: 10 }}>
             <InnovationTile
               gradient={GRADIENTS.ruler}
-              title="Reading Ruler"
-              desc="Penggaris baca intuitif"
+              title={t.dashboard.innovations.ruler.title}
+              desc={t.dashboard.innovations.ruler.desc}
               onPress={() => router.push('/reader')}
               art={<ArtReadingRuler width={90} />}
             />
             <InnovationTile
               gradient={GRADIENTS.isolation}
-              title="Word Isolation"
-              desc="Ketuk kata saat membaca"
+              title={t.dashboard.innovations.isolation.title}
+              desc={t.dashboard.innovations.isolation.desc}
               onPress={() => router.push('/reader')}
               art={<ArtWordIsolation size={70} />}
             />
@@ -337,7 +324,7 @@ export default function DashboardScreen() {
                   gap: 8,
                 }}>
                 <Sparkle size={10} opacity={0.85} />
-                <Text className="font-ui-bold text-[10px] text-white/95">TIP HARI INI</Text>
+                <Text className="font-ui-bold text-xs text-white/95">{t.dashboard.tipOfDay}</Text>
                 <Sparkle size={10} opacity={0.85} />
               </LinearGradient>
 
@@ -347,9 +334,10 @@ export default function DashboardScreen() {
                 </View>
                 <Animated.Text
                   style={{ opacity: fade }}
-                  className="flex-1 font-ui text-[13px] leading-[21px] text-text-main">
-                  {DAILY_TIPS[tipIndex]}
+                  className="flex-1 font-ui text-[14px] leading-[23px] text-text-main">
+                  {t.dailyTips[tipIndex]}
                 </Animated.Text>
+
               </View>
             </View>
           </View>
@@ -378,6 +366,76 @@ function GlassChip({ children, subtle }: { children: React.ReactNode; subtle?: b
   );
 }
 
+/** Kartu fitur yang naik satu per satu saat dashboard dibuka. */
+function FeatureCard({
+  index,
+  accent,
+  Illu,
+  label,
+  desc,
+  onPress,
+}: {
+  index: number;
+  accent: { gradient: readonly [string, string]; chevron: string };
+  Illu: (props: { size?: number }) => React.ReactElement;
+  label: string;
+  desc: string;
+  onPress: () => void;
+}) {
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    progress.value = withDelay(
+      120 + index * 70,
+      withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) }),
+    );
+  }, [index, progress]);
+
+  const entrance = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ translateY: (1 - progress.value) * 14 }],
+  }));
+
+  return (
+    <Reanimated.View style={entrance}>
+      <PressableScale
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}. ${desc}`}
+        scaleTo={0.98}
+        className="h-[84px] flex-row items-center rounded-2xl bg-surface px-3.5"
+        style={{ gap: 14 }}>
+        <LinearGradient
+          colors={[...accent.gradient]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 16,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Illu size={37} />
+        </LinearGradient>
+
+        <View className="flex-1">
+          <Text className="font-ui-bold text-[15px] leading-[21px] text-text-main">{label}</Text>
+          <Text className="mt-0.5 font-ui-medium text-[13px] leading-[19px] text-text-muted">
+            {desc}
+          </Text>
+        </View>
+
+        <View
+          className="h-8 w-8 items-center justify-center rounded-[16px]"
+          style={{ backgroundColor: accent.chevron }}>
+          <ChevronRight size={15} color="#ffffff" />
+        </View>
+      </PressableScale>
+    </Reanimated.View>
+  );
+}
+
 /** Kartu inovasi setengah lebar (Figma: 174x138). */
 function InnovationTile({
   gradient,
@@ -393,7 +451,13 @@ function InnovationTile({
   onPress: () => void;
 }) {
   return (
-    <Pressable className="flex-1" onPress={onPress} accessibilityRole="button">
+    <PressableScale
+      wrapperStyle={{ flex: 1 }}
+      className="flex-1"
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}. ${desc}`}
+      scaleTo={0.97}>
       <LinearGradient
         colors={[...gradient.colors] as [string, string, ...string[]]}
         locations={[...gradient.locations] as [number, number, ...number[]]}
@@ -404,14 +468,12 @@ function InnovationTile({
           <Blob size={70} opacity={0.08} style={{ position: 'absolute', top: -18, right: -12 }} />
           {art}
         </View>
-        <View className="border-t border-white/10 bg-black/20 px-3 py-2.5">
-          <Text className="font-ui-bold text-[13px] leading-5 text-white">{title}</Text>
-          <Text className="mt-0.5 font-ui-medium text-[10px] leading-[15px] text-white/65">
-            {desc}
-          </Text>
+        <View className="border-t border-white/10 bg-black/20 px-3 py-3">
+          <Text className="font-ui-bold text-[15px] leading-5 text-white">{title}</Text>
+          <Text className="mt-0.5 font-ui-medium text-xs leading-[17px] text-white/65">{desc}</Text>
         </View>
       </LinearGradient>
-    </Pressable>
+    </PressableScale>
   );
 }
 

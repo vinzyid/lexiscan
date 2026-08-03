@@ -24,16 +24,20 @@ class AiController extends Controller
             // 8000 karakter kira-kira sehalaman penuh hasil OCR; di atas itu latensi jadi tidak nyaman.
             'text' => ['required', 'string', 'min:10', 'max:8000'],
             'level' => ['required', 'string', Rule::in($this->ai->availableSimplifyLevels())],
+            'language' => $this->languageRule(),
         ]);
 
+        $language = $data['language'] ?? AiTextService::DEFAULT_LANGUAGE;
+
         try {
-            $paragraphs = $this->ai->simplify($data['text'], $data['level']);
+            $paragraphs = $this->ai->simplify($data['text'], $data['level'], $language);
         } catch (RuntimeException $e) {
             return $this->failure($e);
         }
 
         return response()->json([
             'level' => $data['level'],
+            'language' => $language,
             'paragraphs' => $paragraphs,
             'provider' => $this->ai->providerName(),
         ]);
@@ -46,16 +50,25 @@ class AiController extends Controller
             'term' => ['required', 'string', 'min:1', 'max:200'],
             'style' => ['required', 'string', Rule::in($this->ai->availableExplainStyles())],
             'context' => ['nullable', 'string', 'max:2000'],
+            'language' => $this->languageRule(),
         ]);
 
+        $language = $data['language'] ?? AiTextService::DEFAULT_LANGUAGE;
+
         try {
-            $paragraphs = $this->ai->explain($data['term'], $data['style'], $data['context'] ?? null);
+            $paragraphs = $this->ai->explain(
+                $data['term'],
+                $data['style'],
+                $data['context'] ?? null,
+                $language,
+            );
         } catch (RuntimeException $e) {
             return $this->failure($e);
         }
 
         return response()->json([
             'style' => $data['style'],
+            'language' => $language,
             'paragraphs' => $paragraphs,
             'provider' => $this->ai->providerName(),
         ]);
@@ -66,15 +79,19 @@ class AiController extends Controller
     {
         $data = $request->validate([
             'text' => ['required', 'string', 'min:5', 'max:8000'],
+            'language' => $this->languageRule(),
         ]);
 
+        $language = $data['language'] ?? AiTextService::DEFAULT_LANGUAGE;
+
         try {
-            $paragraphs = $this->ai->correctTypo($data['text']);
+            $paragraphs = $this->ai->correctTypo($data['text'], $language);
         } catch (RuntimeException $e) {
             return $this->failure($e);
         }
 
         return response()->json([
+            'language' => $language,
             'paragraphs' => $paragraphs,
             'provider' => $this->ai->providerName(),
         ]);
@@ -102,7 +119,19 @@ class AiController extends Controller
             // dengan backend tanpa harus menebak dari pesan 422.
             'levels' => $this->ai->availableSimplifyLevels(),
             'styles' => $this->ai->availableExplainStyles(),
+            'languages' => $this->ai->availableLanguages(),
         ]);
+    }
+
+    /**
+     * Opsional, bukan wajib: aplikasi versi lama tidak mengirim field ini dan
+     * akan langsung ditolak 422 kalau diwajibkan.
+     *
+     * @return array<int, mixed>
+     */
+    private function languageRule(): array
+    {
+        return ['sometimes', 'string', Rule::in($this->ai->availableLanguages())];
     }
 
     private function cacheWritable(): bool

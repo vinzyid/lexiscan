@@ -31,6 +31,10 @@ yarn-error.*
 *.pem
 
 # local env files
+# .env ikut diabaikan: isinya alamat backend per-mesin (IP LAN), dan nilai
+# EXPO_PUBLIC_* tertanam ke dalam APK saat build. Untuk build EAS, nilainya
+# diambil dari blok "env" di eas.json, bukan dari berkas ini.
+.env
 .env*.local
 
 # typescript

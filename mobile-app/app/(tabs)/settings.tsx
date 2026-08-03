@@ -1,19 +1,22 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check } from 'lucide-react-native';
+import { Check, Languages } from 'lucide-react-native';
 
 import { useOCRStore } from '../../src/store/useStore';
 import { GRADIENTS, THEMES, TYPE_LEVELS, type ThemeDef } from '../../src/theme/palettes';
 import { useThemeColors } from '../../src/theme/theme-provider';
+import { LANGUAGES, useT } from '../../src/i18n';
 import { DyslexicText } from '../../src/components/dyslexic-text';
+import { PressableScale } from '../../src/components/pressable-scale';
 import { Blob, HexDecor, Ring, ScreenBackdrop, Sparkle } from '../../src/components/figma-decor';
 import { LexiMascot } from '../../src/components/illustrations';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
-  const { themeId, setThemeId, typeLevelId, setTypeLevelId } = useOCRStore();
+  const t = useT();
+  const { themeId, setThemeId, typeLevelId, setTypeLevelId, language, setLanguage } = useOCRStore();
 
   return (
     <View className="flex-1 bg-background">
@@ -60,17 +63,15 @@ export default function SettingsScreen() {
             <View className="flex-1">
               <View className="flex-row">
                 <View className="rounded-[10px] border border-white/[0.15] bg-white/10 px-2 py-0.5">
-                  <Text className="font-ui-bold text-[9.5px] text-white/65">PELAJAR</Text>
+                  <Text className="font-ui-bold text-xs text-white/65">{t.settings.role}</Text>
                 </View>
               </View>
-              <Text className="mt-1.5 font-ui-bold text-[21px] text-white">Rama Putra</Text>
-              <Text className="mt-0.5 font-ui text-[12.5px] text-white/50">
-                Kelas 10 · SMA Negeri 1
-              </Text>
+              <Text className="mt-1.5 font-ui-bold text-[21px] text-white">{t.settings.name}</Text>
+              <Text className="mt-0.5 font-ui text-[13px] text-white/55">{t.settings.school}</Text>
               <View className="mt-2.5 flex-row" style={{ gap: 8 }}>
-                {['Gratis', 'Riset Ilmiah', 'Inklusif'].map((tag) => (
+                {t.settings.profileTags.map((tag) => (
                   <View key={tag} className="rounded-[10px] bg-white/[0.12] px-2 py-0.5">
-                    <Text className="font-ui-bold text-[9.5px] text-white/80">{tag}</Text>
+                    <Text className="font-ui-bold text-xs text-white/80">{tag}</Text>
                   </View>
                 ))}
               </View>
@@ -79,14 +80,68 @@ export default function SettingsScreen() {
         </LinearGradient>
 
         <View className="px-4 pt-5">
+          {/* Bahasa paling atas: ia mengubah seluruh isi layar ini. */}
+          <SectionHeading eyebrow={t.settings.languageEyebrow} title={t.settings.languageTitle} />
+
+          <View className="mt-4 flex-row" style={{ gap: 10 }}>
+            {LANGUAGES.map((option) => {
+              const selected = option.id === language;
+
+              return (
+                <PressableScale
+                  key={option.id}
+                  onPress={() => setLanguage(option.id)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={option.english}
+                  scaleTo={0.97}
+                  wrapperStyle={{ flex: 1 }}
+                  className={`h-[62px] flex-1 flex-row items-center rounded-2xl border px-4 ${
+                    selected ? 'border-primary/30 bg-primary/[0.08]' : 'border-border/10 bg-surface'
+                  }`}
+                  style={{ gap: 10 }}>
+                  <Languages size={20} color={selected ? colors.primary : colors.textMuted} />
+                  <Text
+                    className={`flex-1 font-ui-bold text-[15px] ${
+                      selected ? 'text-primary' : 'text-text-main'
+                    }`}>
+                    {option.name}
+                  </Text>
+                  {selected ? (
+                    <LinearGradient
+                      colors={[...GRADIENTS.activePill.colors]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                      <Check size={12} color="#ffffff" strokeWidth={3} />
+                    </LinearGradient>
+                  ) : null}
+                </PressableScale>
+              );
+            })}
+          </View>
+
+          <Text className="mt-2.5 font-ui-medium text-[13px] text-text-muted">
+            {t.settings.languageNote}
+          </Text>
+
           {/* ── Tema warna ──────────────────────────────────────────────── */}
-          <SectionHeading eyebrow="TEMA WARNA" title="Ramah untuk mata disleksia" />
+          <View className="pt-7">
+            <SectionHeading eyebrow={t.settings.themeEyebrow} title={t.settings.themeTitle} />
+          </View>
 
           <View className="mt-4" style={{ gap: 10 }}>
             {THEMES.map((theme) => (
               <ThemeCard
                 key={theme.id}
                 theme={theme}
+                name={t.themes[theme.id]}
                 selected={theme.id === themeId}
                 onPress={() => setThemeId(theme.id)}
               />
@@ -95,7 +150,7 @@ export default function SettingsScreen() {
 
           {/* ── Tipografi default ───────────────────────────────────────── */}
           <View className="pt-7">
-            <SectionHeading eyebrow="TIPOGRAFI DEFAULT" title="Mode baca default" />
+            <SectionHeading eyebrow={t.settings.typeEyebrow} title={t.settings.typeTitle} />
           </View>
 
           <View className="mt-4" style={{ gap: 10 }}>
@@ -103,12 +158,13 @@ export default function SettingsScreen() {
               const selected = level.id === typeLevelId;
 
               return (
-                <Pressable
+                <PressableScale
                   key={level.id}
                   onPress={() => setTypeLevelId(level.id)}
                   accessibilityRole="radio"
                   accessibilityState={{ selected }}
-                  accessibilityLabel={`Tipografi ${level.name}`}
+                  accessibilityLabel={`${t.settings.typeEyebrow} ${t.typeLevels[level.id].name}. ${t.typeLevels[level.id].desc}`}
+                  scaleTo={0.98}
                   className={`rounded-2xl border p-4 ${
                     selected ? 'border-primary/25 bg-primary/[0.07]' : 'border-border/10 bg-surface'
                   }`}>
@@ -133,24 +189,24 @@ export default function SettingsScreen() {
                         className={`font-ui-bold text-sm ${
                           selected ? 'text-primary' : 'text-text-main'
                         }`}>
-                        {level.name}
+                        {t.typeLevels[level.id].name}
                       </Text>
                     </View>
 
                     <View className="flex-row" style={{ gap: 6 }}>
-                      <MetricChip label="Font" value={`${level.fontSize}px`} />
-                      <MetricChip label="Spasi" value={level.spacingLabel} />
+                      <MetricChip label={t.settings.fontChip} value={`${level.fontSize}px`} />
+                      <MetricChip label={t.settings.spacingChip} value={level.spacingLabel} />
                     </View>
                   </View>
 
-                  <Text className="mt-2 font-ui-medium text-[11px] text-text-muted">
-                    {level.desc}
+                  <Text className="mt-2 font-ui-medium text-[13px] text-text-muted">
+                    {t.typeLevels[level.id].desc}
                   </Text>
 
                   <View className="mt-3 border-t border-border/10 pt-3">
-                    <DyslexicText levelOverride={level}>Membaca jadi lebih nyaman.</DyslexicText>
+                    <DyslexicText levelOverride={level}>{t.typography.previewSettings}</DyslexicText>
                   </View>
-                </Pressable>
+                </PressableScale>
               );
             })}
           </View>
@@ -171,13 +227,13 @@ export default function SettingsScreen() {
                 <LexiMascot size={52} />
                 <View className="flex-1">
                   <Text className="font-ui-bold text-lg text-white">LexiScan</Text>
-                  <Text className="font-ui text-xs text-white/55">
-                    Asisten baca untuk disleksia
+                  <Text className="font-ui-medium text-[13px] text-white/60">
+                    {t.settings.aboutTagline}
                   </Text>
                   <View className="mt-2 flex-row" style={{ gap: 6 }}>
-                    {['v1.0', 'Gratis', 'Inklusif'].map((tag) => (
+                    {t.settings.aboutTags.map((tag) => (
                       <View key={tag} className="rounded-[10px] bg-white/[0.12] px-2 py-0.5">
-                        <Text className="font-ui-bold text-[10px] text-white/80">{tag}</Text>
+                        <Text className="font-ui-bold text-xs text-white/80">{tag}</Text>
                       </View>
                     ))}
                   </View>
@@ -186,9 +242,8 @@ export default function SettingsScreen() {
             </LinearGradient>
 
             <View className="bg-surface p-4">
-              <Text className="font-ui text-xs leading-[21px] text-text-muted">
-                LexiScan menggunakan prinsip aksesibilitas berbasis riset ilmiah untuk menciptakan
-                pengalaman membaca yang nyaman dan efektif bagi semua orang.
+              <Text className="font-ui-medium text-sm leading-[23px] text-text-muted">
+                {t.settings.aboutBody}
               </Text>
             </View>
           </View>
@@ -208,8 +263,8 @@ export default function SettingsScreen() {
           style={{ width: 6, height: 24, borderRadius: 3 }}
         />
         <View>
-          <Text className="font-ui-bold text-[10px] text-text-muted">{eyebrow}</Text>
-          <Text className="font-ui-bold text-[15px] text-text-main">{title}</Text>
+          <Text className="font-ui-bold text-xs text-text-muted">{eyebrow}</Text>
+          <Text className="font-ui-bold text-[17px] text-text-main">{title}</Text>
         </View>
       </View>
     );
@@ -219,8 +274,8 @@ export default function SettingsScreen() {
   function MetricChip({ label, value }: { label: string; value: string }) {
     return (
       <View className="items-center rounded-[10px] px-2 py-0.5" style={{ backgroundColor: colors.surfaceAlt }}>
-        <Text className="font-ui-medium text-[9px] text-text-muted">{label}</Text>
-        <Text className="font-ui-bold text-[11px] text-text-main">{value}</Text>
+        <Text className="font-ui-medium text-[11px] text-text-muted">{label}</Text>
+        <Text className="font-ui-bold text-[13px] text-text-main">{value}</Text>
       </View>
     );
   }
@@ -232,21 +287,24 @@ export default function SettingsScreen() {
  */
 function ThemeCard({
   theme,
+  name,
   selected,
   onPress,
 }: {
   theme: ThemeDef;
+  name: string;
   selected: boolean;
   onPress: () => void;
 }) {
   const ink = theme.preview.stroke;
 
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
-      accessibilityLabel={`Tema ${theme.name}`}>
+      accessibilityLabel={name}
+      scaleTo={0.98}>
       <LinearGradient
         colors={[...theme.cardGradient]}
         start={{ x: 0, y: 0 }}
@@ -265,8 +323,8 @@ function ThemeCard({
         <ThemePreview theme={theme} ink={ink} />
 
         <View className="flex-1">
-          <Text className="font-ui-bold text-sm" style={{ color: theme.isDark ? '#e8e8f8' : ink }}>
-            {theme.name}
+          <Text className="font-ui-bold text-[15px]" style={{ color: theme.isDark ? '#e8e8f8' : ink }}>
+            {name}
           </Text>
           <View className="mt-1.5 flex-row" style={{ gap: 8 }}>
             {theme.swatches.map((swatch, index) => (
@@ -294,7 +352,7 @@ function ThemeCard({
           </LinearGradient>
         ) : null}
       </LinearGradient>
-    </Pressable>
+    </PressableScale>
   );
 }
 

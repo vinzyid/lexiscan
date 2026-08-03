@@ -39,8 +39,8 @@ export type ThemeTokens = {
 };
 
 export type ThemeDef = {
+  /** Nama tampilannya ada di `src/i18n` (`t.themes[id]`), bukan di sini. */
   id: ThemeId;
-  name: string;
   /** Tiga titik contoh warna di kartu pemilih tema (Figma: 10x10, r=5). */
   swatches: [string, string, string];
   /** Kotak pratinjau 48x38 di kiri kartu pemilih tema. */
@@ -65,7 +65,6 @@ const ACCENTS = {
 export const THEMES: ThemeDef[] = [
   {
     id: 'krem',
-    name: 'Krem Hangat',
     swatches: ['#9b7a4a', '#7c3aed', '#7c3aed'],
     preview: { fill: '#fdf8f2', stroke: '#241908' },
     cardGradient: ['#fdf8f2', '#f0e0c8'],
@@ -87,7 +86,6 @@ export const THEMES: ThemeDef[] = [
   },
   {
     id: 'kuning',
-    name: 'Kuning Lembut',
     swatches: ['#8b7520', '#d97706', '#7c3aed'],
     preview: { fill: '#fffbea', stroke: '#2e2400' },
     cardGradient: ['#fffbea', '#fff0a0'],
@@ -108,7 +106,6 @@ export const THEMES: ThemeDef[] = [
   },
   {
     id: 'biru',
-    name: 'Biru Pastel',
     swatches: ['#3b5f7a', '#4f46e5', '#7c3aed'],
     preview: { fill: '#edf4fb', stroke: '#0c1e30' },
     cardGradient: ['#edf4fb', '#c5deef'],
@@ -129,7 +126,6 @@ export const THEMES: ThemeDef[] = [
   },
   {
     id: 'hijau',
-    name: 'Hijau Lembut',
     swatches: ['#2e6a42', '#059669', '#7c3aed'],
     preview: { fill: '#eef7f1', stroke: '#0b2518' },
     cardGradient: ['#eef7f1', '#c2e8cc'],
@@ -150,7 +146,6 @@ export const THEMES: ThemeDef[] = [
   },
   {
     id: 'gelap',
-    name: 'Mode Gelap',
     swatches: ['#7070a0', '#7c3aed', '#7c3aed'],
     preview: { fill: '#111122', stroke: '#ffffff' },
     cardGradient: ['#1f2137', '#111122'],
@@ -248,9 +243,8 @@ export const BACKDROP_WASHES = [
 export type TypeLevelId = 'ringan' | 'sedang' | 'berat';
 
 export type TypeLevel = {
+  /** Nama & keterangannya ada di `src/i18n` (`t.typeLevels[id]`), bukan di sini. */
   id: TypeLevelId;
-  name: string;
-  desc: string;
   fontSize: number;
   lineHeightRatio: number;
   letterSpacing: number;
@@ -263,8 +257,6 @@ export type TypeLevel = {
 export const TYPE_LEVELS: TypeLevel[] = [
   {
     id: 'ringan',
-    name: 'Ringan',
-    desc: 'Ukuran & spasi sedikit lebih besar',
     fontSize: 16,
     lineHeightRatio: 1.85,
     letterSpacing: 0.96,
@@ -273,8 +265,6 @@ export const TYPE_LEVELS: TypeLevel[] = [
   },
   {
     id: 'sedang',
-    name: 'Sedang',
-    desc: 'Spasi lebar, awal kata ditebalkan',
     fontSize: 18,
     lineHeightRatio: 2.1,
     letterSpacing: 1.08,
@@ -283,8 +273,6 @@ export const TYPE_LEVELS: TypeLevel[] = [
   },
   {
     id: 'berat',
-    name: 'Berat',
-    desc: 'Aksesibilitas maksimal',
     fontSize: 21,
     lineHeightRatio: 2.4,
     letterSpacing: 1.26,

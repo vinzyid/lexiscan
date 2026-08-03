@@ -3,7 +3,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ScanSearch, X } from 'lucide-react-native';
 
 import { splitSyllables } from '../utils/syllables';
+import { useOCRStore } from '../store/useStore';
 import { GRADIENTS } from '../theme/palettes';
+import { PressableScale } from './pressable-scale';
+import { useT } from '../i18n';
 import { Blob, Ring, Sparkle } from './figma-decor';
 
 /**
@@ -21,7 +24,9 @@ export function WordSheet({
   /** Buka AI Explain This untuk kata ini; sheet ini ditutup lebih dulu. */
   onExplain?: (word: string) => void;
 }) {
-  const syllables = word ? splitSyllables(word) : [];
+  const t = useT();
+  const language = useOCRStore((s) => s.language);
+  const syllables = word ? splitSyllables(word, language) : [];
 
   return (
     <Modal visible={!!word} animationType="fade" transparent onRequestClose={onClose}>
@@ -44,17 +49,17 @@ export function WordSheet({
 
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center" style={{ gap: 8 }}>
-                <ScanSearch size={14} color="rgba(255,255,255,0.7)" />
-                <Text className="font-ui-bold text-[10px] text-white/70">ISOLASI KATA</Text>
+                <ScanSearch size={15} color="rgba(255,255,255,0.7)" />
+                <Text className="font-ui-bold text-xs text-white/70">{t.wordSheet.badge}</Text>
               </View>
-              <Pressable
+              <PressableScale
                 onPress={onClose}
-                hitSlop={10}
                 accessibilityRole="button"
-                accessibilityLabel="Tutup"
-                className="h-8 w-8 items-center justify-center rounded-[14px] bg-white/[0.15]">
-                <X size={14} color="#ffffff" />
-              </Pressable>
+                accessibilityLabel={t.common.close}
+                scaleTo={0.9}
+                className="h-11 w-11 items-center justify-center rounded-[16px] bg-white/[0.15]">
+                <X size={17} color="#ffffff" />
+              </PressableScale>
             </View>
 
             <Text
@@ -86,25 +91,27 @@ export function WordSheet({
           <View
             className="flex-row items-center justify-between bg-surface px-5 py-4"
             style={{ gap: 8 }}>
-            <Text className="font-ui-bold text-[13px] text-text-main">
-              {syllables.length} suku kata
+            <Text className="font-ui-bold text-[15px] text-text-main">
+              {t.wordSheet.syllableCount(syllables.length)}
             </Text>
 
             <View className="flex-row items-center" style={{ gap: 8 }}>
               {word && onExplain ? (
-                <Pressable
+                <PressableScale
                   onPress={() => onExplain(word)}
                   accessibilityRole="button"
-                  className="rounded-2xl px-3 py-2.5">
-                  <Text className="font-ui-bold text-[13px] text-text-muted">Tanya Lexi</Text>
-                </Pressable>
+                  accessibilityLabel={t.wordSheet.askLexiLabel(word)}
+                  className="h-11 items-center justify-center rounded-2xl px-3">
+                  <Text className="font-ui-bold text-sm text-text-muted">{t.common.askLexi}</Text>
+                </PressableScale>
               ) : null}
-              <Pressable
+              <PressableScale
                 onPress={onClose}
                 accessibilityRole="button"
-                className="rounded-2xl bg-primary/10 px-5 py-2.5">
-                <Text className="font-ui-bold text-sm text-primary">Tutup</Text>
-              </Pressable>
+                accessibilityLabel={t.common.close}
+                className="h-11 items-center justify-center rounded-2xl bg-primary/10 px-5">
+                <Text className="font-ui-bold text-[15px] text-primary">{t.common.close}</Text>
+              </PressableScale>
             </View>
           </View>
         </Pressable>

@@ -1,14 +1,17 @@
 import Constants from 'expo-constants';
 
 import type { ExplainStyleId, SimplifyLevelId } from '../data/sample-document';
+import { dictionaryFor } from '../i18n';
+import { useOCRStore } from '../store/useStore';
 
 /**
  * Alamat backend Laravel.
  *
  * Urutan prioritas:
  * 1. EXPO_PUBLIC_API_URL — nilainya ditanam saat build, jadi ini satu-satunya
- *    cara yang jalan di APK standalone. Untuk build EAS, isinya diatur di
- *    `eas.json` (bukan `.env`, yang tidak ikut ter-clone karena di-gitignore).
+ *    cara yang jalan di APK standalone. Build EAS mengambilnya dari blok `env`
+ *    di `eas.json`; build lokal (gradlew / expo run:android) dari `.env`, yang
+ *    sengaja tidak di-commit karena isinya alamat per-mesin.
  * 2. Host Metro bundler (Constants.expoConfig.hostUri) — otomatis benar di
  *    emulator MAUPUN HP fisik, karena perangkat yang bisa memuat JS bundle
  *    pasti bisa mencapai IP yang sama. Backend tinggal jalan di mesin yang
@@ -35,16 +38,21 @@ const REQUEST_TIMEOUT_MS = 70_000;
 
 export class AiApiError extends Error {}
 
+/** Dibaca dari store, bukan hook: berkas ini dipanggil dari luar komponen React. */
+const strings = () => dictionaryFor(useOCRStore.getState().language);
+
+const requestLanguage = () => useOCRStore.getState().language;
+
 async function postJson(path: string, body: Record<string, unknown>): Promise<any> {
+  const t = strings();
+
   if (!API_BASE_URL) {
     /*
      * Hanya bisa terjadi karena salah konfigurasi saat build, bukan karena
      * keadaan jaringan. Jadi pesannya menyebut penyebab dan tindakannya,
      * bukan menyarankan pengguna memeriksa koneksi.
      */
-    throw new AiApiError(
-      'Alamat backend belum ditanam di aplikasi ini. Set EXPO_PUBLIC_API_URL saat build (di eas.json untuk build EAS), lalu build ulang.',
-    );
+    throw new AiApiError(t.api.noBaseUrl);
   }
 
   const controller = new AbortController();
@@ -55,17 +63,14 @@ async function postJson(path: string, body: Record<string, unknown>): Promise<an
     response = await fetch(`${API_BASE_URL}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(body),
+      // Backend memakai `language` untuk memilih bahasa prompt maupun jawabannya.
+      body: JSON.stringify({ ...body, language: requestLanguage() }),
       signal: controller.signal,
     });
   } catch {
     // Penyebabnya dibedakan lewat signal, bukan lewat isi error: pesan fetch
     // di React Native tidak konsisten antar-platform.
-    throw new AiApiError(
-      controller.signal.aborted
-        ? 'Server terlalu lama merespons. Coba lagi sebentar.'
-        : 'Tidak bisa terhubung ke server. Pastikan backend berjalan dan HP satu jaringan dengan laptop.',
-    );
+    throw new AiApiError(controller.signal.aborted ? t.api.timeout : t.api.unreachable);
   } finally {
     clearTimeout(timer);
   }
@@ -74,7 +79,7 @@ async function postJson(path: string, body: Record<string, unknown>): Promise<an
 
   if (!response.ok) {
     // Backend mengirim 'message' yang sudah ramah pengguna (422 validasi, 503 penyedia AI).
-    throw new AiApiError(json?.message ?? `Permintaan gagal (HTTP ${response.status}).`);
+    throw new AiApiError(json?.message ?? t.api.httpError(response.status));
   }
 
   return json;
@@ -91,7 +96,7 @@ export async function simplifyText(
   });
 
   if (!Array.isArray(json?.paragraphs) || json.paragraphs.length === 0) {
-    throw new AiApiError('Server tidak mengembalikan hasil penyederhanaan.');
+    throw new AiApiError(strings().api.noSimplifyResult);
   }
 
   return json.paragraphs;
@@ -110,7 +115,7 @@ export async function explainTerm(
   });
 
   if (!Array.isArray(json?.paragraphs) || json.paragraphs.length === 0) {
-    throw new AiApiError('Server tidak mengembalikan penjelasan.');
+    throw new AiApiError(strings().api.noExplainResult);
   }
 
   return json.paragraphs;
@@ -123,7 +128,7 @@ export async function correctTypo(text: string): Promise<string> {
   });
 
   if (!Array.isArray(json?.paragraphs) || json.paragraphs.length === 0) {
-    throw new AiApiError('Server tidak mengembalikan teks hasil koreksi.');
+    throw new AiApiError(strings().api.noCorrectionResult);
   }
 
   // Gabungkan array of paragraphs menjadi satu string utuh dipisah \n\n
