@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Services\Ai\AiAnswer;
 use App\Services\Ai\AiProvider;
+use App\Services\Ai\FallbackProvider;
 use App\Services\Ai\FootprintEstimator;
 use App\Services\Ai\LlmResult;
 use App\Services\Ai\TokenUsage;
@@ -106,6 +107,14 @@ class AiTextService
     public function model(): string
     {
         return $this->provider->model();
+    }
+
+    /** Nama penyedia cadangan, atau null kalau tidak ada yang dipasang. */
+    public function fallbackName(): ?string
+    {
+        return $this->provider instanceof FallbackProvider
+            ? $this->provider->fallbackName()
+            : null;
     }
 
     /** @return array<int, string> */

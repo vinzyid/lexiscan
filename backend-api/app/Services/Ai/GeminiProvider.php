@@ -63,7 +63,7 @@ class GeminiProvider implements AiProvider
                 'body' => $response->json('error.message') ?? $response->body(),
             ]);
 
-            throw new RuntimeException($this->humanError($response->status(), $response->json('error.message')));
+            throw $this->failure($response->status(), $response->json('error.message'));
         }
 
         if (blank($raw = $this->answerText($response->json('candidates.0.content.parts')))) {
@@ -105,6 +105,20 @@ class GeminiProvider implements AiProvider
         }
 
         return null;
+    }
+
+    /**
+     * Galat yang pantas dipindahkan ke penyedia cadangan dibedakan jenisnya di
+     * sini: kuota habis dan server hulu goyah bisa ditolong cadangan, kunci
+     * salah tidak.
+     */
+    private function failure(int $status, ?string $detail): RuntimeException
+    {
+        $message = $this->humanError($status, $detail);
+
+        return $status === 429 || $status >= 500
+            ? new ProviderExhaustedException($message)
+            : new RuntimeException($message);
     }
 
     private function humanError(int $status, ?string $detail): string

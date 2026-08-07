@@ -42,6 +42,12 @@
             Http::preventStrayRequests() di tests/TestCase.php.
         -->
         <env name="AI_PROVIDER" value="gemini"/>
+        <!--
+            Sengaja kosong: cadangan diaktifkan per-test lewat config(), supaya
+            test lain tetap menguji satu penyedia saja dan kegagalan Gemini
+            tidak diam-diam ditolong OpenRouter di tempat yang tak diharapkan.
+        -->
+        <env name="AI_FALLBACK_PROVIDER" value=""/>
         <env name="AI_TIMEOUT" value="5"/>
         <!--
             Dikosongkan, bukan dihapus: nilai kosong berarti "simpan selamanya",

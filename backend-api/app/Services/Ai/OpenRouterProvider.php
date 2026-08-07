@@ -64,7 +64,7 @@ class OpenRouterProvider implements AiProvider
                 'body' => $response->json('error.message') ?? $response->body(),
             ]);
 
-            throw new RuntimeException($this->humanError($response->status(), $response->json('error.message')));
+            throw $this->failure($response->status(), $response->json('error.message'));
         }
 
         // OpenRouter kadang membalas 200 tapi isinya error dari model hulu.
@@ -84,6 +84,20 @@ class OpenRouterProvider implements AiProvider
             ParagraphPayload::extract($raw, 'OpenRouter'),
             TokenUsage::fromOpenAi($response->json('usage')),
         );
+    }
+
+    /**
+     * Sama seperti di GeminiProvider: hanya kehabisan jatah yang layak
+     * dilempar ke penyedia lain. 402 ikut karena saldo habis persis sama
+     * artinya — permintaan berikutnya pun akan ditolak.
+     */
+    private function failure(int $status, ?string $detail): RuntimeException
+    {
+        $message = $this->humanError($status, $detail);
+
+        return in_array($status, [402, 429], true) || $status >= 500
+            ? new ProviderExhaustedException($message)
+            : new RuntimeException($message);
     }
 
     private function humanError(int $status, ?string $detail): string

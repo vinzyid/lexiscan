@@ -126,6 +126,9 @@ class AiController extends Controller
             'provider' => $this->ai->providerName(),
             'model' => $this->ai->model(),
             'configured' => $this->ai->isConfigured(),
+            // Penyedia yang mengambil alih saat kuota yang utama habis; null
+            // berarti tidak ada, dan permintaan akan gagal begitu jatahnya usai.
+            'fallback' => $this->ai->fallbackName(),
             'cache' => [
                 'store' => config('cache.default'),
                 'writable' => $this->cacheWritable(),

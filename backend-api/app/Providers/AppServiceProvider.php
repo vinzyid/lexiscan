@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\Ai\AiProvider;
+use App\Services\Ai\FallbackProvider;
 use App\Services\Ai\GeminiProvider;
 use App\Services\Ai\GrokProvider;
 use App\Services\Ai\MistralProvider;
@@ -20,17 +21,21 @@ class AppServiceProvider extends ServiceProvider
     {
         // Penyedia LLM dipilih lewat AI_PROVIDER di .env; lihat config/services.php.
         $this->app->bind(AiProvider::class, function (): AiProvider {
-            $provider = (string) config('services.ai.provider');
+            $primary = $this->makeProvider((string) config('services.ai.provider'), 'AI_PROVIDER');
+            $fallback = (string) config('services.ai.fallback');
 
-            return match ($provider) {
-                'gemini' => new GeminiProvider,
-                'grok' => new GrokProvider,
-                'mistral' => new MistralProvider,
-                'openrouter' => new OpenRouterProvider,
-                default => throw new InvalidArgumentException(
-                    "AI_PROVIDER tidak dikenal: '{$provider}'. Pilihannya: gemini, grok, mistral, openrouter."
-                ),
-            };
+            /*
+             * Cadangan yang sama dengan yang utama tidak menambah apa pun, dan
+             * membungkusnya justru membuat satu kegagalan dicoba dua kali.
+             */
+            if (blank($fallback) || $fallback === $primary->name()) {
+                return $primary;
+            }
+
+            return new FallbackProvider(
+                $primary,
+                $this->makeProvider($fallback, 'AI_FALLBACK_PROVIDER'),
+            );
         });
 
         /*
@@ -48,5 +53,19 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         //
+    }
+
+    /** @param  string  $setting  Nama variabel .env-nya, supaya pesan galatnya menunjuk yang benar. */
+    private function makeProvider(string $name, string $setting): AiProvider
+    {
+        return match ($name) {
+            'gemini' => new GeminiProvider,
+            'grok' => new GrokProvider,
+            'mistral' => new MistralProvider,
+            'openrouter' => new OpenRouterProvider,
+            default => throw new InvalidArgumentException(
+                "{$setting} tidak dikenal: '{$name}'. Pilihannya: gemini, grok, mistral, openrouter."
+            ),
+        };
     }
 }

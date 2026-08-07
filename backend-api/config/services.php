@@ -43,6 +43,17 @@ return [
         'provider' => env('AI_PROVIDER', 'gemini'),
 
         /*
+         * Penyedia cadangan yang mengambil alih begitu yang utama kehabisan
+         * jatah — kuota harian habis, rate limit, saldo kurang, atau server
+         * hulunya sedang goyah. Kosongkan untuk mematikannya.
+         *
+         * Bukan pengganti pemilihan penyedia: kunci yang salah atau model yang
+         * tidak ada tetap gagal tanpa berpindah, supaya salah konfigurasi
+         * ketahuan alih-alih tertutupi. Lihat FallbackProvider.
+         */
+        'fallback' => env('AI_FALLBACK_PROVIDER'),
+
+        /*
          * Umur simpanan hasil AI, dalam detik. Kosong atau 0 berarti selamanya,
          * dan itulah bawaannya.
          *
