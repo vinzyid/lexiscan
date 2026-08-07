@@ -28,7 +28,7 @@ class GeminiProvider implements AiProvider
         return (string) config('services.gemini.model');
     }
 
-    public function paragraphsFor(string $prompt): array
+    public function paragraphsFor(string $prompt): LlmResult
     {
         if (! $this->isConfigured()) {
             throw new RuntimeException('GEMINI_API_KEY belum diisi di file .env backend.');
@@ -75,14 +75,16 @@ class GeminiProvider implements AiProvider
             });
         }
 
-        return ParagraphPayload::extract($raw, 'Gemini');
+        return new LlmResult(
+            ParagraphPayload::extract($raw, 'Gemini'),
+            TokenUsage::fromGemini($response->json('usageMetadata')),
+        );
     }
 
     /**
-     * Seri Gemini 3.x menalar sebelum menjawab, dan penalaran itu bisa datang
-     * sebagai part tersendiri bertanda `thought: true` di depan jawabannya.
-     * Mengambil `parts.0` secara buta akan menangkap penalaran itu, bukan JSON
-     * yang diminta, jadi ambil part pertama yang benar-benar berisi jawaban.
+     * Gemini 3.x bisa menyisipkan hasil penalaran sebagai part bertanda
+     * `thought: true` sebelum jawabannya, jadi `parts.0` belum tentu JSON
+     * yang diminta.
      *
      * @param  mixed  $parts
      */

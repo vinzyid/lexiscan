@@ -1,13 +1,8 @@
 /**
- * Token warna & tipografi, diambil langsung dari file Figma "Final Desain".
+ * Token warna & tipografi dari file Figma "Final Desain".
  *
- * Figma menyediakan tiga baris tema penuh (Dark Mode, Warm Cream, Soft Green).
- * Dua tema sisanya (Kuning Lembut, Biru Pastel) hanya muncul di kartu pemilih
- * tema pada layar Pengaturan — nilai bg/teksnya diambil dari kartu itu dan
- * surface-nya diturunkan memakai rumus yang sama dengan tema lain.
- *
- * Nilai warna disimpan sebagai channel RGB ("124 58 237") karena dipakai lewat
- * CSS variable + `rgb(var(--x) / <alpha-value>)` di tailwind.config.js.
+ * Warna disimpan sebagai channel RGB ("124 58 237") karena dipakai lewat CSS
+ * variable + `rgb(var(--x) / <alpha-value>)` di tailwind.config.js.
  */
 export type ThemeId = 'krem' | 'kuning' | 'biru' | 'hijau' | 'gelap';
 
@@ -17,10 +12,7 @@ export type ThemeTokens = {
   surfaceAlt: string;
   textMain: string;
   textMuted: string;
-  /**
-   * Sama dengan textMain. Di Figma garis pemisah selalu textMain @ 8%, jadi di
-   * kode selalu dipakai dengan opacity — `border-border/10`, bukan `border-border`.
-   */
+  /** Sama dengan textMain, selalu dipakai dengan opacity: `border-border/10`. */
   border: string;
   primary: string;
   primaryDeep: string;
@@ -28,12 +20,7 @@ export type ThemeTokens = {
   highlight: string;
   warm: string;
   success: string;
-  /*
-   * Bicolor Words: kata ganjil memakai bicolorA (= textMain), kata genap
-   * bicolorB. Nilai krem & gelap diambil apa adanya dari styleOverrideTable
-   * layar Bicolor di Figma; tiga tema lain memakai campuran yang sama
-   * (60% dari textMain menuju textMuted).
-   */
+  /** Bicolor Words: kata ganjil memakai bicolorA, kata genap bicolorB. */
   bicolorA: string;
   bicolorB: string;
 };
@@ -51,10 +38,7 @@ export type ThemeDef = {
   tokens: ThemeTokens;
 };
 
-/*
- * Aksen ungu/oranye/hijau identik di semua tema — Figma memakai nilai yang
- * persis sama di ketiga baris tema, jadi hanya permukaan & teks yang berganti.
- */
+/* Aksen identik di semua tema; hanya permukaan & teks yang berganti. */
 const ACCENTS = {
   primary: '124 58 237', // #7c3aed
   primaryDeep: '109 40 217', // #6d28d9
@@ -168,12 +152,7 @@ export const THEMES: ThemeDef[] = [
 
 export const getTheme = (id: ThemeId): ThemeDef => THEMES.find((t) => t.id === id) ?? THEMES[0];
 
-/**
- * Gradien Figma. Nilainya identik di ketiga baris tema, jadi tidak ikut
- * berganti saat pengguna mengubah palet — hanya permukaan & teks yang berganti.
- *
- * Dipakai lewat `<LinearGradient colors={...} locations={...} />`.
- */
+/** Gradien Figma, dipakai lewat `<LinearGradient colors locations />`. */
 export const GRADIENTS = {
   /** Banner utama dashboard & header profil. */
   hero: {
@@ -221,9 +200,8 @@ export const FEATURE_ACCENTS = {
 } as const;
 
 /**
- * Empat sapuan radial samar di latar tiap layar (Figma: "Container" paling
- * bawah). Diterjemahkan jadi lingkaran blur absolut, bukan gradien radial,
- * karena RN tidak punya radial gradient bawaan.
+ * Empat sapuan samar di latar tiap layar. React Native tidak punya radial
+ * gradient, jadi digambar sebagai lingkaran blur.
  */
 export const BACKDROP_WASHES = [
   { color: '#f59e0b', opacity: 0.04 },
@@ -232,25 +210,17 @@ export const BACKDROP_WASHES = [
   { color: '#7c3aed', opacity: 0.07 },
 ] as const;
 
-/**
- * Tiga preset "Adaptive Typography", persis kartu di layar Pengaturan.
- *
- * `spacingLabel` adalah angka yang ditampilkan di chip "Spasi" pada kartu —
- * bukan nilai letterSpacing sebenarnya. Teks bacaan memakai Atkinson
- * Hyperlegible; preset Ringan memakai berat Regular, Sedang & Berat memakai
- * Bold untuk seluruh paragraf (sesuai Figma).
- */
+/** Tiga preset "Adaptive Typography" di layar Pengaturan. */
 export type TypeLevelId = 'ringan' | 'sedang' | 'berat';
 
 export type TypeLevel = {
-  /** Nama & keterangannya ada di `src/i18n` (`t.typeLevels[id]`), bukan di sini. */
+  /** Nama & keterangannya ada di `src/i18n` (`t.typeLevels[id]`). */
   id: TypeLevelId;
   fontSize: number;
   lineHeightRatio: number;
   letterSpacing: number;
-  /** Label chip "Spasi" di kartu Pengaturan. */
+  /** Angka yang tampil di chip "Spasi", bukan nilai letterSpacing sebenarnya. */
   spacingLabel: string;
-  /** Seluruh paragraf memakai Atkinson Bold (preset Sedang & Berat). */
   bodyBold: boolean;
 };
 

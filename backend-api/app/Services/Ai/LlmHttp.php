@@ -9,23 +9,21 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Klien HTTP bersama untuk semua provider LLM.
- *
- * Timeout dan kebijakan coba-ulang tinggal di satu tempat supaya ketiga
- * provider tidak punya perilaku jaringan yang berbeda-beda.
+ * Klien HTTP bersama semua provider LLM: timeout dan kebijakan coba-ulang
+ * cukup diatur di satu tempat.
  */
 final class LlmHttp
 {
-    /** Percobaan pertama + 2 ulangan, selama anggaran waktu belum habis. */
+    /** Percobaan pertama + 2 ulangan. */
     private const ATTEMPTS = 3;
 
     /** Jeda dasar; pengalinya naik per percobaan (1,2 s lalu 2,4 s). */
     private const BACKOFF_MS = 1200;
 
     /**
-     * Aplikasi mobile membatalkan permintaan pada detik ke-70 (REQUEST_TIMEOUT_MS
-     * di mobile-app/src/api/ai.ts). Mengulang setelah itu hanya membakar kuota
-     * untuk klien yang sudah pergi, jadi ulangan berhenti di batas ini.
+     * Aplikasi mobile berhenti menunggu di detik ke-70 (REQUEST_TIMEOUT_MS di
+     * mobile-app/src/api/ai.ts), jadi ulangan setelah batas ini hanya membakar
+     * kuota untuk klien yang sudah pergi.
      */
     private const BUDGET_SECONDS = 55;
 
@@ -60,20 +58,16 @@ final class LlmHttp
 
                     return true;
                 },
-                // Provider tetap yang memutuskan bagaimana status akhir
-                // diterjemahkan menjadi pesan untuk pengguna, jadi setelah
-                // ulangan habis kembalikan Response apa adanya.
+                // Provider yang menerjemahkan status akhir jadi pesan untuk
+                // pengguna, jadi kembalikan Response apa adanya.
                 throw: false,
             )
             ->acceptJson();
     }
 
     /**
-     * Hanya kegagalan yang biasanya pulih dalam hitungan detik.
-     *
-     * ConnectionException (timeout, DNS, TLS) sengaja tidak diulang: kasus
-     * timeout memakan seluruh AI_TIMEOUT, jadi ulangannya hampir pasti melewati
-     * batas sabar aplikasi mobile.
+     * Hanya kegagalan yang biasanya pulih dalam hitungan detik. ConnectionException
+     * (timeout, DNS, TLS) tidak diulang karena sudah memakan seluruh AI_TIMEOUT.
      */
     private static function isTransient(Throwable $e): bool
     {

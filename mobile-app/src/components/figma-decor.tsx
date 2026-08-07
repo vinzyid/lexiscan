@@ -4,13 +4,9 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { BACKDROP_WASHES } from '../theme/palettes';
 
 /**
- * Hiasan yang berulang di seluruh layar Figma: gumpalan, cincin, heksagon,
- * kilau, dan potongan gelombang di kaki banner. Semuanya putih transparan di
- * atas gradien, jadi tidak ikut berganti saat palet diubah.
- *
- * Data path-nya diambil langsung dari node Figma, tapi warna & opacity tetap
- * jadi prop karena bentuk yang sama dipakai ulang dengan kepekatan berbeda-beda
- * (mis. Blob 4% di banner, 8% di kartu inovasi).
+ * Hiasan yang berulang di seluruh layar Figma. Data path-nya diambil dari node
+ * Figma, sedangkan warna & opacity jadi prop karena bentuk yang sama dipakai
+ * ulang dengan kepekatan berbeda.
  */
 
 /** "Blob" — gumpalan putih samar, biasanya melewati tepi kartu. */
@@ -104,10 +100,7 @@ export function Sparkle({
   );
 }
 
-/**
- * "WaveCut" — gelombang sewarna latar yang menutup kaki banner, memberi kesan
- * banner menyatu dengan halaman.
- */
+/** "WaveCut" — gelombang sewarna latar yang menutup kaki banner. */
 export function WaveCut({ width, color }: { width: number; color: string }) {
   return (
     <View pointerEvents="none" style={{ width, height: 28 }}>
@@ -121,11 +114,7 @@ export function WaveCut({ width, color }: { width: number; color: string }) {
   );
 }
 
-/**
- * Empat sapuan warna sangat samar di latar tiap layar. Figma memakai gradien
- * radial; React Native tidak punya padanannya, jadi diterjemahkan jadi
- * lingkaran besar ber-opacity rendah di sudut-sudut layar.
- */
+/** Sapuan warna samar di sudut-sudut layar; lihat BACKDROP_WASHES. */
 export function ScreenBackdrop() {
   const [amber, emerald, indigo, violet] = BACKDROP_WASHES;
 

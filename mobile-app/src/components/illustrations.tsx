@@ -1,10 +1,6 @@
 /**
- * Ilustrasi asli dari file Figma "Final Desain", di-export sebagai SVG dan
- * dipakai apa adanya — bukan gambar ulang. Menyegarkan aset cukup dengan
- * menimpa berkas di `assets/figma/`; kode di sini tidak perlu berubah.
- *
- * Semua ilustrasi fitur digambar putih transparan karena selalu tampil di atas
- * ubin gradien 52x52 — lihat FEATURE_ACCENTS di theme/palettes.ts.
+ * SVG hasil export dari file Figma "Final Desain", dipakai apa adanya —
+ * memperbarui aset cukup dengan menimpa berkas di `assets/figma/`.
  */
 import LexiSvg from '../../assets/figma/lexi.svg';
 import IlluScanSvg from '../../assets/figma/illu-scan.svg';

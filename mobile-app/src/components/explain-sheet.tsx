@@ -11,6 +11,7 @@ import {
 import { useT } from '../i18n';
 import { useThemeColors } from '../theme/theme-provider';
 import { DyslexicText } from './dyslexic-text';
+import { FootprintChip } from './footprint-chip';
 import { PressableScale } from './pressable-scale';
 import { LexiMascot } from './illustrations';
 
@@ -19,10 +20,7 @@ export type ExplainTarget = {
   term: string;
   /** Paragraf tempat term muncul; dikirim ke backend sebagai konteks. */
   context?: string;
-  /**
-   * Pakai jawaban kurasi lokal, bukan API — untuk dokumen contoh, supaya
-   * demo tetap jalan tanpa server dan tanpa kuota.
-   */
+  /** Jawaban kurasi lokal untuk dokumen contoh, supaya demo jalan tanpa server. */
   useStaticAnswers?: boolean;
 };
 
@@ -74,7 +72,7 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
     }
   };
 
-  // Helper function to map emoji to Lucide Icon
+  // Emoji gaya penjelasan dipetakan ke ikon Lucide.
   const renderStyleIcon = (id: string, size = 24, color = colors.textMain) => {
     if (id === 'anak10') return <UserRound size={size} color={color} />;
     if (id === 'analogi') return <MessageSquare size={size} color={color} />;
@@ -139,16 +137,17 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
                   </>
                 ) : (
                   /*
-                   * Jawaban Lexi adalah teks yang justru paling perlu dibaca,
-                   * jadi ia memakai DyslexicText — font Atkinson, spasi baris,
-                   * dan preset ukuran yang sama persis dengan layar Baca.
-                   * Sebelumnya bagian ini dirender 12px dengan font antarmuka.
+                   * Jawaban Lexi ikut memakai DyslexicText supaya font, spasi
+                   * baris, dan preset ukurannya sama dengan layar Baca.
                    */
-                  (paragraphs ?? []).map((para, index, all) => (
-                    <View key={index} className={index < all.length - 1 ? 'mb-4' : ''}>
-                      <DyslexicText>{para}</DyslexicText>
-                    </View>
-                  ))
+                  <>
+                    {(paragraphs ?? []).map((para, index, all) => (
+                      <View key={index} className={index < all.length - 1 ? 'mb-4' : ''}>
+                        <DyslexicText>{para}</DyslexicText>
+                      </View>
+                    ))}
+                    <FootprintChip />
+                  </>
                 )}
               </View>
             </View>

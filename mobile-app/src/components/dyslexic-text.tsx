@@ -41,10 +41,9 @@ function toChunks(text: string) {
 /**
  * Satu paragraf teks bacaan dengan aturan tipografi dari Figma:
  *
- * - Atkinson Hyperlegible, line-height lega (1.85–2.4×) dan letter spacing renggang.
- * - Visual fixation: **huruf pertama** tiap kata memakai berat Bold, sisanya
- *   Regular. Ini persis pola characterStyleOverrides di file Figma — bukan
- *   separuh kata — dan hanya aktif di preset Sedang & Berat.
+ * - Atkinson Hyperlegible, line-height lega (1.85–2.4×), letter spacing renggang.
+ * - Visual fixation: huruf pertama tiap kata Bold, sisanya Regular. Hanya aktif
+ *   di preset Sedang & Berat.
  * - Bicolor Words: kata ganjil/genap berganti warna (bicolorA / bicolorB).
  */
 export function DyslexicText({

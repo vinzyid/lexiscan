@@ -3,26 +3,25 @@
 namespace App\Services\Ai;
 
 /**
- * Satu penyedia LLM. Prompt-nya dibuat di AiTextService — provider hanya
- * bertugas mengirimnya dan mengembalikan daftar paragraf.
+ * Satu penyedia LLM. Prompt dibuat di AiTextService; provider hanya mengirimnya
+ * dan mengembalikan daftar paragraf.
  */
 interface AiProvider
 {
     /** Nama singkat untuk log, respons health, dan kunci cache. */
     public function name(): string;
 
-    /** Kunci API sudah terpasang di .env atau belum. */
     public function isConfigured(): bool;
 
-    /** Model yang sedang dipakai — ikut masuk kunci cache. */
     public function model(): string;
 
     /**
-     * Kirim prompt, terima paragraf yang sudah bersih.
+     * Paragraf jawaban beserta jumlah token yang terpakai membuatnya.
      *
-     * @return array<int, string>
+     * Tokennya dibawa serta karena jejak karbon dihitung darinya; penyedia yang
+     * tidak melaporkannya mengembalikan TokenUsage::unknown().
      *
      * @throws \RuntimeException Saat kunci belum diisi, kuota habis, atau respons tidak terpakai.
      */
-    public function paragraphsFor(string $prompt): array;
+    public function paragraphsFor(string $prompt): LlmResult;
 }

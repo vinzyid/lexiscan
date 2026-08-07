@@ -43,7 +43,12 @@
         -->
         <env name="AI_PROVIDER" value="gemini"/>
         <env name="AI_TIMEOUT" value="5"/>
-        <env name="AI_CACHE_TTL" value="600"/>
+        <!--
+            Dikosongkan, bukan dihapus: nilai kosong berarti "simpan selamanya",
+            yaitu bawaan produksi. Kalau barisnya dihapus, nilainya jatuh ke .env
+            milik masing-masing mesin dan test ikut berubah-ubah mengikutinya.
+        -->
+        <env name="AI_CACHE_TTL" value=""/>
         <env name="GEMINI_API_KEY" value="test-gemini-key"/>
         <env name="GEMINI_MODEL" value="gemini-3.6-flash"/>
         <env name="XAI_API_KEY" value="test-xai-key"/>

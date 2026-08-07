@@ -23,6 +23,7 @@ import {
 import { ThemeProvider, useThemeColors } from '../src/theme/theme-provider';
 import { BrandSplash } from '../src/components/brand-splash';
 import { Onboarding } from '../src/components/onboarding';
+import { useServerDefaults } from '../src/hooks/use-server-defaults';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -32,10 +33,8 @@ type Intro = 'splash' | 'onboarding' | 'done';
 function RootNavigator({ intro, onAdvance }: { intro: Intro; onAdvance: (next: Intro) => void }) {
   const colors = useThemeColors();
 
-  /*
-   * Ditumpuk di atas navigator, bukan jadi rute: sebagai rute keduanya masuk
-   * riwayat navigasi dan Beranda sempat berkedip lebih dulu.
-   */
+  // Ditumpuk di atas navigator, bukan jadi rute, supaya Beranda tidak sempat
+  // berkedip lebih dulu.
   return (
     <>
       <StatusBar style={intro !== 'done' || colors.isDark ? 'light' : 'dark'} />
@@ -60,13 +59,12 @@ function RootNavigator({ intro, onAdvance }: { intro: Intro; onAdvance: (next: I
 
 export default function RootLayout() {
   /*
-   * Dua keluarga font sesuai Figma: Fredoka untuk seluruh antarmuka, Atkinson
-   * Hyperlegible khusus teks bacaan (huruf-huruf yang mirip dibedakan bentuknya
-   * — b/d, p/q, I/l — jadi lebih aman untuk pembaca disleksia).
+   * Fredoka untuk antarmuka, Atkinson Hyperlegible untuk teks bacaan (huruf
+   * mirip seperti b/d dan I/l dibedakan bentuknya, lebih aman bagi pembaca
+   * disleksia).
    *
-   * Tiap berat didaftarkan sebagai family tersendiri. Di Android, fontFamily
-   * kustom + fontWeight tanpa face terdaftar bikin RN mundur ke font sistem,
-   * jadi berat selalu disebut lewat class (`font-ui-bold`, `font-read-bold`).
+   * Tiap berat didaftarkan sebagai family tersendiri karena di Android
+   * fontFamily kustom + fontWeight membuat RN mundur ke font sistem.
    */
   const [loaded, error] = useFonts({
     Fredoka_300Light,
@@ -79,9 +77,13 @@ export default function RootLayout() {
   });
 
   /*
-   * Splash sistem ditahan sampai font dimuat, karena BrandSplash memakai
-   * Fredoka — tanpa itu judulnya sempat tampil dengan font sistem.
+   * Dijalankan berbarengan dengan splash: hasilnya sudah diterapkan sebelum
+   * layar pertama terlihat, jadi tidak ada tema yang berganti di depan mata
+   * pengguna.
    */
+  useServerDefaults();
+
+  // Splash sistem ditahan sampai font siap; BrandSplash memakai Fredoka.
   const [intro, setIntro] = useState<Intro>('splash');
   const advanceIntro = useCallback((next: Intro) => setIntro(next), []);
 
@@ -95,8 +97,7 @@ export default function RootLayout() {
     return null;
   }
 
-  // Tanpa GestureHandlerRootView, gestur di layar Baca diam saja di Android
-  // tanpa pesan error apa pun.
+  // Wajib: tanpa ini gestur di layar Baca diam saja di Android.
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

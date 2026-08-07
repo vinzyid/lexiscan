@@ -188,6 +188,49 @@ export const id = {
       'LexiScan menggunakan prinsip aksesibilitas berbasis riset ilmiah untuk menciptakan pengalaman membaca yang nyaman dan efektif bagi semua orang.',
   },
 
+  feedback: {
+    eyebrow: 'Masukan',
+    title: 'Ceritakan pengalamanmu',
+    intro: 'Laporanmu dibaca langsung oleh tim LexiScan.',
+    typeFeedback: 'Masukan',
+    typeOcrFailure: 'Pindai gagal',
+    placeholderFeedback: 'Apa yang bisa kami perbaiki? Tulis sejelas yang kamu bisa.',
+    placeholderOcrFailure: 'Halaman seperti apa yang gagal terbaca? Tulis sebisamu.',
+    charCount: (count: number, max: number) => `${count}/${max}`,
+    attachTitle: 'Lampirkan teks pindaian terakhir',
+    attachDesc: 'Membantu kami menemukan sebabnya. Hanya terkirim kalau kamu menyalakannya.',
+    attachEmpty: 'Belum ada hasil pindaian yang bisa dilampirkan.',
+    privacyNote: 'Terkirim tanpa nama — yang ikut hanya penanda perangkat acak.',
+    submit: 'Kirim Laporan',
+    submitLabel: 'Kirim laporan ke tim LexiScan',
+    sending: 'Mengirim…',
+    tooShort: 'Tulis pesannya dulu, minimal 3 huruf.',
+    sentTitle: 'Terima kasih!',
+    sentBody: 'Laporanmu sudah kami terima.',
+    sendAnother: 'Kirim laporan lain',
+    unexpectedError: 'Terjadi kesalahan tak terduga. Coba lagi.',
+  },
+
+  footprint: {
+    eyebrow: 'Dampak lingkungan',
+    title: 'Jejak karbon AI',
+    empty: 'Belum ada permintaan AI. Coba sederhanakan sebuah teks dulu.',
+    spentLabel: 'Emisi terpakai',
+    avoidedLabel: 'Emisi dihindari',
+    requestsLabel: 'Permintaan AI',
+    energyLabel: 'Energi',
+    cachedShare: (cached: number, total: number, percent: number) =>
+      `${cached} dari ${total} permintaan dijawab dari simpanan, tanpa menyalakan model lagi (${percent}%).`,
+    equivalent: (percent: string) => `Setara mengisi daya ponsel sekitar ${percent}%.`,
+    // Chip kecil di samping hasil AI.
+    chipCached: 'Dari simpanan · 0 g',
+    chipSpent: (value: string) => `≈ ${value} CO₂e`,
+    chipUnknown: 'Jejak karbon tak terdata',
+    methodNote:
+      'Angka ini taksiran, bukan pengukuran: dihitung dari jumlah token yang dilaporkan penyedia AI, dikalikan konsumsi energi per token dan intensitas karbon listrik pusat datanya.',
+    resetLabel: 'Nolkan hitungan',
+  },
+
   typography: {
     title: 'Atur Tulisan',
     subtitle: 'Sesuaikan teks untuk kenyamananmu',

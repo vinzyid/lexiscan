@@ -37,6 +37,7 @@ import { simplifyText, AiApiError } from '../../src/api/ai';
 import { DyslexicText } from '../../src/components/dyslexic-text';
 import { PressableScale } from '../../src/components/pressable-scale';
 import { TextSkeleton } from '../../src/components/text-skeleton';
+import { FootprintChip } from '../../src/components/footprint-chip';
 import { TypographySheet } from '../../src/components/typography-sheet';
 import { ExplainSheet, type ExplainTarget } from '../../src/components/explain-sheet';
 import { WordSheet } from '../../src/components/word-sheet';
@@ -96,8 +97,7 @@ export default function ReaderScreen() {
    */
   const isScanned = rawText.trim().length > 0;
 
-  // Judul bagian sengaja tidak disambung: dulu ia muncul sebagai paragraf
-  // pertama berhuruf kapital semua, mengulang judul di kartu atas.
+  // Judul bagian tidak ikut disambung supaya tidak mengulang judul di kartu atas.
   const textToSimplify = isScanned ? rawText : t.sampleDoc.paragraphs.join('\n\n');
 
   const scannedParagraphs = useMemo(
@@ -170,9 +170,8 @@ export default function ReaderScreen() {
   };
 
   /**
-   * onTextLayout bisa terpanggil lagi setiap render, dan array `lines` selalu
-   * objek baru — tanpa pembanding ini state-nya berubah terus dan memicu
-   * render berulang tanpa henti.
+   * onTextLayout terpanggil tiap render dengan array `lines` yang selalu objek
+   * baru, jadi perlu dibandingkan isinya supaya tidak render tanpa henti.
    */
   const syncLines = useCallback(
     (next: TextLayoutLine[]) => {
@@ -467,6 +466,10 @@ export default function ReaderScreen() {
                 ))}
               </Animated.View>
             )}
+
+            {/* Hanya untuk level yang benar-benar memanggil AI: di L1 teksnya
+                asli, jadi menampilkan jejak karbon di sana akan menyesatkan. */}
+            {needsAi && !showSkeleton ? <FootprintChip /> : null}
 
             {rulerMode && !showSkeleton && lineCount > 0 ? (
               <View

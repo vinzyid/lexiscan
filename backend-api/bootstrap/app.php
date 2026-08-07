@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\IdentifyDevice;
+use App\Http\Middleware\RequireApiKey;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,7 +18,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'api.key' => RequireApiKey::class,
+            'device' => IdentifyDevice::class,
+        ]);
+
+        /*
+         * Di belakang proxy Railway, alamat IP asli hanya ada di header
+         * X-Forwarded-For. Tanpa ini seluruh permintaan terlihat berasal dari
+         * satu IP dan berbagi jatah throttle:20,1 yang sama.
+         */
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
@@ -24,9 +36,8 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         /*
-         * Aplikasi mobile menampilkan field `message` apa adanya ke pengguna, jadi
-         * kegagalan yang bisa dilihat pembaca perlu berbahasa Indonesia. Pesan
-         * bawaan untuk kasus di bawah semuanya berbahasa Inggris.
+         * Aplikasi mobile menampilkan field `message` apa adanya, sedangkan pesan
+         * bawaan Laravel untuk kasus di bawah berbahasa Inggris.
          */
         $exceptions->render(function (ThrottleRequestsException $e, Request $request) {
             if (! $request->is('api/*')) {

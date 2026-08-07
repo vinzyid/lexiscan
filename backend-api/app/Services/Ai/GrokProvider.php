@@ -6,8 +6,7 @@ use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
- * xAI (Grok). API-nya OpenAI-compatible, jadi bentuk request mengikuti
- * /chat/completions dengan response_format json_schema untuk menjamin
+ * xAI (Grok), OpenAI-compatible. Memakai response_format json_schema supaya
  * hasilnya selalu array paragraf.
  */
 class GrokProvider implements AiProvider
@@ -29,7 +28,7 @@ class GrokProvider implements AiProvider
         return (string) config('services.grok.model');
     }
 
-    public function paragraphsFor(string $prompt): array
+    public function paragraphsFor(string $prompt): LlmResult
     {
         if (! $this->isConfigured()) {
             throw new RuntimeException('XAI_API_KEY belum diisi di file .env backend.');
@@ -85,7 +84,10 @@ class GrokProvider implements AiProvider
             throw new RuntimeException('Grok tidak mengembalikan teks. Coba lagi sebentar.');
         }
 
-        return ParagraphPayload::extract($raw, 'Grok');
+        return new LlmResult(
+            ParagraphPayload::extract($raw, 'Grok'),
+            TokenUsage::fromOpenAi($response->json('usage')),
+        );
     }
 
     private function humanError(int $status, ?string $detail): string

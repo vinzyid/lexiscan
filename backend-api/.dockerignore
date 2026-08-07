@@ -1,0 +1,22 @@
+# Dipasang ulang di dalam image oleh composer.
+vendor/
+node_modules/
+
+# Kredensial mesin lokal — nilainya diisi lewat Variables di Railway.
+.env
+.env.backup
+.env.production
+
+.git/
+.github/
+tests/
+.phpunit.cache/
+.phpunit.result.cache
+storage/logs/
+storage/framework/cache/data/
+storage/framework/sessions/
+storage/framework/views/
+database/database.sqlite
+Dockerfile
+.dockerignore
+README.md

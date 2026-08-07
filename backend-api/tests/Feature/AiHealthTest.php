@@ -2,11 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Services\SystemSettings;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /** GET /api/ai/health dan kerangka respons error API. */
 class AiHealthTest extends TestCase
 {
+    // Dibutuhkan tabel `settings`: sebagian test di bawah menimpa parameter
+    // sistem seperti yang dilakukan admin dari dashboard.
+    use RefreshDatabase;
+
     public function test_it_reports_the_active_provider_without_spending_quota(): void
     {
         // Http::preventStrayRequests() di TestCase memastikan health tidak
@@ -21,6 +27,32 @@ class AiHealthTest extends TestCase
                 'levels' => ['L2', 'L3', 'L4', 'L5'],
                 'styles' => ['anak10', 'analogi', 'nyata'],
             ]);
+    }
+
+    public function test_it_publishes_the_typography_defaults_the_mobile_app_reads(): void
+    {
+        /*
+         * Kontrak dengan aplikasi: `defaults` adalah satu-satunya jalan bagi
+         * admin untuk memperbaiki tampilan awal pengguna baru tanpa merilis
+         * ulang APK. Namanya tidak boleh berubah diam-diam.
+         */
+        $this->getJson('/api/ai/health')
+            ->assertOk()
+            ->assertJsonPath('defaults.theme', 'krem')
+            ->assertJsonPath('defaults.type_level', 'sedang');
+    }
+
+    public function test_an_admin_override_reaches_the_mobile_app(): void
+    {
+        app(SystemSettings::class)->put(SystemSettings::KEY_TYPOGRAPHY, [
+            'theme' => 'gelap',
+            'type_level' => 'berat',
+        ]);
+
+        $this->getJson('/api/ai/health')
+            ->assertOk()
+            ->assertJsonPath('defaults.theme', 'gelap')
+            ->assertJsonPath('defaults.type_level', 'berat');
     }
 
     public function test_it_reports_a_missing_api_key_instead_of_pretending_to_be_ready(): void

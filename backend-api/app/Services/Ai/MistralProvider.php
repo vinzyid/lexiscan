@@ -6,11 +6,9 @@ use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
- * Mistral AI (La Plateforme). API-nya OpenAI-compatible.
- *
- * Dipakai sebagai cadangan kalau kuota Gemini habis di tengah demo. Mistral
- * mendukung `response_format: json_object`, tapi tidak menjamin skema seperti
- * Gemini `responseSchema` — jaring pengamannya ada di ParagraphPayload.
+ * Mistral AI (La Plateforme), OpenAI-compatible. Cadangan kalau kuota Gemini
+ * habis. `response_format: json_object` tidak menjamin skema seperti
+ * responseSchema milik Gemini, jadi ParagraphPayload yang jadi jaring pengaman.
  */
 class MistralProvider implements AiProvider
 {
@@ -31,7 +29,7 @@ class MistralProvider implements AiProvider
         return (string) config('services.mistral.model');
     }
 
-    public function paragraphsFor(string $prompt): array
+    public function paragraphsFor(string $prompt): LlmResult
     {
         if (! $this->isConfigured()) {
             throw new RuntimeException('MISTRAL_API_KEY belum diisi di file .env backend.');
@@ -70,7 +68,10 @@ class MistralProvider implements AiProvider
             throw new RuntimeException('Mistral tidak mengembalikan teks. Coba lagi sebentar.');
         }
 
-        return ParagraphPayload::extract($raw, 'Mistral');
+        return new LlmResult(
+            ParagraphPayload::extract($raw, 'Mistral'),
+            TokenUsage::fromOpenAi($response->json('usage')),
+        );
     }
 
     private function humanError(int $status, ?string $detail): string

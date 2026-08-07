@@ -6,12 +6,10 @@ use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
- * OpenRouter — gerbang ke banyak model lewat satu kunci, OpenAI-compatible.
+ * OpenRouter — banyak model lewat satu kunci, OpenAI-compatible.
  *
- * Model gratis (berakhiran ":free") jauh lebih ketat rate limit-nya daripada
- * yang berbayar, dan tidak semuanya mendukung structured outputs. Yang bisa
- * dipakai di sini hanya model yang punya kemampuan itu — cek daftarnya di
- * https://openrouter.ai/api/v1/models (endpoint publik, tanpa kunci).
+ * Model gratis (":free") rate limit-nya ketat dan tidak semuanya mendukung
+ * structured outputs; hanya yang mendukung itu yang bisa dipakai di sini.
  */
 class OpenRouterProvider implements AiProvider
 {
@@ -32,7 +30,7 @@ class OpenRouterProvider implements AiProvider
         return (string) config('services.openrouter.model');
     }
 
-    public function paragraphsFor(string $prompt): array
+    public function paragraphsFor(string $prompt): LlmResult
     {
         if (! $this->isConfigured()) {
             throw new RuntimeException('OPENROUTER_API_KEY belum diisi di file .env backend.');
@@ -82,7 +80,10 @@ class OpenRouterProvider implements AiProvider
             throw new RuntimeException('OpenRouter tidak mengembalikan teks. Coba lagi sebentar.');
         }
 
-        return ParagraphPayload::extract($raw, 'OpenRouter');
+        return new LlmResult(
+            ParagraphPayload::extract($raw, 'OpenRouter'),
+            TokenUsage::fromOpenAi($response->json('usage')),
+        );
     }
 
     private function humanError(int $status, ?string $detail): string

@@ -9,3 +9,7 @@
 /.github export-ignore
 CHANGELOG.md export-ignore
 .styleci.yml export-ignore
+
+# Wajib LF: skrip dengan akhiran baris CRLF ditolak Linux dengan
+# "exec format error" saat container start.
+*.sh text eol=lf

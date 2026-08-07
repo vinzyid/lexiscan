@@ -36,24 +36,47 @@ return [
     ],
 
     /*
-     * Penyedia LLM untuk AI Text Simplification dan AI Explain This.
-     * Prompt dan cache dibagi bersama; hanya lapisan HTTP yang berbeda,
-     * jadi 'provider' bisa ditukar tanpa mengubah endpoint apa pun.
+     * Penyedia LLM untuk fitur AI. Prompt dan cache dibagi bersama; hanya
+     * lapisan HTTP yang berbeda, jadi 'provider' bisa ditukar kapan saja.
      */
     'ai' => [
         'provider' => env('AI_PROVIDER', 'gemini'),
-        // Free tier kedua penyedia dibatasi, jadi hasil identik di-cache.
-        'cache_ttl' => (int) env('AI_CACHE_TTL', 86400),
+
+        /*
+         * Umur simpanan hasil AI, dalam detik. Kosong atau 0 berarti selamanya,
+         * dan itulah bawaannya.
+         *
+         * Kunci cache memuat md5 teks masukannya, jadi satu entri hanya pernah
+         * dipakai ulang oleh permintaan yang benar-benar identik — dan jawaban
+         * atas teks yang sama tidak punya alasan untuk basi. Membiarkannya
+         * kedaluwarsa berarti menyalakan model lagi untuk pertanyaan yang sudah
+         * pernah dijawab: kuota gratis terbuang, dan emisinya keluar dua kali
+         * untuk hasil yang sama.
+         *
+         * Diisi hanya kalau simpanannya memang perlu dibatasi, misalnya saat
+         * store-nya dipakai bersama layanan lain dan ukurannya harus dijaga.
+         */
+        'cache_ttl' => max(0, (int) env('AI_CACHE_TTL', 0)) ?: null,
         'timeout' => (int) env('AI_TIMEOUT', 60),
+
+        /*
+         * Kunci bersama backend <-> aplikasi mobile, bukan autentikasi per
+         * pengguna. Nilainya ditanam ke APK saat build sehingga bisa diekstrak
+         * dari APK — penghalang pemakaian kuota, bukan jaminan keamanan.
+         */
+        'api_key' => env('AI_API_KEY'),
+
+        // Wajib di mana pun kecuali mesin pengembang dan test. Lihat RequireApiKey.
+        'require_api_key' => (bool) env(
+            'AI_REQUIRE_API_KEY',
+            ! in_array(env('APP_ENV', 'production'), ['local', 'testing'], true),
+        ),
     ],
 
     /*
-     * Model default sengaja Flash: itu yang tersedia di free tier Google AI
-     * Studio (seri Pro sudah berbayar) dan cukup cepat untuk dipakai
-     * interaktif di dalam aplikasi.
-     *
-     * Jangan turunkan ke gemini-2.5-flash — Google sudah menutupnya untuk
-     * pengguna baru dan membalas 404 "no longer available to new users".
+     * Default-nya Flash: seri itu yang tersedia di free tier Google AI Studio
+     * dan cukup cepat untuk dipakai interaktif. Jangan turunkan ke
+     * gemini-2.5-flash — sudah ditutup untuk pengguna baru dan membalas 404.
      */
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
@@ -61,8 +84,7 @@ return [
     ],
 
     /*
-     * xAI (Grok). API-nya OpenAI-compatible. Daftar model per akun berbeda —
-     * cek milik sendiri dengan:
+     * Daftar model berbeda per akun; cek milik sendiri dengan:
      *   curl https://api.x.ai/v1/models -H "Authorization: Bearer $XAI_API_KEY"
      */
     'grok' => [
@@ -71,8 +93,7 @@ return [
     ],
 
     /*
-     * Mistral AI (La Plateforme). OpenAI-compatible, mendukung json_object.
-     * Daftar model per akun berbeda — cek milik sendiri dengan:
+     * Daftar model berbeda per akun; cek milik sendiri dengan:
      *   curl https://api.mistral.ai/v1/models -H "Authorization: Bearer $MISTRAL_API_KEY"
      */
     'mistral' => [
@@ -81,14 +102,10 @@ return [
     ],
 
     /*
-     * OpenRouter — satu kunci untuk banyak model, OpenAI-compatible.
-     * Model default harus yang mendukung structured outputs, kalau tidak
-     * jaminan format paragraf hilang. Per Juli 2026 hanya 5 model gratis
-     * yang mendukungnya; alternatif selain default di bawah:
-     *   nvidia/nemotron-3-super-120b-a12b:free  (paling besar)
-     *   openai/gpt-oss-20b:free
-     *   nvidia/nemotron-nano-9b-v2:free         (paling ringan)
-     * Daftar terkini: https://openrouter.ai/api/v1/models (publik, tanpa kunci).
+     * Model harus mendukung structured outputs, kalau tidak jaminan format
+     * paragraf hilang. Alternatif gratis: nvidia/nemotron-3-super-120b-a12b:free,
+     * openai/gpt-oss-20b:free, nvidia/nemotron-nano-9b-v2:free.
+     * Daftar terkini: https://openrouter.ai/api/v1/models
      */
     'openrouter' => [
         'key' => env('OPENROUTER_API_KEY'),

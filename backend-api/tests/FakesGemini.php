@@ -46,16 +46,31 @@ trait FakesGemini
     }
 
     /**
+     * Jumlah token bawaan untuk respons palsu. Nilainya sengaja sama dengan
+     * permintaan menengah yang dipakai mengkalibrasi config/footprint.php,
+     * sehingga taksiran yang keluar di test bisa dihitung tangan: 0,24 Wh.
+     */
+    protected const FAKE_PROMPT_TOKENS = 500;
+
+    protected const FAKE_OUTPUT_TOKENS = 400;
+
+    /**
      * @param  array<int, string>  $paragraphs
+     * @param  array<string, int>|null  $usage  Timpa jumlah token; null memakai bawaan.
      * @return array<string, mixed>
      */
-    protected function geminiBody(array $paragraphs, string $finishReason = 'STOP'): array
+    protected function geminiBody(array $paragraphs, string $finishReason = 'STOP', ?array $usage = null): array
     {
         return [
             'candidates' => [[
                 'content' => ['parts' => [['text' => json_encode(['paragraphs' => $paragraphs])]]],
                 'finishReason' => $finishReason,
             ]],
+            // Dasar perhitungan jejak karbon; Gemini selalu mengirimkannya.
+            'usageMetadata' => $usage ?? [
+                'promptTokenCount' => self::FAKE_PROMPT_TOKENS,
+                'candidatesTokenCount' => self::FAKE_OUTPUT_TOKENS,
+            ],
         ];
     }
 

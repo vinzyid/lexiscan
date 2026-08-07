@@ -2,7 +2,12 @@
 
 namespace App\Services;
 
+use App\Services\Ai\AiAnswer;
 use App\Services\Ai\AiProvider;
+use App\Services\Ai\FootprintEstimator;
+use App\Services\Ai\LlmResult;
+use App\Services\Ai\TokenUsage;
+use App\Services\SystemSettings;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -10,12 +15,8 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Prompt engineering untuk dua fitur AI LexiScan.
- *
- * Prompt dan caching tinggal di sini, terlepas dari penyedia mana yang aktif,
- * supaya berganti dari Gemini ke Grok tidak mengubah kualitas hasil maupun
- * bentuk respons API. Kunci API hanya hidup di sisi server — aplikasi mobile
- * tidak pernah memegangnya, sesuai peran backend sebagai gateway.
+ * Prompt dan cache untuk fitur AI LexiScan. Semuanya terpusat di sini supaya
+ * mengganti penyedia LLM tidak mengubah hasil maupun bentuk respons API.
  */
 class AiTextService
 {
@@ -23,10 +24,9 @@ class AiTextService
 
     public const DEFAULT_LANGUAGE = 'id';
 
-    /**
-     * Instruksi ditulis dalam bahasa sasaran, bukan diterjemahkan di ujung:
-     * model cenderung menjawab mengikuti bahasa instruksinya.
-     */
+    /** Aturan bawaan; bisa ditimpa admin lewat dashboard, lihat SystemSettings. */
+
+    /** Instruksi ditulis dalam bahasa sasaran; model mengikuti bahasa promptnya. */
     private const SIMPLIFY_RULES = [
         'id' => [
             'L2' => 'Pertahankan semua istilah teknis, tetapi pecah kalimat panjang menjadi kalimat pendek. Ini hanya sedikit lebih mudah dari aslinya.',
@@ -42,7 +42,7 @@ class AiTextService
         ],
     ];
 
-    /** Gaya penjelasan pada fitur Tanya Lexi. */
+    /** Gaya penjelasan fitur Tanya Lexi. */
     private const EXPLAIN_STYLES = [
         'id' => [
             'anak10' => 'Jelaskan seperti sedang berbicara kepada anak berusia 10 tahun. Ramah dan sederhana.',
@@ -56,7 +56,42 @@ class AiTextService
         ],
     ];
 
-    public function __construct(private readonly AiProvider $provider) {}
+    private readonly FootprintEstimator $footprint;
+
+    private readonly SystemSettings $settings;
+
+    /**
+     * Estimator dan parameter sistem boleh dikosongkan supaya pemanggil yang
+     * hanya peduli teks — termasuk test lama — tidak perlu tahu soal
+     * perhitungan jejak karbon maupun aturan yang disunting admin.
+     */
+    public function __construct(
+        private readonly AiProvider $provider,
+        ?FootprintEstimator $footprint = null,
+        ?SystemSettings $settings = null,
+    ) {
+        $this->footprint = $footprint ?? new FootprintEstimator;
+        // Lewat container supaya memo per-permintaannya dipakai bersama, bukan
+        // dibaca ulang oleh setiap pemanggil.
+        $this->settings = $settings ?? app(SystemSettings::class);
+    }
+
+    /**
+     * Aturan penyederhanaan yang berlaku: bawaan di kode, ditimpa suntingan
+     * admin kalau ada.
+     *
+     * @return array<string, array<string, string>>
+     */
+    public function simplifyRules(): array
+    {
+        return $this->settings->get(SystemSettings::KEY_SIMPLIFY_RULES, self::SIMPLIFY_RULES);
+    }
+
+    /** @return array<string, array<string, string>> */
+    public function explainStyles(): array
+    {
+        return $this->settings->get(SystemSettings::KEY_EXPLAIN_STYLES, self::EXPLAIN_STYLES);
+    }
 
     public function isConfigured(): bool
     {
@@ -91,16 +126,12 @@ class AiTextService
         return self::LANGUAGES;
     }
 
-    /**
-     * Sederhanakan teks ke level tertentu.
-     *
-     * @return array<int, string> Paragraf hasil penyederhanaan.
-     */
-    public function simplify(string $text, string $level, string $language = self::DEFAULT_LANGUAGE): array
+    /** Paragraf hasil penyederhanaan, beserta taksiran jejak karbonnya. */
+    public function simplify(string $text, string $level, string $language = self::DEFAULT_LANGUAGE): AiAnswer
     {
         $language = $this->normalizeLanguage($language);
 
-        $rule = self::SIMPLIFY_RULES[$language][$level]
+        $rule = $this->simplifyRules()[$language][$level]
             ?? throw new RuntimeException("Level penyederhanaan tidak dikenal: {$level}");
 
         $prompt = $language === 'en'
@@ -138,20 +169,16 @@ class AiTextService
         return $this->remember("simplify:{$language}:{$level}:" . md5($text), $prompt);
     }
 
-    /**
-     * Jelaskan sebuah kata atau potongan teks dengan gaya tertentu.
-     *
-     * @return array<int, string> Paragraf penjelasan.
-     */
+    /** Paragraf penjelasan, beserta taksiran jejak karbonnya. */
     public function explain(
         string $term,
         string $style,
         ?string $context = null,
         string $language = self::DEFAULT_LANGUAGE,
-    ): array {
+    ): AiAnswer {
         $language = $this->normalizeLanguage($language);
 
-        $styleRule = self::EXPLAIN_STYLES[$language][$style]
+        $styleRule = $this->explainStyles()[$language][$style]
             ?? throw new RuntimeException("Gaya penjelasan tidak dikenal: {$style}");
 
         if ($language === 'en') {
@@ -197,12 +224,8 @@ class AiTextService
         return $this->remember("explain:{$language}:{$style}:" . md5($term . '|' . $context), $prompt);
     }
 
-    /**
-     * Rapikan teks dari hasil OCR yang sering salah baca (typo).
-     *
-     * @return array<int, string> Paragraf yang sudah dikoreksi.
-     */
-    public function correctTypo(string $text, string $language = self::DEFAULT_LANGUAGE): array
+    /** Paragraf hasil OCR yang sudah dikoreksi, beserta taksiran jejak karbonnya. */
+    public function correctTypo(string $text, string $language = self::DEFAULT_LANGUAGE): AiAnswer
     {
         $language = $this->normalizeLanguage($language);
 
@@ -236,12 +259,12 @@ class AiTextService
             {$text}
             PROMPT;
 
-        // Tidak di-cache karena kemungkinan user memfoto ulang dari sudut berbeda,
-        // tapi teksnya mirip. Biarkan selalu live ke LLM supaya fresh.
-        return $this->ask($prompt);
+        // Tidak di-cache: foto ulang dari sudut berbeda menghasilkan teks yang
+        // mirip tapi tidak identik, jadi cache hampir tidak pernah kena.
+        return $this->spend($prompt);
     }
 
-/** Jaring pengaman untuk pemanggil internal; validasi sebenarnya di controller. */
+    /** Jaring pengaman untuk pemanggil internal; validasi sebenarnya di controller. */
     private function normalizeLanguage(string $language): string
     {
         return in_array($language, self::LANGUAGES, true) ? $language : self::DEFAULT_LANGUAGE;
@@ -250,60 +273,114 @@ class AiTextService
     /**
      * Ambil dari cache kalau ada, kalau tidak tanya penyedia lalu simpan.
      *
-     * @return array<int, string>
+     * Cache di sini penghematan kuota sekaligus energi, tapi bukan sumber
+     * kebenaran: store yang mati tidak boleh ikut mematikan fitur AI, jadi
+     * kegagalannya dicatat lalu permintaan tetap diteruskan ke penyedia.
      */
-    private function remember(string $suffix, string $prompt): array
+    private function remember(string $suffix, string $prompt): AiAnswer
     {
         /*
-         * Nama provider dan model ikut masuk kunci cache. Tanpa itu, berganti
-         * penyedia atau model akan mengembalikan hasil lama milik penyedia
-         * sebelumnya, sehingga perbandingan keduanya jadi tidak berarti.
+         * Sidik jari promptnya ikut jadi kunci.
+         *
+         * Simpanannya permanen, sementara $suffix hanya memuat teks MASUKAN —
+         * bukan instruksi yang membungkusnya. Tanpa sidik jari ini, aturan yang
+         * baru disunting admin dari dashboard tidak akan pernah menggantikan
+         * hasil lama: kuncinya sama persis, jadi jawaban dari aturan sebelumnya
+         * disajikan selamanya. Dulu masalah ini hilang sendiri dalam sehari
+         * karena ada TTL; sekarang tidak.
+         *
+         * Dihitung dari prompt yang benar-benar dikirim, jadi perubahan apa pun
+         * — aturan per level, badan prompt, maupun ketentuan wajibnya — ikut
+         * tertangkap tanpa ada yang perlu menaikkan nomor versi dengan tangan.
          */
-        $key = "ai:{$this->provider->name()}:{$this->provider->model()}:{$suffix}";
+        $fingerprint = substr(md5($prompt), 0, 12);
 
-        /*
-         * Cache di sini murni penghematan kuota, bukan sumber kebenaran. Store yang
-         * mati (Redis padam, tabel `cache` di database yang tidak terjangkau) dulu
-         * keluar sebagai 500 berisi stack trace dan mematikan fitur AI sepenuhnya —
-         * padahal penyedia LLM-nya sendiri sehat. Jadi kegagalan store ditelan:
-         * dicatat ke log, lalu permintaan tetap diteruskan tanpa cache.
-         */
+        // Provider dan model ikut supaya hasil lama tidak terpakai setelah
+        // AI_PROVIDER diganti.
+        $key = "ai:{$fingerprint}:{$this->provider->name()}:{$this->provider->model()}:{$suffix}";
+
         try {
-            if (is_array($hit = Cache::get($key)) && $hit !== []) {
-                return $hit;
+            if (($cached = $this->fromCache(Cache::get($key))) !== null) {
+                return $cached;
             }
         } catch (Throwable $e) {
             $this->warnCacheUnavailable('baca', $e);
         }
 
-        $paragraphs = $this->ask($prompt);
+        $result = $this->ask($prompt);
 
         try {
-            Cache::put($key, $paragraphs, (int) config('services.ai.cache_ttl'));
+            /*
+             * Jumlah token ikut disimpan supaya cache hit nanti bisa melaporkan
+             * berapa besar emisi yang dihindarinya. Tanpa ini, penghematan
+             * hanya bisa dihitung sebagai "entah berapa".
+             *
+             * TTL null menyimpan selamanya — itu bawaannya, lihat alasannya di
+             * config/services.php.
+             */
+            Cache::put($key, [
+                'paragraphs' => $result->paragraphs,
+                'tokens' => $result->tokens->toArray(),
+            ], config('services.ai.cache_ttl'));
         } catch (Throwable $e) {
             $this->warnCacheUnavailable('tulis', $e);
         }
 
-        return $paragraphs;
+        return new AiAnswer($result->paragraphs, $this->footprint->forUsage($result->tokens));
+    }
+
+    /**
+     * Membaca entri cache menjadi jawaban siap pakai, atau null kalau entrinya
+     * tidak ada / tidak terpakai.
+     *
+     * @param  mixed  $hit
+     */
+    private function fromCache($hit): ?AiAnswer
+    {
+        if (! is_array($hit) || $hit === []) {
+            return null;
+        }
+
+        /*
+         * Format lama menyimpan daftar paragraf polos, tanpa catatan token.
+         * Entri seperti itu masih berlaku sampai TTL-nya habis, jadi tetap
+         * dipakai — hanya penghematannya yang tidak bisa ditaksir.
+         */
+        if (array_is_list($hit)) {
+            return new AiAnswer($hit, $this->footprint->forCacheHit(TokenUsage::unknown()));
+        }
+
+        $paragraphs = $hit['paragraphs'] ?? null;
+
+        if (! is_array($paragraphs) || $paragraphs === []) {
+            return null;
+        }
+
+        return new AiAnswer(
+            array_values($paragraphs),
+            $this->footprint->forCacheHit(TokenUsage::fromArray($hit['tokens'] ?? null)),
+        );
+    }
+
+    /** Panggilan yang benar-benar memakai kuota dan energi, tanpa perantara cache. */
+    private function spend(string $prompt): AiAnswer
+    {
+        $result = $this->ask($prompt);
+
+        return new AiAnswer($result->paragraphs, $this->footprint->forUsage($result->tokens));
     }
 
     /**
      * Satu-satunya tempat penyedia dipanggil, supaya kegagalan jaringan
      * diterjemahkan jadi pesan yang layak dibaca pengguna di semua fitur.
-     *
-     * @return array<int, string>
      */
-    private function ask(string $prompt): array
+    private function ask(string $prompt): LlmResult
     {
         try {
             return $this->provider->paragraphsFor($prompt);
         } catch (ConnectionException $e) {
-            /*
-             * Gagal sebelum ada respons HTTP: internet mati, timeout, atau
-             * sertifikat CA belum terpasang di PHP. Tanpa penanganan ini
-             * kegagalannya keluar sebagai 500 berisi stack trace, bukan pesan
-             * yang bisa ditampilkan ke pengguna.
-             */
+            // Gagal sebelum ada respons HTTP: internet mati, timeout, atau
+            // sertifikat CA belum terpasang di PHP.
             Log::warning('Tidak bisa menghubungi penyedia AI', [
                 'provider' => $this->provider->name(),
                 'error' => $e->getMessage(),

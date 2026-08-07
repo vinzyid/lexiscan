@@ -72,10 +72,8 @@ export default function ScannerScreen() {
 
   const [isCorrectingTypo, setIsCorrectingTypo] = useState(false);
 
-  /*
-   * `useState` dengan initializer, bukan `useRef(...).current` — nilainya tetap
-   * bertahan antar render tapi tidak menyentuh ref saat render berlangsung.
-   */
+  // `useState` dengan initializer, bukan `useRef(...).current`: nilainya tetap
+  // bertahan antar render tanpa menyentuh ref saat render berlangsung.
   const [successScale] = useState(() => new Animated.Value(0.5));
   const [successOpacity] = useState(() => new Animated.Value(0));
 

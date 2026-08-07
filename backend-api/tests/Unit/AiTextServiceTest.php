@@ -3,7 +3,10 @@
 namespace Tests\Unit;
 
 use App\Services\Ai\AiProvider;
+use App\Services\Ai\LlmResult;
+use App\Services\Ai\TokenUsage;
 use App\Services\AiTextService;
+use App\Services\SystemSettings;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
@@ -27,7 +30,7 @@ class AiTextServiceTest extends TestCase
 
         $service = new AiTextService($this->providerReturning(['Tetap jalan.']));
 
-        $this->assertSame(['Tetap jalan.'], $service->simplify('Teks cukup panjang.', 'L3'));
+        $this->assertSame(['Tetap jalan.'], $service->simplify('Teks cukup panjang.', 'L3')->paragraphs);
     }
 
     public function test_a_cache_hit_skips_the_provider_entirely(): void
@@ -38,13 +41,158 @@ class AiTextServiceTest extends TestCase
         // Kuota LLM gratis terbatas: cache hit tidak boleh memanggil penyedia.
         $provider->shouldNotReceive('paragraphsFor');
 
-        $cache = Mockery::mock(Repository::class);
-        $cache->shouldReceive('get')->andReturn(['Dari cache.']);
-        Cache::swap($cache);
+        Cache::swap($this->cacheReturning([
+            'paragraphs' => ['Dari cache.'],
+            'tokens' => ['input' => 500, 'output' => 400],
+        ]));
 
         $service = new AiTextService($provider);
 
-        $this->assertSame(['Dari cache.'], $service->simplify('Teks cukup panjang.', 'L3'));
+        $this->assertSame(['Dari cache.'], $service->simplify('Teks cukup panjang.', 'L3')->paragraphs);
+    }
+
+    public function test_a_cache_hit_counts_as_avoided_emissions_not_as_zero_usage(): void
+    {
+        /*
+         * Inti fitur jejak karbon: jawaban dari cache tidak menjalankan model
+         * sama sekali, jadi biayanya nol DAN penghematannya harus tercatat.
+         * Kalau keduanya nol, penghematan yang nyata jadi tak terlihat.
+         */
+        $provider = Mockery::mock(AiProvider::class);
+        $provider->shouldReceive('name')->andReturn('gemini');
+        $provider->shouldReceive('model')->andReturn('gemini-3.6-flash');
+        $provider->shouldNotReceive('paragraphsFor');
+
+        Cache::swap($this->cacheReturning([
+            'paragraphs' => ['Dari cache.'],
+            'tokens' => ['input' => 500, 'output' => 400],
+        ]));
+
+        $footprint = (new AiTextService($provider))->simplify('Teks cukup panjang.', 'L3')->footprint;
+
+        $this->assertTrue($footprint->cached);
+        $this->assertSame(0.0, $footprint->co2eGrams);
+        $this->assertGreaterThan(0, $footprint->avoidedCo2eGrams);
+    }
+
+    public function test_a_fresh_call_counts_as_spent_not_as_avoided(): void
+    {
+        Cache::swap($this->passthroughCache());
+
+        $footprint = (new AiTextService($this->providerReturning(['Baru.'])))
+            ->simplify('Teks cukup panjang.', 'L3')
+            ->footprint;
+
+        $this->assertFalse($footprint->cached);
+        $this->assertGreaterThan(0, $footprint->co2eGrams);
+        $this->assertSame(0.0, $footprint->avoidedCo2eGrams);
+    }
+
+    public function test_a_cache_entry_written_before_tokens_were_tracked_is_still_usable(): void
+    {
+        /*
+         * Entri lama berisi daftar paragraf polos. Masih berlaku sampai TTL-nya
+         * habis, jadi harus tetap dipakai — hanya jejak karbonnya yang tidak
+         * bisa ditaksir, dan itu ditandai lewat 'known'.
+         */
+        $provider = Mockery::mock(AiProvider::class);
+        $provider->shouldReceive('name')->andReturn('gemini');
+        $provider->shouldReceive('model')->andReturn('gemini-3.6-flash');
+        $provider->shouldNotReceive('paragraphsFor');
+
+        Cache::swap($this->cacheReturning(['Format lama.']));
+
+        $answer = (new AiTextService($provider))->simplify('Teks cukup panjang.', 'L3');
+
+        $this->assertSame(['Format lama.'], $answer->paragraphs);
+        $this->assertFalse($answer->footprint->isKnown());
+    }
+
+    public function test_the_token_count_is_stored_alongside_the_cached_paragraphs(): void
+    {
+        // Tanpa ini, cache hit berikutnya tidak punya dasar untuk menaksir
+        // penghematannya.
+        $stored = null;
+
+        $cache = Mockery::mock(Repository::class);
+        $cache->shouldReceive('get')->andReturn(null);
+        $cache->shouldReceive('put')->andReturnUsing(function (string $key, $value) use (&$stored): bool {
+            $stored = $value;
+
+            return true;
+        });
+        Cache::swap($cache);
+
+        (new AiTextService($this->providerReturning(['Baru.'])))->simplify('Teks cukup panjang.', 'L3');
+
+        $this->assertSame(['Baru.'], $stored['paragraphs']);
+        $this->assertSame(500, $stored['tokens']['input']);
+        $this->assertSame(400, $stored['tokens']['output']);
+    }
+
+    public function test_results_are_stored_permanently_by_default(): void
+    {
+        /*
+         * Jawaban atas teks yang sama tidak pernah basi, jadi membiarkannya
+         * kedaluwarsa berarti menyalakan model lagi untuk pertanyaan yang sudah
+         * pernah dijawab. TTL null adalah cara Laravel menyimpan selamanya.
+         */
+        $ttl = 'belum diisi';
+
+        $cache = Mockery::mock(Repository::class);
+        $cache->shouldReceive('get')->andReturn(null);
+        $cache->shouldReceive('put')->andReturnUsing(function ($key, $value, $seconds) use (&$ttl): bool {
+            $ttl = $seconds;
+
+            return true;
+        });
+        Cache::swap($cache);
+
+        (new AiTextService($this->providerReturning(['Baru.'])))->simplify('Teks cukup panjang.', 'L3');
+
+        $this->assertNull($ttl);
+    }
+
+    public function test_editing_a_prompt_rule_changes_the_cache_key(): void
+    {
+        /*
+         * Simpanannya permanen dan kuncinya hanya memuat teks masukan, jadi
+         * tanpa sidik jari prompt, aturan yang baru disunting admin tidak akan
+         * pernah menggantikan hasil lama — tidak ada TTL yang menolong lagi.
+         */
+        $before = $this->cacheKeyForSimplify(new SystemSettings);
+
+        $settings = Mockery::mock(SystemSettings::class);
+        $settings->shouldReceive('get')->andReturnUsing(
+            fn (string $key, array $default) => $key === SystemSettings::KEY_SIMPLIFY_RULES
+                ? ['id' => ['L3' => 'Aturan yang baru saja disunting admin.']] + $default
+                : $default,
+        );
+
+        $after = $this->cacheKeyForSimplify($settings);
+
+        $this->assertNotSame($before, $after);
+        $this->assertStringStartsWith('ai:', (string) $before);
+    }
+
+    /** Kunci cache yang dipakai satu permintaan simplify dengan parameter tertentu. */
+    private function cacheKeyForSimplify(SystemSettings $settings): ?string
+    {
+        $key = null;
+
+        $cache = Mockery::mock(Repository::class);
+        $cache->shouldReceive('get')->andReturnUsing(function (string $seen) use (&$key) {
+            $key = $seen;
+
+            return null;
+        });
+        $cache->shouldReceive('put')->andReturn(true);
+        Cache::swap($cache);
+
+        (new AiTextService($this->providerReturning(['Baru.']), null, $settings))
+            ->simplify('Teks cukup panjang.', 'L3');
+
+        return $key;
     }
 
     public function test_correct_typo_is_never_cached(): void
@@ -57,7 +205,7 @@ class AiTextServiceTest extends TestCase
 
         $service = new AiTextService($this->providerReturning(['Sudah rapi.']));
 
-        $this->assertSame(['Sudah rapi.'], $service->correctTypo('Teks hasil scan.'));
+        $this->assertSame(['Sudah rapi.'], $service->correctTypo('Teks hasil scan.')->paragraphs);
     }
 
     public function test_a_connection_failure_becomes_a_readable_message(): void
@@ -108,10 +256,10 @@ class AiTextServiceTest extends TestCase
         $provider->shouldReceive('name')->andReturn('gemini');
         $provider->shouldReceive('model')->andReturn('gemini-3.6-flash');
         $provider->shouldReceive('paragraphsFor')
-            ->andReturnUsing(function (string $prompt) use (&$captured): array {
+            ->andReturnUsing(function (string $prompt) use (&$captured): LlmResult {
                 $captured = $prompt;
 
-                return ['ok'];
+                return new LlmResult(['ok'], new TokenUsage(500, 400));
             });
 
         Cache::swap($this->passthroughCache());
@@ -130,10 +278,10 @@ class AiTextServiceTest extends TestCase
         $provider->shouldReceive('name')->andReturn('gemini');
         $provider->shouldReceive('model')->andReturn('gemini-3.6-flash');
         $provider->shouldReceive('paragraphsFor')
-            ->andReturnUsing(function (string $prompt) use (&$captured): array {
+            ->andReturnUsing(function (string $prompt) use (&$captured): LlmResult {
                 $captured = $prompt;
 
-                return ['ok'];
+                return new LlmResult(['ok'], new TokenUsage(500, 400));
             });
 
         Cache::swap($this->passthroughCache());
@@ -150,7 +298,8 @@ class AiTextServiceTest extends TestCase
         $provider = Mockery::mock(AiProvider::class);
         $provider->shouldReceive('name')->andReturn('gemini');
         $provider->shouldReceive('model')->andReturn('gemini-3.6-flash');
-        $provider->shouldReceive('paragraphsFor')->andReturn($paragraphs);
+        $provider->shouldReceive('paragraphsFor')
+            ->andReturn(new LlmResult($paragraphs, new TokenUsage(500, 400)));
 
         return $provider;
     }
@@ -161,6 +310,15 @@ class AiTextServiceTest extends TestCase
         $cache = Mockery::mock(Repository::class);
         $cache->shouldReceive('get')->andReturn(null);
         $cache->shouldReceive('put')->andReturn(true);
+
+        return $cache;
+    }
+
+    /** @param mixed $entry */
+    private function cacheReturning($entry): Repository
+    {
+        $cache = Mockery::mock(Repository::class);
+        $cache->shouldReceive('get')->andReturn($entry);
 
         return $cache;
     }

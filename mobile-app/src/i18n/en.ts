@@ -187,6 +187,49 @@ export const en: Translation = {
       'LexiScan applies research-based accessibility principles to create a reading experience that is comfortable and effective for everyone.',
   },
 
+  feedback: {
+    eyebrow: 'Feedback',
+    title: 'Tell us how it went',
+    intro: 'Your report goes straight to the LexiScan team.',
+    typeFeedback: 'Feedback',
+    typeOcrFailure: 'Scan failed',
+    placeholderFeedback: 'What could we do better? Say as much as you can.',
+    placeholderOcrFailure: 'What kind of page failed to scan? Describe it however you can.',
+    charCount: (count: number, max: number) => `${count}/${max}`,
+    attachTitle: 'Attach the last scanned text',
+    attachDesc: 'It helps us find the cause. Only sent if you switch this on.',
+    attachEmpty: 'There is no scanned text to attach yet.',
+    privacyNote: 'Sent anonymously — only a random device marker goes with it.',
+    submit: 'Send Report',
+    submitLabel: 'Send the report to the LexiScan team',
+    sending: 'Sending…',
+    tooShort: 'Please write a message first, at least 3 characters.',
+    sentTitle: 'Thank you!',
+    sentBody: 'We have received your report.',
+    sendAnother: 'Send another report',
+    unexpectedError: 'Something unexpected went wrong. Please try again.',
+  },
+
+  footprint: {
+    eyebrow: 'Environmental impact',
+    title: 'AI carbon footprint',
+    empty: 'No AI requests yet. Try simplifying a piece of text first.',
+    spentLabel: 'Emissions used',
+    avoidedLabel: 'Emissions avoided',
+    requestsLabel: 'AI requests',
+    energyLabel: 'Energy',
+    cachedShare: (cached: number, total: number, percent: number) =>
+      `${cached} of ${total} requests were answered from storage, without running the model again (${percent}%).`,
+    equivalent: (percent: string) => `About the same as charging a phone by ${percent}%.`,
+    // Small chip shown next to an AI result.
+    chipCached: 'From storage · 0 g',
+    chipSpent: (value: string) => `≈ ${value} CO₂e`,
+    chipUnknown: 'Footprint not reported',
+    methodNote:
+      'These are estimates, not measurements: they come from the token counts the AI provider reports, multiplied by energy per token and the carbon intensity of the data centre’s electricity.',
+    resetLabel: 'Reset the count',
+  },
+
   typography: {
     title: 'Adjust Text',
     subtitle: 'Tune the text to whatever feels comfortable',

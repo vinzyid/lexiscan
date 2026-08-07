@@ -5,8 +5,8 @@ namespace App\Services\Ai;
 use RuntimeException;
 
 /**
- * Membaca JSON `{"paragraphs": [...]}` yang dikembalikan structured output.
- * Dipakai bersama kedua provider supaya aturan pembersihannya sama.
+ * Membaca JSON `{"paragraphs": [...]}` hasil structured output. Dipakai semua
+ * provider supaya aturan pembersihannya sama.
  */
 final class ParagraphPayload
 {
@@ -35,9 +35,8 @@ final class ParagraphPayload
     }
 
     /**
-     * Model kecil sering tetap membungkus JSON dalam blok markdown atau
-     * menambah kalimat pengantar, meski structured output sudah diminta.
-     * Ambil objek JSON terluar supaya kasus itu tidak dianggap gagal.
+     * Model kecil sering tetap membungkus JSON dalam blok markdown atau kalimat
+     * pengantar, jadi ambil objek JSON terluarnya saja.
      */
     private static function unwrap(string $raw): string
     {

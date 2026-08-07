@@ -7,6 +7,7 @@ use App\Services\Ai\GeminiProvider;
 use App\Services\Ai\GrokProvider;
 use App\Services\Ai\MistralProvider;
 use App\Services\Ai\OpenRouterProvider;
+use App\Services\SystemSettings;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 
@@ -31,6 +32,14 @@ class AppServiceProvider extends ServiceProvider
                 ),
             };
         });
+
+        /*
+         * Singleton supaya parameter sistem cukup dibaca sekali per permintaan,
+         * meski dipakai controller, service prompt, dan dashboard sekaligus.
+         * Umurnya sengaja tidak lebih panjang dari permintaannya — lihat
+         * penjelasan memo di SystemSettings.
+         */
+        $this->app->singleton(SystemSettings::class);
     }
 
     /**

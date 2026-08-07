@@ -10,6 +10,8 @@ import { LANGUAGES, useT } from '../../src/i18n';
 import { DyslexicText } from '../../src/components/dyslexic-text';
 import { PressableScale } from '../../src/components/pressable-scale';
 import { Blob, HexDecor, Ring, ScreenBackdrop, Sparkle } from '../../src/components/figma-decor';
+import { FootprintCard } from '../../src/components/footprint-card';
+import { FeedbackForm } from '../../src/components/feedback-form';
 import { LexiMascot } from '../../src/components/illustrations';
 
 export default function SettingsScreen() {
@@ -22,7 +24,12 @@ export default function SettingsScreen() {
     <View className="flex-1 bg-background">
       <ScreenBackdrop />
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      {/* keyboardShouldPersistTaps: tanpa ini ketukan pertama pada tombol Kirim
+          hanya menutup papan ketik, dan laporannya seakan tidak terkirim. */}
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
         {/* ── Kartu profil ──────────────────────────────────────────────── */}
         <LinearGradient
           colors={[...GRADIENTS.profileHeader.colors]}
@@ -211,6 +218,20 @@ export default function SettingsScreen() {
             })}
           </View>
 
+          {/* ── Jejak karbon AI ─────────────────────────────────────────── */}
+          <View className="pt-7">
+            <SectionHeading eyebrow={t.footprint.eyebrow} title={t.footprint.title} />
+          </View>
+
+          <FootprintCard />
+
+          {/* ── Masukan & laporan pindai gagal ──────────────────────────── */}
+          <View className="pt-7">
+            <SectionHeading eyebrow={t.feedback.eyebrow} title={t.feedback.title} />
+          </View>
+
+          <FeedbackForm />
+
           {/* ── Tentang aplikasi ────────────────────────────────────────── */}
           <View className="mt-7 overflow-hidden rounded-3xl">
             <LinearGradient
@@ -281,10 +302,7 @@ export default function SettingsScreen() {
   }
 }
 
-/**
- * Kartu pemilih tema: latar memakai gradien warna tema itu sendiri, sehingga
- * pengguna bisa melihat langsung suasana tiap palet tanpa menerapkannya.
- */
+/** Kartu pemilih tema; latarnya memakai gradien warna tema itu sendiri. */
 function ThemeCard({
   theme,
   name,
@@ -358,8 +376,7 @@ function ThemeCard({
 
 /**
  * Kotak 48x38 di kiri kartu tema: mini-halaman berisi judul, blok sorot, dan
- * beberapa baris teks — memakai warna tema yang bersangkutan, sehingga
- * pengguna melihat contoh nyata tiap palet.
+ * beberapa baris teks, memakai warna tema yang bersangkutan.
  */
 function ThemePreview({ theme, ink }: { theme: ThemeDef; ink: string }) {
   const muted = theme.swatches[0];
