@@ -16,13 +16,17 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://192.168.0.178:8000",
-        "EXPO_PUBLIC_API_KEY": "dev-local"
+        "EXPO_PUBLIC_API_URL": "https://lexiscan-production.up.railway.app",
+        "EXPO_PUBLIC_API_KEY": "2b1185def974515d10ddbdd201f626d689e376ca56501be1"
       }
     },
     "production": {
       "autoIncrement": true,
-      "channel": "production"
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://lexiscan-production.up.railway.app",
+        "EXPO_PUBLIC_API_KEY": "2b1185def974515d10ddbdd201f626d689e376ca56501be1"
+      }
     }
   },
   "submit": {
