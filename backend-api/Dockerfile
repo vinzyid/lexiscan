@@ -31,6 +31,17 @@ RUN composer install \
 
 COPY . .
 
+# Direktori kerja storage dibuat ulang di sini karena .dockerignore membuangnya
+# dari konteks build. Tanpa storage/framework/views, config view.compiled bernilai
+# false (realpath gagal) dan setiap perintah artisan mati dengan
+# "Please provide a valid cache path."
+RUN mkdir -p \
+    storage/logs \
+    storage/framework/cache/data \
+    storage/framework/sessions \
+    storage/framework/views \
+    bootstrap/cache
+
 # Berkas SQLite kosong disiapkan supaya `migrate` punya tujuan tanpa perlu
 # database eksternal. Endpoint AI sendiri tidak menyentuh database, jadi isinya
 # boleh hilang setiap deploy. Untuk data yang harus bertahan, isi DB_* dengan
