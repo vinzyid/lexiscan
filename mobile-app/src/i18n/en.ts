@@ -169,8 +169,13 @@ export const en: Translation = {
 
   settings: {
     role: 'Student',
-    name: 'Rama Putra',
-    school: 'Year 10 · SMA Negeri 1',
+    /*
+     * Bukan profil pengguna: LexiScan tidak punya akun, jadi tidak ada nama
+     * yang bisa ditampilkan di sini. Kartunya menyebut aplikasinya sendiri
+     * supaya tidak ada identitas yang seolah-olah milik penggunanya.
+     */
+    title: 'LexiScan',
+    subtitle: 'Reading assistant for dyslexia',
     profileTags: ['Free', 'Research-based', 'Inclusive'],
     languageEyebrow: 'Language',
     languageTitle: 'App language',
@@ -328,7 +333,7 @@ export const en: Translation = {
   },
 
   sampleDoc: {
-    title: 'Year 10 Biology — Chapter 3',
+    title: 'Sample reading',
     sectionTitle: 'Mitochondria — The Power Plants of the Cell',
     term: 'Mitochondria',
     paragraphs: [

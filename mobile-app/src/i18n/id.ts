@@ -170,8 +170,13 @@ export const id = {
 
   settings: {
     role: 'Pelajar',
-    name: 'Rama Putra',
-    school: 'Kelas 10 · SMA Negeri 1',
+    /*
+     * Bukan profil pengguna: LexiScan tidak punya akun, jadi tidak ada nama
+     * yang bisa ditampilkan di sini. Kartunya menyebut aplikasinya sendiri
+     * supaya tidak ada identitas yang seolah-olah milik penggunanya.
+     */
+    title: 'LexiScan',
+    subtitle: 'Asisten baca untuk disleksia',
     profileTags: ['Gratis', 'Riset Ilmiah', 'Inklusif'],
     languageEyebrow: 'Bahasa',
     languageTitle: 'Bahasa aplikasi',
@@ -329,7 +334,7 @@ export const id = {
   },
 
   sampleDoc: {
-    title: 'Biologi Kelas 10 — Bab 3',
+    title: 'Contoh bacaan',
     sectionTitle: 'Mitokondria — Pembangkit Energi Sel',
     term: 'Mitokondria',
     paragraphs: [

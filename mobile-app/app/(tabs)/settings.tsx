@@ -73,8 +73,8 @@ export default function SettingsScreen() {
                   <Text className="font-ui-bold text-xs text-white/65">{t.settings.role}</Text>
                 </View>
               </View>
-              <Text className="mt-1.5 font-ui-bold text-[21px] text-white">{t.settings.name}</Text>
-              <Text className="mt-0.5 font-ui text-[13px] text-white/55">{t.settings.school}</Text>
+              <Text className="mt-1.5 font-ui-bold text-[21px] text-white">{t.settings.title}</Text>
+              <Text className="mt-0.5 font-ui text-[13px] text-white/55">{t.settings.subtitle}</Text>
               <View className="mt-2.5 flex-row" style={{ gap: 8 }}>
                 {t.settings.profileTags.map((tag) => (
                   <View key={tag} className="rounded-[10px] bg-white/[0.12] px-2 py-0.5">
