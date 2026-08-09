@@ -1,0 +1,21 @@
+# Penyaring arsip untuk EAS Build.
+#
+# eas-cli tidak memakai .gitignore saat menyusun arsip build, jadi tanpa berkas
+# ini node_modules (14 GB) dan android/ (4.6 GB) ikut terunggah — arsipnya jadi
+# 1.3 GB dan upload-nya makan menit-menitan. Dengan daftar di bawah, arsipnya
+# kembali ke ukuran kode saja (~2 MB).
+#
+# android/ dan ios/ sengaja dibuang, bukan sekadar demi ukuran: keduanya hasil
+# prebuild lokal. Kalau ikut terkirim, EAS memakainya apa adanya dan melewati
+# prebuild, sehingga perubahan di app.config.ts (termasuk izin cleartext yang
+# diturunkan dari EXPO_PUBLIC_API_URL) tidak pernah diterapkan.
+
+node_modules/
+/android
+/ios
+.expo/
+dist/
+web-build/
+
+# Dump logcat hasil debugging — besar dan hanya relevan di mesin lokal.
+logcat*.txt
