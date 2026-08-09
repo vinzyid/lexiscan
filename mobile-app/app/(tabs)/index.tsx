@@ -1,16 +1,8 @@
-import { useEffect, useState } from 'react';
-import { Animated, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-// `Animated` bawaan RN dipakai untuk tip harian, Reanimated untuk kartu fitur.
-import Reanimated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withTiming,
-} from 'react-native-reanimated';
 import { BookOpen, Camera, ChevronRight, Sparkles } from 'lucide-react-native';
 
 import { useOCRStore } from '../../src/store/useStore';
@@ -366,7 +358,18 @@ function GlassChip({ children, subtle }: { children: React.ReactNode; subtle?: b
   );
 }
 
-/** Kartu fitur yang naik satu per satu saat dashboard dibuka. */
+/**
+ * Kartu fitur yang naik satu per satu saat dashboard dibuka.
+ *
+ * Animasinya memakai `Animated` bawaan RN, bukan Reanimated. Versi Reanimated
+ * (`useSharedValue(0)` + `withDelay`) tidak pernah menyelesaikan animasinya di
+ * APK rilis: karena opacity-nya mulai dari 0, empat kartu terakhir tinggal
+ * ruang kosong di dashboard sementara kartu pertama lolos. Bug itu tidak pernah
+ * muncul di dev, jadi jangan dikembalikan ke Reanimated tanpa diuji di APK.
+ *
+ * `Animated` dipilih karena sudah terbukti jalan di layar ini juga — fade tip
+ * harian di atas memakainya.
+ */
 function FeatureCard({
   index,
   accent,
@@ -382,22 +385,29 @@ function FeatureCard({
   desc: string;
   onPress: () => void;
 }) {
-  const progress = useSharedValue(0);
+  const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    progress.value = withDelay(
-      120 + index * 70,
-      withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) }),
-    );
+    const entrance = Animated.timing(progress, {
+      toValue: 1,
+      duration: 320,
+      delay: 120 + index * 70,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+    entrance.start();
+    // Dihentikan saat unmount supaya tidak menulis ke nilai yang sudah dibuang.
+    return () => entrance.stop();
   }, [index, progress]);
 
-  const entrance = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ translateY: (1 - progress.value) * 14 }],
-  }));
-
   return (
-    <Reanimated.View style={entrance}>
+    <Animated.View
+      style={{
+        opacity: progress,
+        transform: [
+          { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) },
+        ],
+      }}>
       <PressableScale
         onPress={onPress}
         accessibilityRole="button"
@@ -432,7 +442,7 @@ function FeatureCard({
           <ChevronRight size={15} color="#ffffff" />
         </View>
       </PressableScale>
-    </Reanimated.View>
+    </Animated.View>
   );
 }
 
