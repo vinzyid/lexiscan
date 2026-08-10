@@ -4,6 +4,7 @@ import type { ExplainStyleId, SimplifyLevelId } from '../data/sample-document';
 import { dictionaryFor } from '../i18n';
 import { useOCRStore, type FootprintSample, type ServerDefaults } from '../store/useStore';
 import { currentDeviceId } from '../utils/device-id';
+import { authHeader } from './session-token';
 
 /**
  * Alamat backend Laravel:
@@ -48,11 +49,25 @@ const strings = () => dictionaryFor(useOCRStore.getState().language);
 const requestLanguage = () => useOCRStore.getState().language;
 
 /**
+ * Kemampuan membaca pengirimnya, ikut di setiap permintaan AI.
+ *
+ * Backend memakainya untuk membatasi panjang jawaban: yang belum bisa membaca
+ * mendapat satu paragraf maksimal dua kalimat, sementara yang sudah lancar
+ * boleh menerima dua paragraf. Tanpa ini, semua orang menerima jawaban dengan
+ * panjang yang sama — persis keluhan yang disampaikan dosen PLB.
+ */
+const requestReadingLevel = () => useOCRStore.getState().readingLevel;
+
+/**
  * Satu-satunya jalur POST ke backend; dipakai juga oleh `src/api/feedback.ts`,
  * yang bukan endpoint AI tapi memerlukan penanganan kunci, penanda perangkat,
  * timeout, dan pesan galat yang persis sama.
  */
-export async function postJson(path: string, body: Record<string, unknown>): Promise<any> {
+export async function postJson(
+  path: string,
+  body: Record<string, unknown>,
+  options: { method?: 'POST' | 'PATCH' } = {},
+): Promise<any> {
   const t = strings();
 
   if (!API_BASE_URL) {
@@ -73,7 +88,7 @@ export async function postJson(path: string, body: Record<string, unknown>): Pro
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
-      method: 'POST',
+      method: options.method ?? 'POST',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
@@ -81,9 +96,22 @@ export async function postJson(path: string, body: Record<string, unknown>): Pro
         // dengan alasan yang menyesatkan.
         ...(API_KEY ? { 'X-Api-Key': API_KEY } : {}),
         ...(deviceId ? { 'X-Device-Id': deviceId } : {}),
+        ...authHeader(),
       },
-      // `language` menentukan bahasa prompt sekaligus bahasa jawaban AI.
-      body: JSON.stringify({ ...body, language: requestLanguage() }),
+      /*
+       * `language` menentukan bahasa prompt sekaligus bahasa jawaban AI;
+       * `reading_level` menentukan seberapa pendek jawabannya.
+       *
+       * Keduanya ditaruh SEBELUM `body`, jadi pemanggil yang menyebutkannya
+       * sendiri tetap menang. Itu bukan detail: saat mendaftar, tingkat yang
+       * baru saja dipilih di formulir belum masuk store, dan menimpanya dengan
+       * nilai store berarti menyimpan jawaban yang salah ke akunnya.
+       */
+      body: JSON.stringify({
+        language: requestLanguage(),
+        reading_level: requestReadingLevel(),
+        ...body,
+      }),
       signal: controller.signal,
     });
   } catch {

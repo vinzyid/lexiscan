@@ -2,6 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { THEMES, TYPE_LEVELS, type ThemeId, type TypeLevelId } from '../theme/palettes';
+import {
+  DEFAULT_READING_LEVEL,
+  getReadingLevel,
+  type ReadingLevelId,
+} from '../theme/reading-levels';
 import type { SimplifyLevelId } from '../data/sample-document';
 
 /** Didefinisikan di sini, bukan di `src/i18n`, supaya tidak saling mengimpor. */
@@ -90,17 +95,56 @@ interface OCRState {
   recordFootprint: (sample: FootprintSample) => void;
   resetFootprintTotals: () => void;
 
+  /**
+   * Kemampuan membaca pengguna — dipilih saat mendaftar, bisa diubah kapan saja
+   * dari Pengaturan. Dari sinilah tipografi, pemenggalan suku kata, dan suara
+   * di bawah diturunkan.
+   */
+  readingLevel: ReadingLevelId;
+  /**
+   * Pasang seluruh preset milik satu tingkat sekaligus.
+   *
+   * Dipanggil hanya saat tingkatnya BERGANTI: sesudah itu setiap sakelar yang
+   * disentuh pengguna menang dan tidak pernah ditimpa lagi. Kalau preset ikut
+   * berjalan di tiap pembukaan aplikasi, pengguna yang mematikan suara akan
+   * menemukannya menyala lagi esok hari.
+   */
+  applyReadingLevelPreset: (level: ReadingLevelId) => void;
+
   /** Tampilan */
   themeId: ThemeId;
   setThemeId: (id: ThemeId) => void;
   typeLevelId: TypeLevelId;
   setTypeLevelId: (id: TypeLevelId) => void;
   /**
+   * Pecah tiap kata menjadi suku kata langsung di teks bacaan ("bu ka ba ca"),
+   * tanpa perlu mengetuk katanya lebih dulu.
+   */
+  syllableSpacing: boolean;
+  setSyllableSpacing: (value: boolean) => void;
+  /**
    * Sudah pernahkah pengguna mengatur tema/tipografinya sendiri. Menjadi
    * penentu apakah bawaan dari server masih boleh dipakai.
    */
   preferencesTouched: boolean;
   applyServerDefaults: (defaults: ServerDefaults) => void;
+
+  /**
+   * Pengguna sudah pernah memilih "lihat-lihat dulu" alih-alih mendaftar.
+   *
+   * Tanpa penanda ini, layar daftar muncul lagi setiap kali aplikasi dibuka —
+   * dan menagih terus-menerus orang yang sudah menolak sekali adalah cara
+   * tercepat membuat aplikasinya ditinggalkan.
+   */
+  authPromptDismissed: boolean;
+  dismissAuthPrompt: () => void;
+
+  /** Suara */
+  ttsEnabled: boolean;
+  setTtsEnabled: (value: boolean) => void;
+  /** Bacakan paragraf aktif sendiri, tanpa menunggu tombol ditekan. */
+  ttsAutoPlay: boolean;
+  setTtsAutoPlay: (value: boolean) => void;
 
   /** Reader */
   simplifyLevel: SimplifyLevelId;
@@ -149,10 +193,45 @@ export const useOCRStore = create<OCRState>()(
         })),
       resetFootprintTotals: () => set({ footprintTotals: EMPTY_TOTALS, lastFootprint: null }),
 
+      readingLevel: DEFAULT_READING_LEVEL,
+      applyReadingLevelPreset: (level) => {
+        const preset = getReadingLevel(level);
+
+        set({
+          readingLevel: level,
+          typeLevelId: preset.typeLevelId,
+          syllableSpacing: preset.syllableSpacing,
+          ttsEnabled: preset.ttsEnabled,
+          ttsAutoPlay: preset.ttsAutoPlay,
+          bicolorMode: preset.bicolorWords,
+          /*
+           * Bawaan dari admin tidak boleh lagi ikut campur setelah ini: preset
+           * baru saja menetapkan tipografinya berdasarkan sesuatu yang jauh
+           * lebih tahu, yaitu kemampuan membaca orangnya sendiri.
+           */
+          preferencesTouched: true,
+        });
+      },
+
       themeId: 'krem',
       setThemeId: (id) => set({ themeId: id, preferencesTouched: true }),
       typeLevelId: 'sedang',
       setTypeLevelId: (id) => set({ typeLevelId: id, preferencesTouched: true }),
+      syllableSpacing: getReadingLevel(DEFAULT_READING_LEVEL).syllableSpacing,
+      setSyllableSpacing: (value) => set({ syllableSpacing: value }),
+
+      authPromptDismissed: false,
+      dismissAuthPrompt: () => set({ authPromptDismissed: true }),
+
+      ttsEnabled: getReadingLevel(DEFAULT_READING_LEVEL).ttsEnabled,
+      setTtsEnabled: (value) =>
+        // Mematikan suara ikut mematikan pembacaan otomatis, kalau tidak
+        // sakelar induknya mati sementara akibatnya masih terdengar.
+        set(value ? { ttsEnabled: true } : { ttsEnabled: false, ttsAutoPlay: false }),
+      ttsAutoPlay: getReadingLevel(DEFAULT_READING_LEVEL).ttsAutoPlay,
+      // Menyalakan pembacaan otomatis tidak masuk akal saat suaranya mati.
+      setTtsAutoPlay: (value) =>
+        set(value ? { ttsAutoPlay: true, ttsEnabled: true } : { ttsAutoPlay: false }),
 
       preferencesTouched: false,
       /*
@@ -206,6 +285,20 @@ export const useOCRStore = create<OCRState>()(
         themeId: s.themeId,
         typeLevelId: s.typeLevelId,
         preferencesTouched: s.preferencesTouched,
+
+        /*
+         * Kemampuan membaca beserta seluruh turunannya ikut disimpan, dan itu
+         * wajib: preset hanya berjalan saat tingkatnya berganti, jadi kalau
+         * turunannya hilang saat aplikasi ditutup, tidak ada yang akan
+         * memasangnya kembali — pengguna yang belum bisa membaca akan membuka
+         * aplikasi tanpa suara dan tanpa pemenggalan suku kata.
+         */
+        readingLevel: s.readingLevel,
+        syllableSpacing: s.syllableSpacing,
+        ttsEnabled: s.ttsEnabled,
+        ttsAutoPlay: s.ttsAutoPlay,
+        bicolorMode: s.bicolorMode,
+        authPromptDismissed: s.authPromptDismissed,
       }),
     },
   ),

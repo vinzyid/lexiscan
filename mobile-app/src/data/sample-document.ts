@@ -8,13 +8,13 @@ export type SimplifyLevelId = 'L1' | 'L2' | 'L3' | 'L4' | 'L5';
 export const SIMPLIFY_LEVEL_IDS: SimplifyLevelId[] = ['L1', 'L2', 'L3', 'L4', 'L5'];
 
 /** Tiga gaya penjelasan di layar "Tanya Lexi". */
-export type ExplainStyleId = 'anak10' | 'analogi' | 'nyata';
+export type ExplainStyleId = 'sederhana' | 'analogi' | 'nyata';
 
-export const EXPLAIN_STYLE_IDS: ExplainStyleId[] = ['anak10', 'analogi', 'nyata'];
+export const EXPLAIN_STYLE_IDS: ExplainStyleId[] = ['sederhana', 'analogi', 'nyata'];
 
 /** Emoji cadangan kalau ikon Lucide untuk sebuah gaya belum dipetakan. */
 export const EXPLAIN_STYLE_EMOJI: Record<ExplainStyleId, string> = {
-  anak10: '🧒',
+  sederhana: '💬',
   analogi: '🎯',
   nyata: '🌍',
 };

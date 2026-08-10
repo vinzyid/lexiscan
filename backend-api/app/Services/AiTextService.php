@@ -25,6 +25,23 @@ class AiTextService
 
     public const DEFAULT_LANGUAGE = 'id';
 
+    /**
+     * Kemampuan membaca pembacanya, dikirim aplikasi bersama permintaan.
+     * Menentukan seberapa pendek jawabannya. Harus sama persis dengan
+     * App\Models\Reader::readingLevels() dan ReadingLevelId di aplikasi.
+     */
+    public const READING_LEVELS = ['belum', 'mengeja', 'lancar'];
+
+    /**
+     * Dipakai kalau permintaannya tidak menyebutkan kemampuan membaca — yaitu
+     * aplikasi versi lama, dan pemakaian tanpa mendaftar.
+     *
+     * Sengaja yang paling longgar. Kalau tidak tahu siapa yang bertanya, memotong
+     * jawaban terlalu pendek berisiko membuang fakta yang justru dibutuhkan;
+     * kesalahan ke arah ini lebih mudah diperbaiki pembacanya sendiri.
+     */
+    public const DEFAULT_READING_LEVEL = 'lancar';
+
     /** Aturan bawaan; bisa ditimpa admin lewat dashboard, lihat SystemSettings. */
 
     /** Instruksi ditulis dalam bahasa sasaran; model mengikuti bahasa promptnya. */
@@ -33,27 +50,87 @@ class AiTextService
             'L2' => 'Pertahankan semua istilah teknis, tetapi pecah kalimat panjang menjadi kalimat pendek. Ini hanya sedikit lebih mudah dari aslinya.',
             'L3' => 'Gunakan bahasa sehari-hari yang santai. Istilah teknis boleh diganti padanan awam, tetapi fakta harus tetap akurat.',
             'L4' => 'Format Easy Read: sangat singkat dan padat. Boleh memakai tanda panah atau tanda sama dengan untuk menunjukkan hubungan.',
-            'L5' => 'Sesederhana mungkin, setara pemahaman anak sekolah dasar. Gunakan kalimat sangat pendek dan kata yang paling umum.',
+            /*
+             * Dulu berbunyi "setara pemahaman anak sekolah dasar". Dibuang atas
+             * masukan dosen PLB: menyebut jenjang atau usia untuk menggambarkan
+             * kemampuan seseorang itu merendahkan, dan tidak menambah apa pun
+             * bagi model — yang dibutuhkannya adalah panjang kalimat dan pilihan
+             * kata, dan keduanya sudah dinyatakan langsung.
+             */
+            'L5' => 'Sesederhana mungkin. Gunakan kalimat sangat pendek dan kata yang paling umum dipakai sehari-hari.',
         ],
         'en' => [
             'L2' => 'Keep every technical term, but break long sentences into short ones. This should be only slightly easier than the original.',
             'L3' => 'Use relaxed, everyday language. Technical terms may be swapped for plain equivalents, but the facts must stay accurate.',
             'L4' => 'Easy Read format: very short and dense. Arrows or equals signs may be used to show relationships.',
-            'L5' => 'As simple as possible, at primary-school reading level. Use very short sentences and the most common words.',
+            'L5' => 'As simple as possible. Use very short sentences and the most common everyday words.',
         ],
     ];
 
-    /** Gaya penjelasan fitur Tanya Lexi. */
+    /**
+     * Gaya penjelasan fitur Tanya Lexi.
+     *
+     * Gaya 'sederhana' dulu bernama 'anak10' dan berbunyi "seperti berbicara
+     * kepada anak berusia 10 tahun". Diganti atas masukan dosen PLB: pembacanya
+     * bisa saja seusia itu, bisa juga jauh lebih tua, dan menyamakan kesulitan
+     * membaca dengan usia anak-anak adalah bentuk diskriminasi. Yang sebenarnya
+     * diminta dari model tidak pernah "berbicaralah kepada anak", melainkan
+     * "pakailah kata yang paling sederhana" — dan itu yang sekarang ditulis.
+     */
     private const EXPLAIN_STYLES = [
         'id' => [
-            'anak10' => 'Jelaskan seperti sedang berbicara kepada anak berusia 10 tahun. Ramah dan sederhana.',
+            'sederhana' => 'Jelaskan dengan kata-kata yang paling sederhana dan hangat. Hindari istilah sulit; kalau terpaksa memakainya, jelaskan artinya sekalian.',
             'analogi' => 'Jelaskan memakai satu analogi atau perumpamaan yang mudah dibayangkan, lalu kaitkan kembali ke konsep aslinya.',
             'nyata' => 'Jelaskan lewat contoh konkret dari kehidupan sehari-hari yang kemungkinan pernah dialami pembaca.',
         ],
         'en' => [
-            'anak10' => 'Explain it as if you were talking to a 10-year-old. Warm and simple.',
+            'sederhana' => 'Explain it with the simplest, warmest words. Avoid difficult terms; if one is unavoidable, explain what it means as well.',
             'analogi' => 'Explain it with a single analogy that is easy to picture, then tie it back to the original concept.',
             'nyata' => 'Explain it through a concrete example from everyday life that the reader has probably experienced.',
+        ],
+    ];
+
+    /**
+     * Batas panjang jawaban Tanya Lexi menurut kemampuan membaca pembacanya.
+     *
+     * Ini inti masukan dosen PLB: penjelasan tertulis yang panjang justru
+     * menyulitkan dan membingungkan, sehingga yang paling membutuhkan bantuan
+     * malah paling dirugikan oleh jawaban yang bertele-tele. Sebelumnya semua
+     * orang mendapat batas yang sama, yaitu tiga paragraf.
+     *
+     * Batasnya dinyatakan dalam kalimat dan kata, bukan "singkat saja", karena
+     * model menuruti angka jauh lebih patuh daripada kata sifat.
+     */
+    private const EXPLAIN_LENGTH_RULES = [
+        'id' => [
+            'belum' => 'Jawab dengan SATU paragraf saja, maksimal dua kalimat. Satu kalimat maksimal sepuluh kata.',
+            'mengeja' => 'Jawab dengan SATU paragraf saja, maksimal tiga kalimat pendek.',
+            'lancar' => 'Jawab maksimal dua paragraf pendek.',
+        ],
+        'en' => [
+            'belum' => 'Answer with ONE paragraph only, at most two sentences. Each sentence at most ten words.',
+            'mengeja' => 'Answer with ONE paragraph only, at most three short sentences.',
+            'lancar' => 'Answer with at most two short paragraphs.',
+        ],
+    ];
+
+    /**
+     * Batas panjang hasil penyederhanaan.
+     *
+     * Dinyatakan per paragraf, bukan untuk keseluruhan teks seperti pada
+     * EXPLAIN_LENGTH_RULES: jumlah paragrafnya sudah terikat teks aslinya, jadi
+     * yang bisa diatur di sini hanya kepadatan tiap paragraf.
+     */
+    private const SIMPLIFY_LENGTH_RULES = [
+        'id' => [
+            'belum' => 'Satu paragraf maksimal dua kalimat, dan satu kalimat maksimal sepuluh kata.',
+            'mengeja' => 'Satu paragraf maksimal dua kalimat pendek.',
+            'lancar' => 'Satu paragraf maksimal tiga kalimat.',
+        ],
+        'en' => [
+            'belum' => 'At most two sentences per paragraph, and at most ten words per sentence.',
+            'mengeja' => 'At most two short sentences per paragraph.',
+            'lancar' => 'At most three sentences per paragraph.',
         ],
     ];
 
@@ -85,13 +162,43 @@ class AiTextService
      */
     public function simplifyRules(): array
     {
-        return $this->settings->get(SystemSettings::KEY_SIMPLIFY_RULES, self::SIMPLIFY_RULES);
+        return $this->onlyKnownKeys(
+            $this->settings->get(SystemSettings::KEY_SIMPLIFY_RULES, self::SIMPLIFY_RULES),
+            self::SIMPLIFY_RULES,
+        );
     }
 
     /** @return array<string, array<string, string>> */
     public function explainStyles(): array
     {
-        return $this->settings->get(SystemSettings::KEY_EXPLAIN_STYLES, self::EXPLAIN_STYLES);
+        return $this->onlyKnownKeys(
+            $this->settings->get(SystemSettings::KEY_EXPLAIN_STYLES, self::EXPLAIN_STYLES),
+            self::EXPLAIN_STYLES,
+        );
+    }
+
+    /**
+     * Buang level maupun gaya yang tidak lagi dikenal kode ini.
+     *
+     * Suntingan admin tersimpan permanen di tabel `settings` dan digabung
+     * dengan bawaan lewat array_replace_recursive, sehingga kunci yang sudah
+     * dihapus dari kode akan hidup terus di hasil gabungannya. Itu bukan
+     * masalah teoretis: gaya 'anak10' pernah tersimpan di sana, dan tanpa
+     * saringan ini ia tetap muncul sebagai kolom yang bisa disunting di
+     * dashboard — padahal API sudah menolaknya, karena daftar yang divalidasi
+     * diambil dari konstanta, bukan dari hasil gabungan ini.
+     *
+     * @param  array<string, array<string, string>>  $merged
+     * @param  array<string, array<string, string>>  $known
+     * @return array<string, array<string, string>>
+     */
+    private function onlyKnownKeys(array $merged, array $known): array
+    {
+        foreach ($merged as $language => $entries) {
+            $merged[$language] = array_intersect_key($entries, $known[$language] ?? []);
+        }
+
+        return $merged;
     }
 
     public function isConfigured(): bool
@@ -135,13 +242,26 @@ class AiTextService
         return self::LANGUAGES;
     }
 
-    /** Paragraf hasil penyederhanaan, beserta taksiran jejak karbonnya. */
-    public function simplify(string $text, string $level, string $language = self::DEFAULT_LANGUAGE): AiAnswer
+    /** @return array<int, string> */
+    public function availableReadingLevels(): array
     {
+        return self::READING_LEVELS;
+    }
+
+    /** Paragraf hasil penyederhanaan, beserta taksiran jejak karbonnya. */
+    public function simplify(
+        string $text,
+        string $level,
+        string $language = self::DEFAULT_LANGUAGE,
+        string $readingLevel = self::DEFAULT_READING_LEVEL,
+    ): AiAnswer {
         $language = $this->normalizeLanguage($language);
+        $readingLevel = $this->normalizeReadingLevel($readingLevel);
 
         $rule = $this->simplifyRules()[$language][$level]
             ?? throw new RuntimeException("Level penyederhanaan tidak dikenal: {$level}");
+
+        $lengthRule = self::SIMPLIFY_LENGTH_RULES[$language][$readingLevel];
 
         $prompt = $language === 'en'
             ? <<<PROMPT
@@ -154,7 +274,7 @@ class AiTextService
             - Do not add information that is not in the original text.
             - Do not drop important facts.
             - Keep the number of paragraphs as close to the original as possible.
-            - At most three sentences per paragraph.
+            - {$lengthRule}
 
             Original text:
             {$text}
@@ -169,13 +289,13 @@ class AiTextService
             - Jangan menambah informasi yang tidak ada di teks asli.
             - Jangan menghilangkan fakta penting.
             - Pertahankan jumlah paragraf sedekat mungkin dengan teks asli.
-            - Satu paragraf maksimal tiga kalimat.
+            - {$lengthRule}
 
             Teks asli:
             {$text}
             PROMPT;
 
-        return $this->remember("simplify:{$language}:{$level}:" . md5($text), $prompt);
+        return $this->remember("simplify:{$language}:{$level}:{$readingLevel}:" . md5($text), $prompt);
     }
 
     /** Paragraf penjelasan, beserta taksiran jejak karbonnya. */
@@ -184,11 +304,15 @@ class AiTextService
         string $style,
         ?string $context = null,
         string $language = self::DEFAULT_LANGUAGE,
+        string $readingLevel = self::DEFAULT_READING_LEVEL,
     ): AiAnswer {
         $language = $this->normalizeLanguage($language);
+        $readingLevel = $this->normalizeReadingLevel($readingLevel);
 
         $styleRule = $this->explainStyles()[$language][$style]
             ?? throw new RuntimeException("Gaya penjelasan tidak dikenal: {$style}");
+
+        $lengthRule = self::EXPLAIN_LENGTH_RULES[$language][$readingLevel];
 
         if ($language === 'en') {
             $contextBlock = filled($context)
@@ -202,10 +326,12 @@ class AiTextService
 
             Hard requirements:
             - Answer in English.
-            - At most three short paragraphs.
+            - {$lengthRule}
             - Short sentences; avoid technical terms you do not explain.
             - The explanation must be accurate — never invent facts.
             - Focus only on the main concept or term.
+            - No emoji and no decorative symbols: this answer is read aloud.
+            - Never describe the reader by age or school grade.
 
             {$contextBlock}
             PROMPT;
@@ -221,16 +347,21 @@ class AiTextService
 
             Ketentuan wajib:
             - Jawab dalam bahasa Indonesia.
-            - Maksimal tiga paragraf pendek.
+            - {$lengthRule}
             - Kalimat pendek, hindari istilah teknis yang tidak dijelaskan.
             - Penjelasan harus akurat, jangan mengarang fakta.
             - Fokus jelaskan konsep atau istilah utamanya saja.
+            - Tanpa emoji dan tanpa simbol hiasan: jawaban ini akan dibacakan suara.
+            - Jangan pernah menyebut usia atau jenjang sekolah pembacanya.
 
             {$contextBlock}
             PROMPT;
         }
 
-        return $this->remember("explain:{$language}:{$style}:" . md5($term . '|' . $context), $prompt);
+        return $this->remember(
+            "explain:{$language}:{$style}:{$readingLevel}:" . md5($term . '|' . $context),
+            $prompt,
+        );
     }
 
     /** Paragraf hasil OCR yang sudah dikoreksi, beserta taksiran jejak karbonnya. */
@@ -277,6 +408,13 @@ class AiTextService
     private function normalizeLanguage(string $language): string
     {
         return in_array($language, self::LANGUAGES, true) ? $language : self::DEFAULT_LANGUAGE;
+    }
+
+    private function normalizeReadingLevel(string $readingLevel): string
+    {
+        return in_array($readingLevel, self::READING_LEVELS, true)
+            ? $readingLevel
+            : self::DEFAULT_READING_LEVEL;
     }
 
     /**

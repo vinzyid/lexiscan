@@ -1,5 +1,5 @@
 import '../global.css';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -24,6 +24,8 @@ import { ThemeProvider, useThemeColors } from '../src/theme/theme-provider';
 import { BrandSplash } from '../src/components/brand-splash';
 import { Onboarding } from '../src/components/onboarding';
 import { useServerDefaults } from '../src/hooks/use-server-defaults';
+import { useAuthStore } from '../src/store/useAuthStore';
+import { useOCRStore } from '../src/store/useStore';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -32,6 +34,28 @@ type Intro = 'splash' | 'onboarding' | 'done';
 
 function RootNavigator({ intro, onAdvance }: { intro: Intro; onAdvance: (next: Intro) => void }) {
   const colors = useThemeColors();
+  const router = useRouter();
+
+  const sessionRestored = useAuthStore((s) => s.hydrated);
+  const token = useAuthStore((s) => s.token);
+  const authPromptDismissed = useOCRStore((s) => s.authPromptDismissed);
+
+  /*
+   * Gerbang masuk, dijalankan sekali setelah pembukaan selesai.
+   *
+   * Syaratnya tiga, dan ketiganya perlu:
+   * - `intro === 'done'`, supaya navigasi tidak terjadi di balik layar splash;
+   * - `sessionRestored`, supaya pemilik akun yang sah tidak sempat dilempar ke
+   *   layar daftar hanya karena sesinya belum selesai dibaca dari penyimpanan;
+   * - belum punya token DAN belum pernah memilih "lihat-lihat dulu", supaya
+   *   yang sudah menolak sekali tidak ditagih setiap kali membuka aplikasi.
+   */
+  useEffect(() => {
+    if (intro !== 'done' || !sessionRestored) return;
+    if (token || authPromptDismissed) return;
+
+    router.replace('/(auth)/register');
+  }, [intro, sessionRestored, token, authPromptDismissed, router]);
 
   // Ditumpuk di atas navigator, bukan jadi rute, supaya Beranda tidak sempat
   // berkedip lebih dulu.
@@ -40,6 +64,7 @@ function RootNavigator({ intro, onAdvance }: { intro: Intro; onAdvance: (next: I
       <StatusBar style={intro !== 'done' || colors.isDark ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(auth)" />
       </Stack>
 
       {intro === 'splash' ? (
@@ -82,6 +107,16 @@ export default function RootLayout() {
    * pengguna.
    */
   useServerDefaults();
+
+  /*
+   * Sesi tersimpan dibaca berbarengan dengan splash juga. Kalau menunggu sampai
+   * layar pertama terlihat, pemilik akun akan sempat melihat tampilan bawaan
+   * sebelum preferensi akunnya terpasang — dan bagi yang belum bisa membaca,
+   * "sebentar" itu berarti satu layar penuh huruf kecil tanpa suara.
+   */
+  useEffect(() => {
+    void useAuthStore.getState().restore();
+  }, []);
 
   // Splash sistem ditahan sampai font siap; BrandSplash memakai Fredoka.
   const [intro, setIntro] = useState<Intro>('splash');

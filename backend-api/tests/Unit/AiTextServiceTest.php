@@ -286,7 +286,7 @@ class AiTextServiceTest extends TestCase
 
         Cache::swap($this->passthroughCache());
 
-        (new AiTextService($provider))->explain('anabolisme', 'anak10');
+        (new AiTextService($provider))->explain('anabolisme', 'sederhana');
 
         // Kalau blok konteks dibiarkan kosong, model mengira konteksnya terpotong.
         $this->assertStringContainsString('Tidak ada konteks tambahan.', $captured);

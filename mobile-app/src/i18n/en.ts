@@ -53,13 +53,71 @@ export const en: Translation = {
     askLexi: 'Ask Lexi',
   },
 
+  speech: {
+    playLabel: 'Read this text aloud',
+    stopLabel: 'Stop the voice',
+    readAloud: 'Read aloud',
+    readParagraph: (index: number) => `Read paragraph ${index} aloud`,
+  },
+
+  readingLevels: {
+    belum: {
+      name: 'Cannot read yet',
+      desc: 'Largest text, words split into syllables, and everything read aloud.',
+      example: 'Sun shine',
+    },
+    mengeja: {
+      name: 'Still sounding words out',
+      desc: 'Words split into syllables, with the voice there whenever it is needed.',
+      example: 'Sun shine',
+    },
+    lancar: {
+      name: 'Reads fluently',
+      desc: 'Text appears as usual, without the voice.',
+      example: 'Sunshine',
+    },
+  },
+
+  auth: {
+    loginTitle: 'Welcome back',
+    loginSubtitle: 'Sign in to keep reading',
+    loginAction: 'Sign in',
+    loginLoading: 'Signing in…',
+    noAccount: 'No account yet?',
+    toRegister: 'Create one here',
+
+    registerTitle: 'Create a LexiScan account',
+    registerSubtitle: 'So the app can adapt itself to you',
+    registerAction: 'Sign up',
+    registerLoading: 'Creating your account…',
+    haveAccount: 'Already have an account?',
+    toLogin: 'Sign in here',
+
+    companionBanner: 'Fill this in together with a teacher or parent',
+
+    nameLabel: 'Your name',
+    namePlaceholder: 'For example: Rafi',
+    usernameLabel: 'Username',
+    usernamePlaceholder: 'For example: rafi123',
+    usernameHint: 'Letters and numbers only, no spaces',
+    passwordLabel: 'Password',
+    passwordPlaceholder: 'At least 6 characters',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
+
+    readingLevelLabel: 'Can you read on your own yet?',
+    readingLevelHint: 'You can change this any time from Settings.',
+
+    skip: 'Just look around first',
+    skipHint: 'You can sign up later from Settings.',
+
+    fillEverything: 'Please fill in every field first.',
+    unexpectedError: 'Something unexpected went wrong. Please try again.',
+  },
+
   dashboard: {
-    /*
-     * Sapaan tanpa nama: LexiScan tidak punya akun, jadi tidak ada nama
-     * pengguna yang bisa disebut di sini. Sama alasannya dengan kartu di
-     * layar Atur yang menyebut aplikasinya sendiri, bukan sebuah profil.
-     */
     greeting: 'Hello, Reader!',
+    greetingNamed: (name: string) => `Hello, ${name}!`,
     statusBadge: 'Ready to learn',
     heroTitle: 'Ready for today’s\nadventure?',
     scanButton: 'Scan',
@@ -174,14 +232,6 @@ export const en: Translation = {
 
   settings: {
     role: 'Student',
-    /*
-     * Bukan profil pengguna: LexiScan tidak punya akun, jadi tidak ada nama
-     * yang bisa ditampilkan di sini. Kartunya menyebut aplikasinya sendiri
-     * supaya tidak ada identitas yang seolah-olah milik penggunanya.
-     */
-    title: 'LexiScan',
-    subtitle: 'Reading assistant for dyslexia',
-    profileTags: ['Free', 'Research-based', 'Inclusive'],
     languageEyebrow: 'Language',
     languageTitle: 'App language',
     languageNote: 'Also changes the language of AI answers.',
@@ -191,6 +241,30 @@ export const en: Translation = {
     typeTitle: 'Used across every reading screen',
     fontChip: 'Font',
     spacingChip: 'Spacing',
+
+    readingEyebrow: 'Reading ability',
+    readingTitle: 'Where every adjustment comes from',
+    readingNote:
+      'Changing this resets the text size, syllable splitting, and voice. Afterwards you are still free to adjust each one below.',
+
+    voiceEyebrow: 'Voice',
+    voiceTitle: 'Read the text out loud',
+    ttsTitle: 'Voice buttons',
+    ttsDesc: 'Show a read-aloud button on every paragraph and on Lexi answers.',
+    autoPlayTitle: 'Read automatically',
+    autoPlayDesc: 'The paragraph you are on starts speaking without being tapped.',
+    syllableTitle: 'Split syllables',
+    syllableDesc: 'Write words as "Sun shine" so they are easier to sound out.',
+    voiceOfflineNote: 'The voice uses your phone built-in engine, so it works without internet.',
+
+    accountEyebrow: 'Account',
+    accountTitle: 'Your profile',
+    guestName: 'Not signed in',
+    guestSubtitle: 'Sign up so the app can adapt itself to you',
+    loginAction: 'Sign in or sign up',
+    logoutAction: 'Sign out',
+    logoutLabel: 'Sign out of this account',
+
     aboutTagline: 'A reading companion for dyslexia',
     aboutTags: ['v1.0', 'Free', 'Inclusive'],
     aboutBody:
@@ -256,6 +330,8 @@ export const en: Translation = {
     badge: 'One word at a time',
     syllableCount: (count: number) => `${count} syllables`,
     askLexiLabel: (word: string) => `Ask Lexi to explain the word ${word}`,
+    syllableHint: 'Tap a syllable to hear it.',
+    syllableLabel: (syllable: string) => `Say the syllable ${syllable}`,
   },
 
   explain: {
@@ -304,35 +380,27 @@ export const en: Translation = {
     L2: { name: 'A Little Easier', short: 'Easier', tagline: 'Long sentences broken up' },
     L3: { name: 'Casual Language', short: 'Casual', tagline: 'Everyday words, still accurate' },
     L4: { name: 'Short Points', short: 'Points', tagline: 'Brief and to the point' },
-    L5: { name: 'Simplest', short: 'Basic', tagline: 'Primary-school reading level' },
+    L5: { name: 'Simplest', short: 'Basic', tagline: 'Very short sentences, everyday words' },
   },
 
   explainStyles: {
-    anak10: {
-      name: 'Like you are 10',
-      desc: 'The simplest explanation',
+    sederhana: {
+      name: 'The simplest words',
+      desc: 'The easiest wording there is',
       answer: [
-        'Your body is made of a huge number of tiny cells. Inside every one of them sits something called a mitochondrion.',
-        "A mitochondrion has just one job: making energy! That energy is called ATP — think of it as coins the cell spends to 'buy' everything it does.",
-        "Without mitochondria your cells run out of coins and cannot do anything at all. That is why they are nicknamed the 'power plants of the cell'. ⚡",
+        'Mitochondria are tiny parts inside a cell. Their job is making the energy your body moves with.',
       ],
     },
     analogi: {
       name: 'A simple analogy',
       desc: 'An image that is easy to picture',
-      answer: [
-        'Picture a cell as a small town. The town needs electricity to keep its lights, trains, and factories running.',
-        'Mitochondria are its power plants. They burn "fuel" from the food you eat and turn it into electricity called ATP.',
-        'The busier the town, the more power plants it needs. That is why muscle cells hold far more mitochondria than other cells do. 🏙️',
-      ],
+      answer: ['Picture a cell as a small town. Mitochondria are its power plants.'],
     },
     nyata: {
       name: 'A real-life example',
       desc: 'From everyday experience',
       answer: [
-        'When you run around and suddenly find yourself out of breath, it is because your muscle cells need a lot of energy fast.',
-        'The mitochondria inside those muscle cells immediately get to work turning sugar from your food into ATP.',
-        'That is also why enough sleep and good food matter — they are the fuel your mitochondria run on! 😴🍎',
+        'When you run and get out of breath, the mitochondria in your muscles are working hard to make energy.',
       ],
     },
   },

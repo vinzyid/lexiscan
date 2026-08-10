@@ -42,7 +42,7 @@ class SimplifyTextTest extends TestCase
         $prompt = $this->promptSentToGemini();
 
         // Aturan L5 harus ikut, kalau tidak semua level menghasilkan teks yang sama.
-        $this->assertStringContainsString('anak sekolah dasar', $prompt);
+        $this->assertStringContainsString('kata yang paling umum dipakai sehari-hari', $prompt);
         $this->assertStringContainsString(self::TEXT, $prompt);
     }
 

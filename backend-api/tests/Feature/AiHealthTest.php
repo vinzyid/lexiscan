@@ -25,7 +25,7 @@ class AiHealthTest extends TestCase
                 'configured' => true,
                 'cache' => ['store' => 'array', 'writable' => true],
                 'levels' => ['L2', 'L3', 'L4', 'L5'],
-                'styles' => ['anak10', 'analogi', 'nyata'],
+                'styles' => ['sederhana', 'analogi', 'nyata'],
             ]);
     }
 

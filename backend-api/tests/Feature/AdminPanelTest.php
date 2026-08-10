@@ -85,7 +85,7 @@ class AdminPanelTest extends TestCase
             ->assertOk()
             // Aturan bawaan L5 bahasa Indonesia harus muncul di formulirnya;
             // kalau kosong, admin akan menyimpan prompt kosong tanpa sadar.
-            ->assertSee('anak sekolah dasar');
+            ->assertSee('kata yang paling umum dipakai sehari-hari');
     }
 
     public function test_an_edited_rule_is_what_the_settings_page_shows(): void

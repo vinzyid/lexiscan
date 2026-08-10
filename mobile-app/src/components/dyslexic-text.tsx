@@ -1,8 +1,11 @@
+import { useMemo } from 'react';
 import { Text, type TextLayoutEventData, type NativeSyntheticEvent } from 'react-native';
 
 import { getTypeLevel, type TypeLevel } from '../theme/palettes';
 import { useOCRStore } from '../store/useStore';
 import { useThemeColors } from '../theme/theme-provider';
+import { splitSyllables } from '../utils/syllables';
+import type { LanguageId } from '../store/useStore';
 
 type Props = {
   children: string;
@@ -13,28 +16,80 @@ type Props = {
   onWordPress?: (word: string) => void;
   /** Timpa preset tipografi aktif — dipakai kartu pratinjau di Pengaturan. */
   levelOverride?: TypeLevel;
+  /** Timpa pengaturan pemenggalan suku kata — juga untuk kartu pratinjau. */
+  syllableOverride?: boolean;
   /** Posisi tiap baris hasil layout — dipakai Reading Ruler untuk menempatkan penggaris. */
   onTextLayout?: (event: NativeSyntheticEvent<TextLayoutEventData>) => void;
 };
 
 /** Hanya huruf/angka — tanda baca dibuang agar sheet suku kata tidak ikut kebawa. */
-const stripPunctuation = (word: string) => word.replace(/[^\p{L}\p{N}-]/gu, '');
+const stripPunctuation = (word: string) => word.replace(/[^\p{L}\p{N}]/gu, '');
+
+/**
+ * Pisahkan tanda baca yang menempel di depan dan belakang kata.
+ *
+ * Tanpa ini "sel," ikut masuk ke pemenggal suku kata dan komanya hilang dari
+ * layar. Tanda hubung sengaja dibiarkan menempel di inti kata, karena
+ * "anak-anak" memang satu kata dan pemenggalnya sudah tahu cara menanganinya.
+ */
+const AFFIXES = /^([^\p{L}\p{N}]*)([\s\S]*?)([^\p{L}\p{N}]*)$/u;
+
+type Chunk =
+  | { kind: 'space' }
+  | {
+      kind: 'word';
+      text: string;
+      wordIndex: number;
+      prefix: string;
+      suffix: string;
+      /** Kosong berarti kata ini ditampilkan utuh, tanpa dipenggal. */
+      syllables: string[];
+    };
 
 /**
  * Pecah paragraf jadi potongan kata + spasi, sambil menomori kata (spasi tidak
  * dihitung). Nomor inilah yang menentukan giliran warna pada Bicolor Words.
  */
-function toChunks(text: string) {
+function toChunks(text: string, syllableSpacing: boolean, language: LanguageId): Chunk[] {
   let counter = 0;
 
   return text
     .split(/(\s+)/)
     .filter((chunk) => chunk.length > 0)
-    .map((chunk) => {
-      const isSpace = /^\s+$/.test(chunk);
-      const entry = { chunk, isSpace, wordIndex: counter };
-      if (!isSpace) counter += 1;
-      return entry;
+    .map((chunk): Chunk => {
+      if (/^\s+$/.test(chunk)) return { kind: 'space' };
+
+      const wordIndex = counter;
+      counter += 1;
+
+      if (!syllableSpacing) {
+        return { kind: 'word', text: chunk, wordIndex, prefix: '', suffix: '', syllables: [] };
+      }
+
+      const [, prefix = '', core = '', suffix = ''] = chunk.match(AFFIXES) ?? [];
+      const syllables = splitSyllables(core, language);
+
+      /*
+       * Dua syarat sebelum sebuah kata boleh ditampilkan terpenggal:
+       *
+       * - lebih dari satu suku kata, karena memenggal "di" jadi "di" hanya
+       *   menambah elemen tanpa efek apa pun;
+       * - hasil penggalannya kalau disambung kembali harus SAMA PERSIS dengan
+       *   kata aslinya. splitSyllables membuang karakter yang bukan huruf,
+       *   angka, atau tanda hubung, sehingga "don't" akan kembali sebagai
+       *   "dont". Menampilkan kata yang berbeda dari yang tertulis di buku
+       *   adalah kesalahan yang jauh lebih buruk daripada tidak memenggalnya.
+       */
+      const lossless = syllables.join('') === core;
+
+      return {
+        kind: 'word',
+        text: chunk,
+        wordIndex,
+        prefix,
+        suffix,
+        syllables: syllables.length > 1 && lossless ? syllables : [],
+      };
     });
 }
 
@@ -45,6 +100,8 @@ function toChunks(text: string) {
  * - Visual fixation: huruf pertama tiap kata Bold, sisanya Regular. Hanya aktif
  *   di preset Sedang & Berat.
  * - Bicolor Words: kata ganjil/genap berganti warna (bicolorA / bicolorB).
+ * - Pemenggalan suku kata: "Mitokondria" ditulis "Mi to kon dri a", langsung di
+ *   teksnya dan tanpa perlu diketuk lebih dulu.
  */
 export function DyslexicText({
   children,
@@ -52,18 +109,49 @@ export function DyslexicText({
   dimmed,
   onWordPress,
   levelOverride,
+  syllableOverride,
   onTextLayout,
 }: Props) {
   const typeLevelId = useOCRStore((s) => s.typeLevelId);
+  const storeSyllableSpacing = useOCRStore((s) => s.syllableSpacing);
+  const language = useOCRStore((s) => s.language);
   const level = levelOverride ?? getTypeLevel(typeLevelId);
   const colors = useThemeColors();
 
-  const chunks = toChunks(children);
+  const syllableSpacing = syllableOverride ?? storeSyllableSpacing;
+
+  /*
+   * Pemenggalan dihitung ulang hanya kalau salah satu masukannya berubah.
+   * Tanpa memo, setiap paragraf memanggil splitSyllables sekali per kata di
+   * SETIAP render — termasuk saat penggaris baca digeser jari.
+   */
+  const chunks = useMemo(
+    () => toChunks(children, syllableSpacing, language),
+    [children, syllableSpacing, language],
+  );
+
+  /*
+   * Jarak antar suku kata harus lebih sempit daripada jarak antar kata; kalau
+   * sama, "Mi to kon dri a" terbaca sebagai lima kata terpisah dan batas
+   * katanya justru hilang.
+   *
+   * Diatur lewat fontSize pada spasi, bukan margin, karena elemen <Text> inline
+   * di React Native mengabaikan margin.
+   */
+  const syllableGap = level.fontSize * 0.45;
+  const wordGap = syllableSpacing ? '  ' : ' ';
 
   return (
     <Text
       className="font-read"
       onTextLayout={onTextLayout}
+      /*
+       * Label diisi teks aslinya. TalkBack membaca isi elemen apa adanya, jadi
+       * tanpa ini pembaca layar ikut mengeja "Mi to kon dri a" suku kata demi
+       * suku kata — persis kebalikan dari maksud fiturnya.
+       */
+      accessible
+      accessibilityLabel={children}
       style={{
         fontSize: level.fontSize,
         lineHeight: level.fontSize * level.lineHeightRatio,
@@ -71,34 +159,65 @@ export function DyslexicText({
         color: dimmed ? colors.textMuted : colors.textMain,
         opacity: dimmed ? 0.35 : 1,
       }}>
-      {chunks.map(({ chunk, isSpace, wordIndex }, index) => {
-        if (isSpace) return <Text key={index}> </Text>;
+      {chunks.map((chunk, index) => {
+        if (chunk.kind === 'space') return <Text key={index}>{wordGap}</Text>;
 
         const color = dimmed
           ? undefined
           : bicolor
-            ? wordIndex % 2 === 0
+            ? chunk.wordIndex % 2 === 0
               ? colors.bicolorA
               : colors.bicolorB
             : undefined;
 
-        const press = onWordPress ? () => onWordPress(stripPunctuation(chunk)) : undefined;
-
-        if (!level.bodyBold) {
-          return (
-            <Text key={index} style={color ? { color } : undefined} onPress={press}>
-              {chunk}
-            </Text>
-          );
-        }
+        const press = onWordPress ? () => onWordPress(stripPunctuation(chunk.text)) : undefined;
 
         return (
           <Text key={index} style={color ? { color } : undefined} onPress={press}>
-            <Text className="font-read-bold">{chunk.slice(0, 1)}</Text>
-            <Text>{chunk.slice(1)}</Text>
+            {chunk.syllables.length > 0
+              ? renderSyllables(chunk, level.bodyBold, syllableGap)
+              : renderWhole(chunk.text, level.bodyBold)}
           </Text>
         );
       })}
     </Text>
+  );
+}
+
+/** Kata utuh, dengan huruf pertamanya ditebalkan kalau presetnya meminta. */
+function renderWhole(text: string, bodyBold: boolean) {
+  if (!bodyBold) return text;
+
+  return (
+    <>
+      <Text className="font-read-bold">{text.slice(0, 1)}</Text>
+      <Text>{text.slice(1)}</Text>
+    </>
+  );
+}
+
+/**
+ * Kata yang dipecah jadi suku kata, dipisah spasi sempit.
+ *
+ * Yang ditebalkan tetap huruf pertama KATA, bukan huruf pertama tiap suku kata:
+ * penebalan itu penanda tempat mata mulai membaca satu kata, dan lima penanda
+ * dalam satu kata tidak menandai apa pun.
+ */
+function renderSyllables(
+  chunk: Extract<Chunk, { kind: 'word' }>,
+  bodyBold: boolean,
+  gap: number,
+) {
+  return (
+    <>
+      {chunk.prefix}
+      {chunk.syllables.map((syllable, index) => (
+        <Text key={index}>
+          {index > 0 ? <Text style={{ fontSize: gap }}> </Text> : null}
+          {index === 0 ? renderWhole(syllable, bodyBold) : syllable}
+        </Text>
+      ))}
+      {chunk.suffix}
+    </>
   );
 }

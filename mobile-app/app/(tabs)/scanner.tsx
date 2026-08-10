@@ -28,6 +28,8 @@ import { ImageManipulator } from 'expo-image-manipulator';
 
 import { useOCRStore } from '../../src/store/useStore';
 import { PressableScale } from '../../src/components/pressable-scale';
+import { SpeakButton } from '../../src/components/speak-button';
+import { useStopSpeechOnBlur } from '../../src/speech/use-speech';
 import { useThemeColors } from '../../src/theme/theme-provider';
 import { GRADIENTS, getTypeLevel } from '../../src/theme/palettes';
 import { useT } from '../../src/i18n';
@@ -57,6 +59,10 @@ export default function ScannerScreen() {
   const router = useRouter();
   const cameraRef = useRef<CameraView>(null);
   const t = useT();
+
+  // Pindah tab sambil hasil pindaian sedang dibacakan tidak boleh meninggalkan
+  // suara yang terus berbicara tanpa tombol untuk menghentikannya.
+  useStopSpeechOnBlur();
 
   const [permission, requestPermission] = useCameraPermissions();
   const [tab, setTab] = useState<'camera' | 'upload'>('camera');
@@ -290,7 +296,17 @@ export default function ScannerScreen() {
                   </Text>
                   {isCorrectingTypo ? (
                     <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 'auto' }} />
-                  ) : null}
+                  ) : (
+                    /*
+                     * Bisa didengar sebelum dibuka di layar Baca. Bagi yang
+                     * belum bisa membaca, inilah satu-satunya cara memastikan
+                     * halaman yang difoto sudah benar — kalau tidak, ia baru
+                     * tahu salah foto setelah masuk ke layar berikutnya.
+                     */
+                    <View style={{ marginLeft: 'auto' }}>
+                      <SpeakButton text={detected} speechKey="scan-result" size={16} />
+                    </View>
+                  )}
                 </View>
 
                 <Text

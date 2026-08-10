@@ -26,6 +26,8 @@ import {
   Ruler,
   Sparkles,
   Type,
+  Volume2,
+  Square,
 } from 'lucide-react-native';
 
 import { useOCRStore } from '../../src/store/useStore';
@@ -41,6 +43,8 @@ import { FootprintChip } from '../../src/components/footprint-chip';
 import { TypographySheet } from '../../src/components/typography-sheet';
 import { ExplainSheet, type ExplainTarget } from '../../src/components/explain-sheet';
 import { WordSheet } from '../../src/components/word-sheet';
+import { SpeakButton } from '../../src/components/speak-button';
+import { useAutoSpeak, useSpeech, useStopSpeechOnBlur } from '../../src/speech/use-speech';
 import { Blob, Ring, Sparkle } from '../../src/components/figma-decor';
 
 type LineMetric = { y: number; height: number };
@@ -139,6 +143,21 @@ export default function ReaderScreen() {
   const shownParagraphs = paragraphs.length > 0 ? paragraphs : [t.reader.emptyText];
 
   const showSkeleton = needsAi && simplifyLoading && !aiResult;
+
+  const { enabled: ttsEnabled, toggle: toggleSpeech, speakingKey } = useSpeech();
+
+  useStopSpeechOnBlur();
+
+  /*
+   * Paragraf aktif dibacakan sendiri bagi yang presetnya memang meminta
+   * demikian — yang belum bisa membaca sama sekali. Yang dikirim `paragraphs`,
+   * bukan yang tampil di layar: teks di layar sudah dipenggal suku kata, dan
+   * "Mi to kon dri a" akan dilafalkan sebagai lima kata terpisah.
+   *
+   * Dijeda selama kerangka pemuatan masih tampil, kalau tidak yang terbacakan
+   * adalah teks level sebelumnya yang sebentar lagi diganti.
+   */
+  useAutoSpeak(shownParagraphs[activeIndex] ?? null, `paragraph:${activeIndex}`, !showSkeleton);
 
   const moveParagraph = useCallback(
     (delta: number) => {
@@ -508,36 +527,78 @@ export default function ReaderScreen() {
           colors={['rgba(0,0,0,0)', colors.background]}
           locations={[0, 0.45]}
           style={{ paddingHorizontal: 16, paddingTop: 24, paddingBottom: 12 }}>
-          <PressableScale
-            onPress={() =>
-              setExplainTarget({
-                term: shownParagraphs[activeIndex],
-                context: shownParagraphs[activeIndex],
-                // Dokumen contoh punya jawaban kurasi; teks pindaian dijelaskan AI beneran.
-                useStaticAnswers: !isScanned,
-              })
-            }
-            accessibilityRole="button"
-            accessibilityLabel={t.reader.explainButtonLabel}
-            scaleTo={0.97}>
-            <LinearGradient
-              colors={['rgba(124,58,237,0.12)', 'rgba(79,70,229,0.12)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{
-                height: 56,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: 'rgba(124,58,237,0.2)',
-              }}>
-              <Lightbulb size={18} color={colors.primary} />
-              <Text className="font-ui-bold text-base text-primary">{t.reader.explainButton}</Text>
-            </LinearGradient>
-          </PressableScale>
+          <View className="flex-row" style={{ gap: 10 }}>
+            {/*
+              Tombol besar, bukan hanya ikon kecil di samping nomor paragraf.
+              Pengguna yang paling membutuhkan suara adalah yang paling kecil
+              kemungkinannya menemukan tombol kecil — jadi yang utama ditaruh di
+              tempat ibu jari sudah berada.
+            */}
+            {ttsEnabled ? (
+              <PressableScale
+                onPress={() =>
+                  toggleSpeech(shownParagraphs[activeIndex], `paragraph:${activeIndex}`)
+                }
+                accessibilityRole="button"
+                accessibilityLabel={t.speech.readParagraph(activeIndex + 1)}
+                scaleTo={0.97}
+                wrapperStyle={{ flex: 1 }}>
+                <LinearGradient
+                  colors={[...GRADIENTS.activePill.colors]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={{
+                    height: 56,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    borderRadius: 16,
+                  }}>
+                  {speakingKey === `paragraph:${activeIndex}` ? (
+                    <Square size={15} color="#ffffff" fill="#ffffff" />
+                  ) : (
+                    <Volume2 size={18} color="#ffffff" />
+                  )}
+                  <Text className="font-ui-bold text-base text-white">{t.speech.readAloud}</Text>
+                </LinearGradient>
+              </PressableScale>
+            ) : null}
+
+            <PressableScale
+              onPress={() =>
+                setExplainTarget({
+                  term: shownParagraphs[activeIndex],
+                  context: shownParagraphs[activeIndex],
+                  // Dokumen contoh punya jawaban kurasi; teks pindaian dijelaskan AI beneran.
+                  useStaticAnswers: !isScanned,
+                })
+              }
+              accessibilityRole="button"
+              accessibilityLabel={t.reader.explainButtonLabel}
+              scaleTo={0.97}
+              wrapperStyle={{ flex: 1 }}>
+              <LinearGradient
+                colors={['rgba(124,58,237,0.12)', 'rgba(79,70,229,0.12)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{
+                  height: 56,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: 'rgba(124,58,237,0.2)',
+                }}>
+                <Lightbulb size={18} color={colors.primary} />
+                <Text className="font-ui-bold text-base text-primary">
+                  {t.reader.explainButton}
+                </Text>
+              </LinearGradient>
+            </PressableScale>
+          </View>
 
           <View
             className="mt-3 h-10 flex-row items-center justify-center rounded-[14px] bg-primary/[0.04]"
@@ -673,10 +734,22 @@ function ParagraphBlock({
         Mode Fokus meredupkan paragraf lain, bukan menyembunyikannya —
         pembaca tetap bisa melihat konteks di sekitarnya.
       */}
+      {/*
+        Tombol suara hanya di paragraf aktif. Satu tombol per paragraf akan
+        memenuhi layar dengan tombol yang semuanya melakukan hal serupa, dan
+        justru layar bacaan yang harus paling tenang.
+      */}
       {isActive ? (
-        <Text className="mb-2.5 font-ui-bold text-xs text-primary">
-          {t.reader.paragraphOf(index + 1, total)}
-        </Text>
+        <View className="mb-2.5 flex-row items-center" style={{ gap: 8 }}>
+          <Text className="flex-1 font-ui-bold text-xs text-primary">
+            {t.reader.paragraphOf(index + 1, total)}
+          </Text>
+          <SpeakButton
+            text={paragraph}
+            speechKey={`paragraph:${index}`}
+            size={16}
+          />
+        </View>
       ) : null}
 
       {showRuler ? <GestureDetector gesture={rulerGesture}>{body}</GestureDetector> : body}

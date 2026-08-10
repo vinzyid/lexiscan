@@ -13,6 +13,8 @@ import { useThemeColors } from '../theme/theme-provider';
 import { DyslexicText } from './dyslexic-text';
 import { FootprintChip } from './footprint-chip';
 import { PressableScale } from './pressable-scale';
+import { SpeakButton } from './speak-button';
+import { useAutoSpeak, useStopSpeechOnUnmount } from '../speech/use-speech';
 import { LexiMascot } from './illustrations';
 
 export type ExplainTarget = {
@@ -38,6 +40,22 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
   const [error, setError] = useState<string | null>(null);
 
   const active = styleId ? { id: styleId, ...t.explainStyles[styleId] } : null;
+
+  /*
+   * Jawaban digabung jadi satu ucapan, bukan satu per paragraf: jeda antar
+   * panggilan expo-speech terdengar seperti kalimat yang terputus.
+   */
+  const spokenAnswer = paragraphs && paragraphs.length > 0 ? paragraphs.join(' ') : null;
+
+  useStopSpeechOnUnmount();
+
+  /*
+   * Inilah jawaban paling langsung atas masukan dosen PLB. Penjelasan tertulis
+   * yang panjang menyulitkan; kalau begitu penjelasannya harus bisa didengar,
+   * dan bagi yang belum bisa membaca sama sekali ia harus berbunyi sendiri
+   * begitu jawabannya siap — tanpa perlu menemukan tombol lebih dulu.
+   */
+  useAutoSpeak(spokenAnswer, `explain:${styleId ?? ''}`, !loading && !error);
 
   const reset = () => {
     setStyleId(null);
@@ -74,7 +92,7 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
 
   // Emoji gaya penjelasan dipetakan ke ikon Lucide.
   const renderStyleIcon = (id: string, size = 24, color = colors.textMain) => {
-    if (id === 'anak10') return <UserRound size={size} color={color} />;
+    if (id === 'sederhana') return <UserRound size={size} color={color} />;
     if (id === 'analogi') return <MessageSquare size={size} color={color} />;
     if (id === 'nyata') return <Lightbulb size={size} color={color} />;
     return <Text className="text-2xl">{EXPLAIN_STYLE_EMOJI[id as ExplainStyleId]}</Text>;
@@ -146,7 +164,21 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
                         <DyslexicText>{para}</DyslexicText>
                       </View>
                     ))}
-                    <FootprintChip />
+
+                    {spokenAnswer ? (
+                      <View className="mt-3 flex-row items-center" style={{ gap: 10 }}>
+                        <SpeakButton
+                          text={spokenAnswer}
+                          speechKey={`explain:${active.id}`}
+                          size={16}
+                        />
+                        <View className="flex-1">
+                          <FootprintChip />
+                        </View>
+                      </View>
+                    ) : (
+                      <FootprintChip />
+                    )}
                   </>
                 )}
               </View>

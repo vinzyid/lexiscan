@@ -16,7 +16,37 @@ export function splitSyllables(word: string, language: LanguageId = 'id'): strin
   const clean = word.replace(/[^\p{L}\p{N}-]/gu, '');
   if (clean.length < 3) return clean ? [clean] : [];
 
+  if (clean.includes(HYPHEN)) return splitHyphenated(clean, language);
+
   return language === 'en' ? splitEnglish(clean) : splitIndonesian(clean);
+}
+
+const HYPHEN = '-';
+
+/**
+ * Kata bertanda hubung dipenggal per bagian, lalu tanda hubungnya ditempelkan
+ * ke ujung bagian sebelumnya.
+ *
+ * Tanpa ini "anak-anak" keluar sebagai "a nak -a nak": tanda hubungnya menempel
+ * di AWAL suku kata berikutnya sehingga terbaca seperti tanda minus, padahal
+ * tugasnya menutup bagian sebelumnya. Dulu tidak terlihat karena pemenggalan
+ * hanya muncul saat kata diketuk; sekarang ia tampil di setiap kata.
+ */
+function splitHyphenated(clean: string, language: LanguageId): string[] {
+  const parts: string[] = [];
+
+  clean.split(HYPHEN).forEach((segment, index, all) => {
+    if (segment.length > 0) parts.push(...splitSyllables(segment, language));
+
+    if (index === all.length - 1) return;
+
+    // Bagian kosong (mis. "--") membuat tanda hubungnya berdiri sendiri, supaya
+    // tidak ada karakter yang hilang dari kata aslinya.
+    if (parts.length > 0) parts[parts.length - 1] += HYPHEN;
+    else parts.push(HYPHEN);
+  });
+
+  return parts;
 }
 
 /**
@@ -47,7 +77,18 @@ function splitIndonesian(clean: string): string[] {
     } else if (consonants === 1) {
       boundaries.push(i + 1); // V-KV
     } else if (isDigraphAt(clean, i + 1)) {
-      boundaries.push(i + 1); // digraf ikut ke suku kata berikutnya: "ba-ngun"
+      /*
+       * Digraf tepat setelah vokal, dan letaknya menentukan.
+       *
+       * Kalau ia SATU-SATUNYA gugus, ia membuka suku kata berikutnya:
+       * "ba-ngun", "me-nya-pu". Tapi kalau masih ada konsonan lain sesudahnya,
+       * ia justru menutup suku kata ini dan konsonan sisanya yang membuka yang
+       * berikutnya: "meng-ha-sil-kan", "bang-sa", "bang-ku".
+       *
+       * Tanpa pembedaan ini "menghasilkan" terpenggal jadi "me-ngha-sil-kan" —
+       * tidak ada suku kata "ngha" dalam bahasa Indonesia.
+       */
+      boundaries.push(consonants === 2 ? i + 1 : i + 3);
     } else {
       boundaries.push(i + 2); // VK-KV, mis. "man-di"
     }

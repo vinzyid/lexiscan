@@ -16,6 +16,15 @@ return [
     'required' => 'Kolom :attribute wajib diisi.',
     'string' => 'Kolom :attribute harus berupa teks.',
     'in' => 'Pilihan :attribute tidak valid.',
+    'boolean' => 'Kolom :attribute harus berupa ya atau tidak.',
+
+    /*
+     * Ditulis sebagai petunjuk, bukan sebagai vonis. Pengguna yang kesulitan
+     * mengeja perlu tahu apa yang BOLEH diketik, bukan sekadar diberi tahu
+     * bahwa yang barusan salah.
+     */
+    'alpha_dash' => 'Kolom :attribute hanya boleh berisi huruf, angka, dan tanda hubung. Jangan pakai spasi.',
+    'unique' => 'Kolom :attribute ini sudah dipakai.',
 
     'min' => [
         'string' => 'Kolom :attribute minimal :min karakter.',
@@ -39,5 +48,9 @@ return [
         'term' => 'kata yang dijelaskan',
         'style' => 'gaya penjelasan',
         'context' => 'konteks kalimat',
+        'name' => 'nama',
+        'username' => 'nama pengguna',
+        'password' => 'kata sandi',
+        'reading_level' => 'kemampuan membaca',
     ],
 ];

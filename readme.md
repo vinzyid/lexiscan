@@ -34,10 +34,12 @@
 | # | Fitur | Deskripsi |
 |---|-------|-----------|
 | 1 | 📸 **Smart OCR Scan** | Foto dokumen fisik → teks digital instan menggunakan *Google ML Kit* (OCR on-device). Dilengkapi koreksi typo berbasis AI. |
-| 2 | 🔤 **Adaptive Typography Engine** | Restrukturisasi tipografi otomatis: font OpenDyslexic, spasi baris, ukuran huruf, serta mode **Bicolor Words** & **Reading Ruler**. |
-| 3 | 🧠 **AI Text Simplification** | Sederhanakan teks dalam 5 level (L1–L5) — dari teks asli hingga setara tingkat SD — menggunakan *Large Language Model* tanpa mengubah fakta. |
+| 2 | 🔤 **Adaptive Typography Engine** | Restrukturisasi tipografi otomatis: font Atkinson Hyperlegible, spasi baris, ukuran huruf, **pemenggalan suku kata** ("Mi to kon dri a"), serta mode **Bicolor Words** & **Reading Ruler**. |
+| 3 | 🧠 **AI Text Simplification** | Sederhanakan teks dalam 5 level (L1–L5) — dari teks asli hingga kalimat sangat pendek dengan kata sehari-hari — menggunakan *Large Language Model* tanpa mengubah fakta. |
 | 4 | 🎯 **Focus Reading Mode** | Sorot satu paragraf aktif dan redupkan sisanya. Dilengkapi navigasi antar paragraf & *Reading Ruler* untuk menjaga konsentrasi baca. |
-| 5 | 💡 **AI Explain This** | Pilih teks/kalimat yang sulit → Lexi jelaskan dengan 3 gaya: sederhana (anak10), analogi, atau contoh nyata. |
+| 5 | 💡 **AI Explain This** | Pilih teks/kalimat yang sulit → Lexi jelaskan dengan 3 gaya: bahasa paling sederhana, analogi, atau contoh nyata. Panjang jawabannya menyesuaikan kemampuan membaca pengguna. |
+| 6 | 🔊 **Text-to-Speech** | Setiap paragraf, jawaban Lexi, dan suku kata bisa dibacakan. Memakai mesin TTS bawaan perangkat lewat `expo-speech` — gratis tanpa batas, jalan offline, dan **tidak memakai kuota LLM**. |
+| 7 | 👤 **Profil Kemampuan Membaca** | Dipilih saat mendaftar (didampingi guru atau orang tua). Tipografi, pemenggalan suku kata, suara, dan panjang jawaban AI menyesuaikan sendiri — dan semuanya tetap bisa dimatikan manual. |
 
 ---
 
@@ -190,6 +192,16 @@ OPENROUTER_API_KEY=sk-or-...
 | `POST` | `/api/explain-word` | Jelaskan kata/kalimat dengan gaya tertentu | 20/menit |
 | `POST` | `/api/correct-typo` | Koreksi typo hasil OCR | 20/menit |
 | `GET` | `/api/ai/health` | Cek status provider AI | - |
+| `POST` | `/api/auth/register` | Daftar akun + kemampuan membaca | 10/menit |
+| `POST` | `/api/auth/login` | Masuk, membalas token Sanctum | 10/menit |
+| `GET` | `/api/auth/me` | Profil akun (butuh token) | 60/menit |
+| `POST` | `/api/auth/logout` | Cabut token yang sedang dipakai | 60/menit |
+| `PATCH` | `/api/auth/preferences` | Simpan preferensi tampilan & suara ke akun | 60/menit |
+
+`simplify-text` dan `explain-word` menerima field opsional `reading_level`
+(`belum` / `mengeja` / `lancar`) yang menentukan seberapa pendek jawabannya.
+Endpoint AI sengaja **tidak** menuntut token: fitur bacanya harus bisa dicoba
+sebelum mendaftar.
 
 ---
 

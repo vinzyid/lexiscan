@@ -29,13 +29,19 @@ class AiController extends Controller
             'text' => ['required', 'string', 'min:10', 'max:8000'],
             'level' => ['required', 'string', Rule::in($this->ai->availableSimplifyLevels())],
             'language' => $this->languageRule(),
+            'reading_level' => $this->readingLevelRule(),
         ]);
 
         $language = $data['language'] ?? AiTextService::DEFAULT_LANGUAGE;
         $startedAt = hrtime(true);
 
         try {
-            $answer = $this->ai->simplify($data['text'], $data['level'], $language);
+            $answer = $this->ai->simplify(
+                $data['text'],
+                $data['level'],
+                $language,
+                $data['reading_level'] ?? AiTextService::DEFAULT_READING_LEVEL,
+            );
         } catch (RuntimeException $e) {
             return $this->failure($e);
         }
@@ -59,6 +65,7 @@ class AiController extends Controller
             'style' => ['required', 'string', Rule::in($this->ai->availableExplainStyles())],
             'context' => ['nullable', 'string', 'max:2000'],
             'language' => $this->languageRule(),
+            'reading_level' => $this->readingLevelRule(),
         ]);
 
         $language = $data['language'] ?? AiTextService::DEFAULT_LANGUAGE;
@@ -70,6 +77,7 @@ class AiController extends Controller
                 $data['style'],
                 $data['context'] ?? null,
                 $language,
+                $data['reading_level'] ?? AiTextService::DEFAULT_READING_LEVEL,
             );
         } catch (RuntimeException $e) {
             return $this->failure($e);
@@ -152,6 +160,7 @@ class AiController extends Controller
             'levels' => $this->ai->availableSimplifyLevels(),
             'styles' => $this->ai->availableExplainStyles(),
             'languages' => $this->ai->availableLanguages(),
+            'reading_levels' => $this->ai->availableReadingLevels(),
             /*
              * Konstanta jejak karbon ikut dibuka supaya angka di aplikasi bisa
              * ditelusuri asalnya tanpa membaca kode. Penjelasan tiap konstanta
@@ -204,6 +213,20 @@ class AiController extends Controller
     private function languageRule(): array
     {
         return ['sometimes', 'string', Rule::in($this->ai->availableLanguages())];
+    }
+
+    /**
+     * Kemampuan membaca pengirimnya, penentu seberapa pendek jawabannya.
+     *
+     * Opsional dengan alasan yang sama seperti bahasa, ditambah satu lagi:
+     * fitur AI tetap bisa dicoba tanpa mendaftar, dan yang belum punya akun
+     * belum punya kemampuan membaca yang tercatat.
+     *
+     * @return array<int, mixed>
+     */
+    private function readingLevelRule(): array
+    {
+        return ['sometimes', 'string', Rule::in($this->ai->availableReadingLevels())];
     }
 
     private function cacheWritable(): bool

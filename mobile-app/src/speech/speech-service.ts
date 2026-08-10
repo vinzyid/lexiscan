@@ -1,0 +1,111 @@
+import * as Speech from 'expo-speech';
+
+import type { LanguageId } from '../store/useStore';
+
+/**
+ * Satu-satunya tempat expo-speech dipanggil.
+ *
+ * KENAPA MESIN BAWAAN PERANGKAT, BUKAN AI. Suara di sini dipakai untuk setiap
+ * paragraf yang dibuka, bukan sesekali — kalau tiap paragraf berarti satu
+ * panggilan ke model, kuota AI habis untuk membacakan teks yang sudah ada di
+ * layar, sementara fitur yang benar-benar butuh model (menyederhanakan,
+ * menjelaskan) kehabisan jatah. expo-speech memakai mesin text-to-speech yang
+ * sudah terpasang di perangkat: tanpa jaringan, tanpa biaya, tanpa batas
+ * karakter, dan berbunyi seketika.
+ *
+ * Kalau suatu saat suaranya perlu ditingkatkan ke penyedia cloud, berkas inilah
+ * satu-satunya yang perlu diubah — pemanggilnya hanya tahu `speak()` dan
+ * `stop()`.
+ */
+
+/** Bahasa antarmuka → kode BCP 47 yang dimengerti mesin TTS perangkat. */
+const BCP47: Record<LanguageId, string> = {
+  id: 'id-ID',
+  en: 'en-US',
+};
+
+export type SpeakOptions = {
+  language: LanguageId;
+  /** Dari preset kemampuan membaca; lihat `src/theme/reading-levels.ts`. */
+  rate: number;
+  onStart?: () => void;
+  /** Dipanggil saat selesai, dihentikan, MAUPUN gagal — tepatnya sekali. */
+  onSettled?: () => void;
+};
+
+/**
+ * Bacakan teks. Selalu menghentikan ucapan sebelumnya lebih dulu.
+ *
+ * Tanpa penghentian itu, Android mengantrekan ucapan baru di belakang yang
+ * lama: menekan tombol tiga paragraf berturut-turut berarti menunggu dua
+ * paragraf pertama selesai. Yang diharapkan pengguna adalah yang terakhir
+ * ditekan itulah yang berbunyi.
+ */
+export async function speak(text: string, options: SpeakOptions): Promise<void> {
+  const clean = normalize(text);
+
+  if (clean.length === 0) {
+    options.onSettled?.();
+
+    return;
+  }
+
+  await stop();
+
+  /*
+   * Penjaga supaya onSettled tidak terpanggil dua kali. expo-speech bisa
+   * memanggil onDone dan onStopped untuk satu ucapan yang sama, dan pemanggil
+   * memakai callback ini untuk mematikan indikator "sedang berbunyi".
+   */
+  let settled = false;
+  const settle = () => {
+    if (settled) return;
+    settled = true;
+    options.onSettled?.();
+  };
+
+  Speech.speak(clean, {
+    language: BCP47[options.language],
+    rate: options.rate,
+    onStart: options.onStart,
+    onDone: settle,
+    onStopped: settle,
+    onError: settle,
+  });
+}
+
+export async function stop(): Promise<void> {
+  try {
+    await Speech.stop();
+  } catch {
+    /*
+     * Menghentikan sesuatu yang memang tidak berbunyi bukan kegagalan yang
+     * perlu diteruskan. Ini dipanggil dari pembersihan useEffect, dan galat di
+     * sana akan muncul sebagai layar merah untuk masalah yang tidak ada.
+     */
+  }
+}
+
+export async function isSpeaking(): Promise<boolean> {
+  try {
+    return await Speech.isSpeakingAsync();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Rapikan teks sebelum dibunyikan.
+ *
+ * Emoji dan simbol hiasan dibuang: mesin TTS Android membacakan namanya
+ * ("tanda seru berulang", "wajah tersenyum") di tengah kalimat, dan itu justru
+ * memecah perhatian pembaca yang sedang mencocokkan bunyi dengan tulisan.
+ * Prompt di backend sudah melarang model memakainya, tapi teks hasil OCR bisa
+ * memuat apa saja.
+ */
+function normalize(text: string): string {
+  return text
+    .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}

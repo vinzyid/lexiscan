@@ -1,14 +1,20 @@
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check, Languages } from 'lucide-react-native';
+import { Check, Languages, LogIn, LogOut } from 'lucide-react-native';
 
 import { useOCRStore } from '../../src/store/useStore';
+import { useAuthStore } from '../../src/store/useAuthStore';
 import { GRADIENTS, THEMES, TYPE_LEVELS, type ThemeDef } from '../../src/theme/palettes';
+import type { ReadingLevelId } from '../../src/theme/reading-levels';
 import { useThemeColors } from '../../src/theme/theme-provider';
 import { LANGUAGES, useT } from '../../src/i18n';
 import { DyslexicText } from '../../src/components/dyslexic-text';
 import { PressableScale } from '../../src/components/pressable-scale';
+import { ReadingLevelPicker } from '../../src/components/reading-level-picker';
+import { SpeakButton } from '../../src/components/speak-button';
+import { useStopSpeechOnBlur } from '../../src/speech/use-speech';
 import { Blob, HexDecor, Ring, ScreenBackdrop, Sparkle } from '../../src/components/figma-decor';
 import { FootprintCard } from '../../src/components/footprint-card';
 import { FeedbackForm } from '../../src/components/feedback-form';
@@ -17,8 +23,72 @@ import { LexiMascot } from '../../src/components/illustrations';
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
+  const router = useRouter();
   const t = useT();
-  const { themeId, setThemeId, typeLevelId, setTypeLevelId, language, setLanguage } = useOCRStore();
+  const {
+    themeId,
+    setThemeId,
+    typeLevelId,
+    setTypeLevelId,
+    language,
+    setLanguage,
+    readingLevel,
+    applyReadingLevelPreset,
+    syllableSpacing,
+    setSyllableSpacing,
+    ttsEnabled,
+    setTtsEnabled,
+    ttsAutoPlay,
+    setTtsAutoPlay,
+  } = useOCRStore();
+
+  const reader = useAuthStore((s) => s.reader);
+  const signOut = useAuthStore((s) => s.signOut);
+  const pushPreference = useAuthStore((s) => s.pushPreference);
+
+  useStopSpeechOnBlur();
+
+  /*
+   * Perubahan disimpan dua kali: ke perangkat lewat store, lalu ke akun lewat
+   * server. Yang kedua boleh gagal tanpa mengganggu — pengaturannya sudah
+   * berlaku di HP ini, dan yang hilang hanya kemampuannya ikut pindah kalau
+   * penggunanya berganti HP.
+   */
+  const changeReadingLevel = (id: ReadingLevelId) => {
+    applyReadingLevelPreset(id);
+    void pushPreference({
+      reading_level: id,
+      /*
+       * Preferensi manual dikosongkan berbarengan, dan itu memang maksudnya:
+       * memilih tingkat baru berarti minta dipasangkan preset yang baru. Kalau
+       * pilihan lama tetap tersimpan di server, ia akan menimpa preset itu lagi
+       * pada login berikutnya.
+       */
+      type_level: null,
+      tts_enabled: null,
+      tts_auto_play: null,
+      syllable_spacing: null,
+    });
+  };
+
+  const changeTts = (value: boolean) => {
+    setTtsEnabled(value);
+    void pushPreference(
+      value
+        ? { tts_enabled: true }
+        : { tts_enabled: false, tts_auto_play: false },
+    );
+  };
+
+  const changeAutoPlay = (value: boolean) => {
+    setTtsAutoPlay(value);
+    void pushPreference(value ? { tts_auto_play: true, tts_enabled: true } : { tts_auto_play: false });
+  };
+
+  const changeSyllableSpacing = (value: boolean) => {
+    setSyllableSpacing(value);
+    void pushPreference({ syllable_spacing: value });
+  };
 
   return (
     <View className="flex-1 bg-background">
@@ -57,30 +127,68 @@ export default function SettingsScreen() {
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}>
-                <Text className="font-ui-bold text-2xl text-white">R</Text>
+                {/* Huruf awal nama akun; tanpa akun, maskotnya yang tampil
+                    supaya tidak ada inisial yang seolah-olah milik seseorang. */}
+                {reader ? (
+                  <Text className="font-ui-bold text-2xl text-white">
+                    {reader.name.trim().slice(0, 1).toUpperCase()}
+                  </Text>
+                ) : (
+                  <LexiMascot size={44} />
+                )}
               </LinearGradient>
-              {/* Lencana terverifikasi di sudut avatar */}
-              <View
-                className="absolute -bottom-1 -right-1 h-5 w-5 items-center justify-center rounded-full border-2 border-white"
-                style={{ backgroundColor: '#10b981' }}>
-                <Check size={10} color="#ffffff" strokeWidth={3} />
-              </View>
+              {reader ? (
+                <View
+                  className="absolute -bottom-1 -right-1 h-5 w-5 items-center justify-center rounded-full border-2 border-white"
+                  style={{ backgroundColor: '#10b981' }}>
+                  <Check size={10} color="#ffffff" strokeWidth={3} />
+                </View>
+              ) : null}
             </View>
 
             <View className="flex-1">
               <View className="flex-row">
                 <View className="rounded-[10px] border border-white/[0.15] bg-white/10 px-2 py-0.5">
-                  <Text className="font-ui-bold text-xs text-white/65">{t.settings.role}</Text>
+                  <Text className="font-ui-bold text-xs text-white/65">
+                    {reader ? t.readingLevels[reader.reading_level].name : t.settings.role}
+                  </Text>
                 </View>
               </View>
-              <Text className="mt-1.5 font-ui-bold text-[21px] text-white">{t.settings.title}</Text>
-              <Text className="mt-0.5 font-ui text-[13px] text-white/55">{t.settings.subtitle}</Text>
+              <Text className="mt-1.5 font-ui-bold text-[21px] text-white" numberOfLines={1}>
+                {reader ? reader.name : t.settings.guestName}
+              </Text>
+              <Text className="mt-0.5 font-ui text-[13px] text-white/55" numberOfLines={1}>
+                {reader ? `@${reader.username}` : t.settings.guestSubtitle}
+              </Text>
+
               <View className="mt-2.5 flex-row" style={{ gap: 8 }}>
-                {t.settings.profileTags.map((tag) => (
-                  <View key={tag} className="rounded-[10px] bg-white/[0.12] px-2 py-0.5">
-                    <Text className="font-ui-bold text-xs text-white/80">{tag}</Text>
-                  </View>
-                ))}
+                {reader ? (
+                  <PressableScale
+                    onPress={() => void signOut()}
+                    accessibilityRole="button"
+                    accessibilityLabel={t.settings.logoutLabel}
+                    scaleTo={0.95}
+                    className="h-9 flex-row items-center rounded-[12px] bg-white/[0.14] px-3"
+                    style={{ gap: 6 }}>
+                    <LogOut size={13} color="#ffffff" />
+                    <Text className="font-ui-bold text-xs text-white">
+                      {t.settings.logoutAction}
+                    </Text>
+                  </PressableScale>
+                ) : (
+                  <PressableScale
+                    onPress={() => router.push('/(auth)/register')}
+                    accessibilityRole="button"
+                    accessibilityLabel={t.settings.loginAction}
+                    scaleTo={0.95}
+                    className="h-9 flex-row items-center rounded-[12px] bg-white/[0.18] px-3"
+                    style={{ gap: 6 }}>
+                    <LogIn size={13} color="#ffffff" />
+                    <Text className="font-ui-bold text-xs text-white">
+                      {t.settings.loginAction}
+                    </Text>
+                  </PressableScale>
+                )}
               </View>
             </View>
           </View>
@@ -136,6 +244,67 @@ export default function SettingsScreen() {
 
           <Text className="mt-2.5 font-ui-medium text-[13px] text-text-muted">
             {t.settings.languageNote}
+          </Text>
+
+          {/* ── Kemampuan membaca ───────────────────────────────────────── */}
+          <View className="pt-7">
+            <SectionHeading
+              eyebrow={t.settings.readingEyebrow}
+              title={t.settings.readingTitle}
+              speechKey="settings:reading"
+            />
+          </View>
+
+          <Text className="mt-2.5 font-ui-medium text-[13px] leading-5 text-text-muted">
+            {t.settings.readingNote}
+          </Text>
+
+          <View className="mt-4">
+            <ReadingLevelPicker value={readingLevel} onChange={changeReadingLevel} />
+          </View>
+
+          {/* ── Suara ───────────────────────────────────────────────────── */}
+          <View className="pt-7">
+            <SectionHeading
+              eyebrow={t.settings.voiceEyebrow}
+              title={t.settings.voiceTitle}
+              speechKey="settings:voice"
+            />
+          </View>
+
+          <View className="mt-4" style={{ gap: 10 }}>
+            {/*
+              Sakelar ini wajib ada dan tidak boleh dikunci oleh tingkat
+              kemampuan membaca. Dosen PLB menegaskan fitur suara harus tetap
+              opsional: penyesuaian yang dipaksakan justru membuat pengguna
+              yang sudah lancar membaca merasa terganggu.
+            */}
+            <ToggleRow
+              title={t.settings.ttsTitle}
+              desc={t.settings.ttsDesc}
+              value={ttsEnabled}
+              onValueChange={changeTts}
+            />
+            <ToggleRow
+              title={t.settings.autoPlayTitle}
+              desc={t.settings.autoPlayDesc}
+              value={ttsAutoPlay}
+              onValueChange={changeAutoPlay}
+              // Tidak masuk akal menyalakan pembacaan otomatis saat suaranya
+              // sendiri mati; dibuat redup, bukan disembunyikan, supaya
+              // hubungannya dengan sakelar di atas tetap terlihat.
+              disabled={!ttsEnabled}
+            />
+            <ToggleRow
+              title={t.settings.syllableTitle}
+              desc={t.settings.syllableDesc}
+              value={syllableSpacing}
+              onValueChange={changeSyllableSpacing}
+            />
+          </View>
+
+          <Text className="mt-2.5 font-ui-medium text-[13px] leading-5 text-text-muted">
+            {t.settings.voiceOfflineNote}
           </Text>
 
           {/* ── Tema warna ──────────────────────────────────────────────── */}
@@ -274,7 +443,16 @@ export default function SettingsScreen() {
   );
 
   /** Judul seksi: bilah gradien 6x24 + label kecil di atas judul. */
-  function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
+  function SectionHeading({
+    eyebrow,
+    title,
+    speechKey,
+  }: {
+    eyebrow: string;
+    title: string;
+    /** Diisi hanya untuk seksi yang perlu bisa dibacakan; sisanya tetap polos. */
+    speechKey?: string;
+  }) {
     return (
       <View className="flex-row items-center" style={{ gap: 8 }}>
         <LinearGradient
@@ -283,10 +461,47 @@ export default function SettingsScreen() {
           end={{ x: 0, y: 1 }}
           style={{ width: 6, height: 24, borderRadius: 3 }}
         />
-        <View>
+        <View className="flex-1">
           <Text className="font-ui-bold text-xs text-text-muted">{eyebrow}</Text>
           <Text className="font-ui-bold text-[17px] text-text-main">{title}</Text>
         </View>
+        {speechKey ? (
+          <SpeakButton text={`${eyebrow}. ${title}`} speechKey={speechKey} size={16} />
+        ) : null}
+      </View>
+    );
+  }
+
+  /** Satu baris sakelar: judul, keterangan, dan Switch di kanan. */
+  function ToggleRow({
+    title,
+    desc,
+    value,
+    onValueChange,
+    disabled,
+  }: {
+    title: string;
+    desc: string;
+    value: boolean;
+    onValueChange: (next: boolean) => void;
+    disabled?: boolean;
+  }) {
+    return (
+      <View
+        className="flex-row items-center rounded-2xl border border-border/10 bg-surface p-4"
+        style={{ gap: 12, opacity: disabled ? 0.45 : 1 }}>
+        <View className="flex-1">
+          <Text className="font-ui-bold text-[15px] text-text-main">{title}</Text>
+          <Text className="mt-1 font-ui-medium text-[13px] leading-5 text-text-muted">{desc}</Text>
+        </View>
+        <Switch
+          value={value}
+          onValueChange={onValueChange}
+          disabled={disabled}
+          accessibilityLabel={`${title}. ${desc}`}
+          trackColor={{ false: colors.surfaceAlt, true: colors.primary }}
+          thumbColor="#ffffff"
+        />
       </View>
     );
   }

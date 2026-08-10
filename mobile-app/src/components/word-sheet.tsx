@@ -6,6 +6,8 @@ import { splitSyllables } from '../utils/syllables';
 import { useOCRStore } from '../store/useStore';
 import { GRADIENTS } from '../theme/palettes';
 import { PressableScale } from './pressable-scale';
+import { SpeakButton } from './speak-button';
+import { useSpeech, useStopSpeechOnUnmount } from '../speech/use-speech';
 import { useT } from '../i18n';
 import { Blob, Ring, Sparkle } from './figma-decor';
 
@@ -27,6 +29,16 @@ export function WordSheet({
   const t = useT();
   const language = useOCRStore((s) => s.language);
   const syllables = word ? splitSyllables(word, language) : [];
+
+  const { enabled: ttsEnabled, speak } = useSpeech();
+  useStopSpeechOnUnmount();
+
+  /*
+   * Suku kata dibunyikan sendiri-sendiri, jadi tiap ketukan menghentikan bunyi
+   * sebelumnya — itu memang yang diharapkan saat mengeja maju-mundur, dan
+   * karena itu tidak memakai toggle seperti tombol paragraf.
+   */
+  const speakSyllable = (syllable: string) => speak(syllable, `syllable:${syllable}`);
 
   return (
     <Modal visible={!!word} animationType="fade" transparent onRequestClose={onClose}>
@@ -62,30 +74,47 @@ export function WordSheet({
               </PressableScale>
             </View>
 
-            <Text
-              className="mt-4 font-read-bold text-white"
-              style={{ fontSize: 40, lineHeight: 48 }}
-              adjustsFontSizeToFit
-              numberOfLines={1}>
-              {word}
-            </Text>
+            <View className="mt-4 flex-row items-center" style={{ gap: 12 }}>
+              <Text
+                className="flex-1 font-read-bold text-white"
+                style={{ fontSize: 40, lineHeight: 48 }}
+                adjustsFontSizeToFit
+                numberOfLines={1}>
+                {word}
+              </Text>
+              {word ? <SpeakButton text={word} speechKey={`word:${word}`} onDark /> : null}
+            </View>
 
-            <View className="mt-4 flex-row flex-wrap items-center" style={{ gap: 5 }}>
+            {/*
+             * Ejaannya ditulis sebagai teks biasa yang renggang, bukan pil
+             * berwarna seperti sebelumnya. Pil membuat tiap suku kata terlihat
+             * sebagai objek tersendiri, padahal yang perlu dikenali pengguna
+             * justru bentuk KATA yang sama seperti yang akan ditemuinya di
+             * buku — hanya diberi jarak.
+             */}
+            <View className="mt-4 flex-row flex-wrap items-baseline">
               {syllables.map((syllable, index) => (
-                <View key={index} className="flex-row items-center" style={{ gap: 5 }}>
-                  <View className="rounded-[14px] bg-white/[0.14] px-3 py-1.5">
-                    <Text
-                      className="font-read-bold text-base"
-                      style={{ color: index % 2 === 0 ? '#ffffff' : 'rgba(255,255,255,0.6)' }}>
-                      {syllable}
-                    </Text>
-                  </View>
-                  {index < syllables.length - 1 ? (
-                    <Text className="font-ui-light text-xl text-white/30">·</Text>
-                  ) : null}
-                </View>
+                <PressableScale
+                  key={index}
+                  onPress={() => speakSyllable(syllable)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t.wordSheet.syllableLabel(syllable)}
+                  scaleTo={0.9}
+                  className="px-1.5 py-1">
+                  <Text
+                    className="font-read text-2xl text-white"
+                    style={{ letterSpacing: 1.5, marginRight: index < syllables.length - 1 ? 14 : 0 }}>
+                    {syllable}
+                  </Text>
+                </PressableScale>
               ))}
             </View>
+
+            {syllables.length > 1 && ttsEnabled ? (
+              <Text className="mt-1.5 px-1.5 font-ui-medium text-xs text-white/50">
+                {t.wordSheet.syllableHint}
+              </Text>
+            ) : null}
           </LinearGradient>
 
           <View

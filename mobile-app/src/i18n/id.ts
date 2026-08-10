@@ -54,13 +54,92 @@ export const id = {
     askLexi: 'Tanya Lexi',
   },
 
+  speech: {
+    playLabel: 'Bacakan teks ini',
+    stopLabel: 'Hentikan suara',
+    readAloud: 'Bacakan',
+    readParagraph: (index: number) => `Bacakan paragraf ${index}`,
+  },
+
+  /**
+   * Tingkat kemampuan membaca. `example` sengaja memperlihatkan bentuk teks
+   * yang akan didapat, bukan menjelaskannya — yang memilih tingkat ini bisa
+   * jadi belum bisa membaca keterangannya sendiri.
+   */
+  readingLevels: {
+    belum: {
+      name: 'Belum bisa membaca',
+      desc: 'Huruf paling besar, kata dipecah per suku kata, dan semuanya dibacakan suara.',
+      example: 'Ma ta ha ri',
+    },
+    mengeja: {
+      name: 'Masih mengeja sedikit-sedikit',
+      desc: 'Kata dipecah per suku kata, suara tersedia kalau dibutuhkan.',
+      example: 'Ma ta ha ri',
+    },
+    lancar: {
+      name: 'Sudah lancar membaca',
+      desc: 'Teks tampil seperti biasa, tanpa suara.',
+      example: 'Matahari',
+    },
+  },
+
+  auth: {
+    /* Masuk */
+    loginTitle: 'Selamat datang kembali',
+    loginSubtitle: 'Masuk untuk melanjutkan membaca',
+    loginAction: 'Masuk',
+    loginLoading: 'Sedang masuk…',
+    noAccount: 'Belum punya akun?',
+    toRegister: 'Daftar di sini',
+
+    /* Daftar */
+    registerTitle: 'Buat akun LexiScan',
+    registerSubtitle: 'Supaya tampilannya bisa menyesuaikan denganmu',
+    registerAction: 'Daftar',
+    registerLoading: 'Sedang mendaftar…',
+    haveAccount: 'Sudah punya akun?',
+    toLogin: 'Masuk di sini',
+
+    /*
+     * Ditempatkan paling atas di layar daftar. Bukan basa-basi: tingkat
+     * kemampuan membaca yang dipilih di sini menentukan ukuran huruf dan
+     * suara di seluruh aplikasi, dan yang paling tahu jawabannya adalah orang
+     * yang mendampinginya.
+     */
+    companionBanner: 'Isi bersama guru atau orang tua ya',
+
+    nameLabel: 'Nama kamu',
+    namePlaceholder: 'Contoh: Rafi',
+    usernameLabel: 'Nama pengguna',
+    usernamePlaceholder: 'Contoh: rafi123',
+    usernameHint: 'Huruf dan angka saja, tanpa spasi',
+    passwordLabel: 'Kata sandi',
+    passwordPlaceholder: 'Minimal 6 huruf',
+    showPassword: 'Lihat kata sandi',
+    hidePassword: 'Sembunyikan kata sandi',
+
+    readingLevelLabel: 'Sekarang sudah bisa membaca?',
+    readingLevelHint: 'Bisa diubah kapan saja lewat Atur.',
+
+    /* Melewati pendaftaran */
+    skip: 'Lihat-lihat dulu',
+    skipHint: 'Kamu bisa mendaftar nanti dari Atur.',
+
+    /* Galat */
+    fillEverything: 'Semua kolom perlu diisi dulu ya.',
+    unexpectedError: 'Terjadi kesalahan tak terduga. Coba lagi.',
+  },
+
   dashboard: {
     /*
-     * Sapaan tanpa nama: LexiScan tidak punya akun, jadi tidak ada nama
-     * pengguna yang bisa disebut di sini. Sama alasannya dengan kartu di
-     * layar Atur yang menyebut aplikasinya sendiri, bukan sebuah profil.
+     * Dua bentuk sapaan. Yang bernama dipakai kalau sudah masuk; yang tanpa
+     * nama untuk yang belum mendaftar — bukan nama karangan seperti dulu,
+     * karena menyapa orang dengan nama orang lain lebih buruk daripada tidak
+     * menyapa sama sekali.
      */
     greeting: 'Halo, Pembaca!',
+    greetingNamed: (name: string) => `Halo, ${name}!`,
     statusBadge: 'Siap belajar',
     heroTitle: 'Siap Petualangan\nhari ini?',
     scanButton: 'Pindai',
@@ -174,15 +253,12 @@ export const id = {
   },
 
   settings: {
-    role: 'Pelajar',
     /*
-     * Bukan profil pengguna: LexiScan tidak punya akun, jadi tidak ada nama
-     * yang bisa ditampilkan di sini. Kartunya menyebut aplikasinya sendiri
-     * supaya tidak ada identitas yang seolah-olah milik penggunanya.
+     * Lencana kecil di kartu profil bagi yang belum masuk. Yang sudah punya
+     * akun menampilkan tingkat kemampuan membacanya di tempat ini, karena
+     * itulah yang benar-benar menentukan tampilan aplikasinya.
      */
-    title: 'LexiScan',
-    subtitle: 'Asisten baca untuk disleksia',
-    profileTags: ['Gratis', 'Riset Ilmiah', 'Inklusif'],
+    role: 'Pelajar',
     languageEyebrow: 'Bahasa',
     languageTitle: 'Bahasa aplikasi',
     languageNote: 'Ikut mengubah bahasa jawaban AI.',
@@ -192,6 +268,31 @@ export const id = {
     typeTitle: 'Dipakai di semua bacaan',
     fontChip: 'Font',
     spacingChip: 'Spasi',
+
+    readingEyebrow: 'Kemampuan membaca',
+    readingTitle: 'Sumber semua penyesuaian',
+    readingNote:
+      'Mengubah ini memasang ulang ukuran huruf, pemenggalan suku kata, dan suara. Sesudahnya kamu tetap bebas mengatur satu per satu di bawah.',
+
+    voiceEyebrow: 'Suara',
+    voiceTitle: 'Bacakan teks dengan suara',
+    ttsTitle: 'Tombol suara',
+    ttsDesc: 'Tampilkan tombol bacakan di setiap paragraf dan jawaban Lexi.',
+    autoPlayTitle: 'Bacakan otomatis',
+    autoPlayDesc: 'Paragraf yang sedang dibaca langsung berbunyi tanpa ditekan.',
+    syllableTitle: 'Pisahkan suku kata',
+    syllableDesc: 'Tulis kata sebagai "Ma ta ha ri" supaya lebih mudah dieja.',
+    voiceOfflineNote: 'Suara memakai mesin bawaan HP — tetap berbunyi tanpa internet.',
+
+    /* Akun */
+    accountEyebrow: 'Akun',
+    accountTitle: 'Profil kamu',
+    guestName: 'Belum masuk',
+    guestSubtitle: 'Daftar supaya tampilannya menyesuaikan denganmu',
+    loginAction: 'Masuk atau daftar',
+    logoutAction: 'Keluar',
+    logoutLabel: 'Keluar dari akun ini',
+
     aboutTagline: 'Asisten baca untuk disleksia',
     aboutTags: ['v1.0', 'Gratis', 'Inklusif'],
     aboutBody:
@@ -257,6 +358,8 @@ export const id = {
     badge: 'Satu kata saja',
     syllableCount: (count: number) => `${count} suku kata`,
     askLexiLabel: (word: string) => `Minta Lexi menjelaskan kata ${word}`,
+    syllableHint: 'Ketuk satu suku kata untuk mendengarnya.',
+    syllableLabel: (syllable: string) => `Bunyikan suku kata ${syllable}`,
   },
 
   explain: {
@@ -305,35 +408,42 @@ export const id = {
     L2: { name: 'Sedikit Lebih Mudah', short: 'Mudah', tagline: 'Kalimat panjang dipersingkat' },
     L3: { name: 'Bahasa Santai', short: 'Santai', tagline: 'Bahasa sehari-hari, tetap akurat' },
     L4: { name: 'Poin Singkat', short: 'Poin', tagline: 'Format singkat dan padat' },
-    L5: { name: 'Paling Mudah', short: 'Dasar', tagline: 'Setara tingkat SD' },
+    // Dulu 'Setara tingkat SD'. Menyebut jenjang sekolah untuk menggambarkan
+    // kemampuan seseorang itu merendahkan, dan tidak memberi tahu apa pun
+    // tentang bentuk teksnya — yang justru ingin diketahui pengguna.
+    L5: { name: 'Paling Mudah', short: 'Dasar', tagline: 'Kalimat sangat pendek, kata sehari-hari' },
   },
 
+  /*
+   * Jawaban di sini adalah contoh kurasi untuk dokumen demo, dipakai saat
+   * aplikasi dipakai tanpa server. Panjangnya sengaja dipotong jadi satu
+   * paragraf pendek agar sama dengan batas yang sekarang berlaku di prompt
+   * backend — kalau demo memperlihatkan tiga paragraf sementara jawaban
+   * sungguhan hanya satu, demonya berbohong.
+   *
+   * Emoji dibuang: jawaban ini ikut dibacakan suara, dan mesin TTS melafalkan
+   * namanya di tengah kalimat.
+   */
   explainStyles: {
-    anak10: {
-      name: 'Seperti usia 10 tahun',
-      desc: 'Penjelasan paling sederhana',
+    sederhana: {
+      name: 'Bahasa paling sederhana',
+      desc: 'Kata-kata yang paling mudah',
       answer: [
-        'Di dalam tubuh kamu ada banyak sekali sel kecil. Dan di dalam tiap sel ada sesuatu namanya mitokondria.',
-        "Mitokondria itu tugasnya cuma satu: bikin energi! Energinya namanya ATP — kayak koin yang dipakai sel untuk 'membeli' semua aktivitas.",
-        "Kalau nggak ada mitokondria, sel kamu kehabisan koin dan nggak bisa ngapa-ngapain. Makanya mitokondria sering disebut 'pembangkit listrik sel'. ⚡",
+        'Mitokondria itu bagian kecil di dalam sel. Tugasnya membuat energi supaya tubuhmu bisa bergerak.',
       ],
     },
     analogi: {
       name: 'Analogi sederhana',
       desc: 'Perumpamaan yang mudah dipahami',
       answer: [
-        'Bayangkan sel itu sebuah kota kecil. Kota butuh listrik supaya lampu, kereta, dan pabriknya jalan.',
-        'Mitokondria adalah pembangkit listriknya. Ia membakar "bahan bakar" dari makanan yang kamu makan, lalu mengubahnya jadi listrik bernama ATP.',
-        'Makin sibuk kotanya, makin banyak pembangkit yang dibutuhkan. Itu sebabnya sel otot punya mitokondria jauh lebih banyak daripada sel lain. 🏙️',
+        'Bayangkan sel itu kota kecil. Mitokondria adalah pembangkit listriknya.',
       ],
     },
     nyata: {
       name: 'Contoh kehidupan nyata',
       desc: 'Dari pengalaman sehari-hari',
       answer: [
-        'Waktu kamu lari-larian dan tiba-tiba ngos-ngosan, itu karena sel ototmu butuh banyak energi cepat.',
-        'Mitokondria di dalam sel ototmu langsung kerja keras mengubah gula dari makananmu menjadi ATP.',
-        'Itulah juga kenapa tidur cukup dan makan bergizi penting — itu bahan bakar untuk mitokondria kamu! 😴🍎',
+        'Saat kamu lari lalu ngos-ngosan, mitokondria di ototmu sedang bekerja keras membuat energi.',
       ],
     },
   },

@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BookOpen, Camera, ChevronRight, Sparkles } from 'lucide-react-native';
 
 import { useOCRStore } from '../../src/store/useStore';
+import { useAuthStore } from '../../src/store/useAuthStore';
 import { useThemeColors } from '../../src/theme/theme-provider';
 import { FEATURE_ACCENTS, GRADIENTS } from '../../src/theme/palettes';
 import { useT } from '../../src/i18n';
@@ -39,6 +40,7 @@ export default function DashboardScreen() {
   const [explainOpen, setExplainOpen] = useState(false);
 
   const { focusMode, toggleFocusMode, typeLevelId, simplifyLevel } = useOCRStore();
+  const reader = useAuthStore((s) => s.reader);
 
   /** Lebar kartu sesungguhnya (Figma: 358 pada layar 390). */
   const cardWidth = width - PAGE_PADDING * 2;
@@ -121,8 +123,12 @@ export default function DashboardScreen() {
           <View className="flex-row items-center justify-between px-5 pb-4">
             <View>
               <Text className="font-ui-medium text-[13px] text-text-muted">{today}</Text>
+              {/*
+               * Nama akun kalau sudah masuk. Sapaan tanpa nama tetap dipakai
+               * bagi yang belum mendaftar — bukan nama karangan, seperti dulu.
+               */}
               <Text className="font-ui-bold text-[22px] leading-[33px] text-text-main">
-                {t.dashboard.greeting}
+                {reader ? t.dashboard.greetingNamed(reader.name) : t.dashboard.greeting}
               </Text>
             </View>
             {/*

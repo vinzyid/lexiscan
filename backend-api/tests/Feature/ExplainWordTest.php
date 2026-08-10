@@ -13,7 +13,7 @@ class ExplainWordTest extends TestCase
 
     public static function supportedStyles(): array
     {
-        return [['anak10'], ['analogi'], ['nyata']];
+        return [['sederhana'], ['analogi'], ['nyata']];
     }
 
     #[\PHPUnit\Framework\Attributes\DataProvider('supportedStyles')]
@@ -34,7 +34,7 @@ class ExplainWordTest extends TestCase
     {
         $this->fakeGeminiParagraphs(['Penjelasan tanpa konteks.']);
 
-        $this->postJson('/api/explain-word', ['term' => 'kloroplas', 'style' => 'anak10'])
+        $this->postJson('/api/explain-word', ['term' => 'kloroplas', 'style' => 'sederhana'])
             ->assertOk()
             ->assertJsonPath('paragraphs.0', 'Penjelasan tanpa konteks.');
     }
@@ -72,14 +72,14 @@ class ExplainWordTest extends TestCase
 
     public function test_it_rejects_a_missing_term(): void
     {
-        $this->postJson('/api/explain-word', ['style' => 'anak10'])
+        $this->postJson('/api/explain-word', ['style' => 'sederhana'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('term');
     }
 
     public function test_it_rejects_a_term_longer_than_a_highlight_could_be(): void
     {
-        $this->postJson('/api/explain-word', ['term' => str_repeat('a', 201), 'style' => 'anak10'])
+        $this->postJson('/api/explain-word', ['term' => str_repeat('a', 201), 'style' => 'sederhana'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('term');
     }
@@ -88,7 +88,7 @@ class ExplainWordTest extends TestCase
     {
         $this->postJson('/api/explain-word', [
             'term' => 'anabolisme',
-            'style' => 'anak10',
+            'style' => 'sederhana',
             'context' => str_repeat('a', 2001),
         ])->assertStatus(422)->assertJsonValidationErrors('context');
     }
@@ -98,7 +98,7 @@ class ExplainWordTest extends TestCase
         // 429 dari penyedia diulang dulu; kalau tetap gagal barulah jadi 503.
         $this->fakeGeminiFailure(429);
 
-        $this->postJson('/api/explain-word', ['term' => 'anabolisme', 'style' => 'anak10'])
+        $this->postJson('/api/explain-word', ['term' => 'anabolisme', 'style' => 'sederhana'])
             ->assertStatus(503)
             ->assertJsonPath('message', 'Kuota harian Gemini gratis sudah habis. Coba lagi besok atau kurangi permintaan.');
 
@@ -114,7 +114,7 @@ class ExplainWordTest extends TestCase
             ]),
         ]);
 
-        $this->postJson('/api/explain-word', ['term' => 'anabolisme', 'style' => 'anak10'])
+        $this->postJson('/api/explain-word', ['term' => 'anabolisme', 'style' => 'sederhana'])
             ->assertStatus(503)
             ->assertJsonPath('message', 'Respons Gemini bukan JSON yang bisa dibaca.');
     }

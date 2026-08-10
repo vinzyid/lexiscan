@@ -29,7 +29,7 @@ class LanguageTest extends TestCase
         $prompt = $this->promptSentToGemini();
 
         $this->assertStringContainsString('Answer in English.', $prompt);
-        $this->assertStringContainsString('primary-school reading level', $prompt);
+        $this->assertStringContainsString('the most common everyday words', $prompt);
         $this->assertStringNotContainsString('Jawab dalam bahasa Indonesia.', $prompt);
     }
 
@@ -69,14 +69,14 @@ class LanguageTest extends TestCase
 
         $this->postJson('/api/explain-word', [
             'term' => 'mitochondria',
-            'style' => 'anak10',
+            'style' => 'sederhana',
             'context' => 'The mitochondria produce energy.',
             'language' => 'en',
         ])->assertOk()->assertJsonPath('language', 'en');
 
         $prompt = $this->promptSentToGemini();
 
-        $this->assertStringContainsString('talking to a 10-year-old', $prompt);
+        $this->assertStringContainsString('the simplest, warmest words', $prompt);
         $this->assertStringContainsString('The sentence the word appears in', $prompt);
         $this->assertStringNotContainsString('Kalimat tempat kata itu muncul', $prompt);
     }
