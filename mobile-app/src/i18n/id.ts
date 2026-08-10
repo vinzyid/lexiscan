@@ -55,7 +55,12 @@ export const id = {
   },
 
   dashboard: {
-    greeting: 'Hei, Rama!',
+    /*
+     * Sapaan tanpa nama: LexiScan tidak punya akun, jadi tidak ada nama
+     * pengguna yang bisa disebut di sini. Sama alasannya dengan kartu di
+     * layar Atur yang menyebut aplikasinya sendiri, bukan sebuah profil.
+     */
+    greeting: 'Halo, Pembaca!',
     statusBadge: 'Siap belajar',
     heroTitle: 'Siap Petualangan\nhari ini?',
     scanButton: 'Pindai',

@@ -54,7 +54,12 @@ export const en: Translation = {
   },
 
   dashboard: {
-    greeting: 'Hi, Rama!',
+    /*
+     * Sapaan tanpa nama: LexiScan tidak punya akun, jadi tidak ada nama
+     * pengguna yang bisa disebut di sini. Sama alasannya dengan kartu di
+     * layar Atur yang menyebut aplikasinya sendiri, bukan sebuah profil.
+     */
+    greeting: 'Hello, Reader!',
     statusBadge: 'Ready to learn',
     heroTitle: 'Ready for today’s\nadventure?',
     scanButton: 'Scan',

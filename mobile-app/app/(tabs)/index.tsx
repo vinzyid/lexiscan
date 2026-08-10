@@ -117,7 +117,7 @@ export default function DashboardScreen() {
         <ScrollView
           contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}>
-          {/* ── Sapaan + avatar ─────────────────────────────────────────── */}
+          {/* ── Sapaan + lencana aplikasi ───────────────────────────────── */}
           <View className="flex-row items-center justify-between px-5 pb-4">
             <View>
               <Text className="font-ui-medium text-[13px] text-text-muted">{today}</Text>
@@ -125,7 +125,15 @@ export default function DashboardScreen() {
                 {t.dashboard.greeting}
               </Text>
             </View>
+            {/*
+             * Dulu ini avatar berisi inisial "R" dari nama pengguna palsu.
+             * LexiScan tidak punya akun, jadi kotaknya sekarang jadi lencana
+             * aplikasi: ikon buku, murni hiasan penyeimbang sapaan di kiri.
+             * Disembunyikan dari pembaca layar supaya tidak ikut dibacakan.
+             */}
             <LinearGradient
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
               colors={[...GRADIENTS.avatar.colors]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -136,7 +144,7 @@ export default function DashboardScreen() {
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-              <Text className="font-ui-bold text-base text-white">R</Text>
+              <BookOpen size={20} color="#ffffff" />
             </LinearGradient>
           </View>
 
