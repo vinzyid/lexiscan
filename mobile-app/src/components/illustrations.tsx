@@ -11,6 +11,15 @@ import IlluExplainSvg from '../../assets/figma/illu-explain.svg';
 import ArtRulerSvg from '../../assets/figma/art-ruler.svg';
 import ArtIsolationSvg from '../../assets/figma/art-isolation.svg';
 import ArtBicolorSvg from '../../assets/figma/art-bicolor.svg';
+import IlluGradeSd1Svg from '../../assets/figma/illu-grade-sd1.svg';
+import IlluGradeSd2Svg from '../../assets/figma/illu-grade-sd2.svg';
+import IlluGradeSmpSvg from '../../assets/figma/illu-grade-smp.svg';
+import IlluGradeSmaSvg from '../../assets/figma/illu-grade-sma.svg';
+import IlluGradeUmumSvg from '../../assets/figma/illu-grade-umum.svg';
+import IlluCanReadSvg from '../../assets/figma/illu-can-read.svg';
+import IlluNeedVoiceSvg from '../../assets/figma/illu-need-voice.svg';
+
+import type { SchoolLevelId } from '../theme/school-levels';
 
 /** Maskot burung hantu "Lexi" (Figma: frame "Lexi", 120x120). */
 export function LexiMascot({ size = 120 }: { size?: number }) {
@@ -59,4 +68,37 @@ export function ArtWordIsolation({ size = 70 }: { size?: number }) {
 /** Deretan kata berwarna selang-seling (Figma: 322x48). */
 export function ArtBicolorWords({ width = 322 }: { width?: number }) {
   return <ArtBicolorSvg width={width} height={width * (48 / 322.188)} />;
+}
+
+/* ── Kartu pilihan di pendaftaran ────────────────────────────────────────── */
+
+/**
+ * Ilustrasi 64x64 tiap kartu jenjang (Figma: IlluGradeSD1 … IlluGradeUmum).
+ *
+ * Dipetakan lewat tabel, bukan satu komponen per jenjang, karena pemanggilnya
+ * memang mengulang `SCHOOL_LEVELS` — dan tabel inilah yang membuat menambah
+ * jenjang baru gagal di TypeScript kalau gambarnya belum ada.
+ */
+const GRADE_SVGS: Record<SchoolLevelId, typeof IlluGradeSd1Svg> = {
+  sd1: IlluGradeSd1Svg,
+  sd2: IlluGradeSd2Svg,
+  smp: IlluGradeSmpSvg,
+  sma: IlluGradeSmaSvg,
+  umum: IlluGradeUmumSvg,
+};
+
+export function IlluSchoolLevel({ id, size = 64 }: { id: SchoolLevelId; size?: number }) {
+  const Svg = GRADE_SVGS[id];
+
+  return <Svg width={size} height={size} />;
+}
+
+/** Buku bertanda centang — "Aku bisa membaca sendiri" (Figma: 60x60). */
+export function IlluCanRead({ size = 60 }: { size?: number }) {
+  return <IlluCanReadSvg width={size} height={size} />;
+}
+
+/** Pengeras suara — "Aku butuh bantuan suara" (Figma: 60x60). */
+export function IlluNeedVoice({ size = 60 }: { size?: number }) {
+  return <IlluNeedVoiceSvg width={size} height={size} />;
 }

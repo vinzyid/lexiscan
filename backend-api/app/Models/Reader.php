@@ -17,6 +17,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string $name
  * @property string $username
  * @property string $reading_level
+ * @property string|null $school_level
  * @property string $language
  * @property string|null $theme
  * @property string|null $type_level
@@ -25,7 +26,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property bool|null $syllable_spacing
  * @property bool|null $bicolor_words
  */
-#[Fillable(['name', 'username', 'password', 'reading_level', 'language'])]
+#[Fillable(['name', 'username', 'password', 'reading_level', 'school_level', 'language'])]
 #[Hidden(['password', 'remember_token'])]
 class Reader extends Authenticatable
 {
@@ -49,6 +50,35 @@ class Reader extends Authenticatable
     }
 
     /**
+     * Jenjang sekolah, ditanyakan di langkah 2 pendaftaran. Harus sama persis
+     * dengan SchoolLevelId di mobile-app/src/theme/school-levels.ts.
+     *
+     * Bukan turunan dari reading_level dan tidak boleh diperlakukan begitu:
+     * anak kelas 5 yang masih mengeja justru sasaran utama aplikasi ini.
+     */
+    public const SCHOOL_SD1 = 'sd1';
+
+    public const SCHOOL_SD2 = 'sd2';
+
+    public const SCHOOL_SMP = 'smp';
+
+    public const SCHOOL_SMA = 'sma';
+
+    public const SCHOOL_UMUM = 'umum';
+
+    /** @return array<int, string> */
+    public static function schoolLevels(): array
+    {
+        return [
+            self::SCHOOL_SD1,
+            self::SCHOOL_SD2,
+            self::SCHOOL_SMP,
+            self::SCHOOL_SMA,
+            self::SCHOOL_UMUM,
+        ];
+    }
+
+    /**
      * Preferensi yang boleh disimpan lewat PATCH /api/auth/preferences.
      *
      * Sengaja tidak ikut $fillable: `reading_level` boleh diubah lewat sini
@@ -61,6 +91,7 @@ class Reader extends Authenticatable
     {
         return [
             'reading_level',
+            'school_level',
             'language',
             'theme',
             'type_level',
@@ -95,6 +126,15 @@ class Reader extends Authenticatable
             'name' => $this->name,
             'username' => $this->username,
             'reading_level' => $this->reading_level,
+
+            /*
+             * Sejajar dengan reading_level, bukan di dalam `preferences`.
+             * Isi `preferences` semuanya boleh dipasang ulang oleh preset saat
+             * levelnya berganti; jenjang sekolah tidak — ia fakta tentang
+             * penggunanya, bukan pilihan tampilan yang bisa ditimpa.
+             */
+            'school_level' => $this->school_level,
+
             'preferences' => [
                 'language' => $this->language,
                 'theme' => $this->theme,

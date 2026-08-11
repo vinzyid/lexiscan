@@ -84,7 +84,78 @@ export const id = {
     },
   },
 
+  /**
+   * Jenjang sekolah di langkah 2 pendaftaran.
+   *
+   * `age` ditulis apa adanya dan bukan patokan kaku — gunanya membantu pengguna
+   * mengenali barisnya sendiri saat namanya ("SD Kelas 4–6") belum tentu
+   * terbaca.
+   */
+  schoolLevels: {
+    sd1: { name: 'SD Kelas 1–3', age: 'Usia 6–9 tahun' },
+    sd2: { name: 'SD Kelas 4–6', age: 'Usia 9–12 tahun' },
+    smp: { name: 'SMP', age: 'Usia 12–15 tahun' },
+    sma: { name: 'SMA', age: 'Usia 15–18 tahun' },
+    umum: { name: 'Umum', age: 'Semua usia' },
+  },
+
   auth: {
+    /* ── Wizard 3 langkah (Figma: AuthScreen) ───────────────────────────── */
+    appTagline: 'Teman belajar ramah disleksia',
+
+    /** Judul kecil di bawah titik langkah, mis. "LANGKAH 1 / 3 — HALO!". */
+    stepLabel: (step: number, total: number, name: string) =>
+      `LANGKAH ${step} / ${total} — ${name}`,
+    stepHalo: 'HALO!',
+    stepJenjang: 'JENJANG',
+    stepMembaca: 'MEMBACA',
+
+    tabNew: 'Pengguna Baru',
+    tabExisting: 'Sudah Punya Akun',
+
+    /* Langkah 1 */
+    askNameTitle: 'Siapa namamu?',
+    askNameSubtitle: 'Kenalkan dirimu ke Lexi!',
+    namePlaceholderLong: 'Ketuk di sini untuk menulis namamu…',
+    welcomeBackTitle: 'Selamat datang kembali!',
+    welcomeBackSubtitle: 'Masukkan namamu untuk melanjutkan.',
+
+    /* Langkah 2 */
+    askSchoolTitle: 'Kamu sekolah di mana?',
+    askSchoolSubtitle: 'Lexi akan menyesuaikan teks untukmu.',
+
+    /* Langkah 3 */
+    askReadingTitle: 'Membaca teks itu…',
+    askReadingSubtitle: 'Lexi akan menyiapkan bantuan yang tepat buatmu.',
+
+    /**
+     * Kalimat tiap kartu langkah 3. Sengaja ditulis sebagai kalimat orang
+     * pertama ("Aku…"), bukan label — yang memilihnya sedang menyatakan sesuatu
+     * tentang dirinya, dan bahasa seperti ini jauh lebih mudah dikenali daripada
+     * istilah "kemampuan membaca rendah".
+     */
+    readingChoice: {
+      lancar: {
+        title: 'Aku bisa membaca sendiri',
+        desc: 'Hanya butuh tampilan yang lebih nyaman dan ramah.',
+      },
+      mengeja: {
+        title: 'Aku masih mengeja sedikit-sedikit',
+        desc: 'Kata dipecah per suku kata, suara siap kalau dibutuhkan.',
+      },
+      belum: {
+        title: 'Aku butuh bantuan suara',
+        desc: 'Semua tombol & teks akan dibacakan untukku secara otomatis.',
+      },
+    },
+
+    /** Muncul hanya saat "butuh bantuan suara" dipilih. */
+    voiceAutoNote: 'Fitur suara akan aktif otomatis. Ketuk apa saja dan Lexi akan membacakannya!',
+
+    next: 'Lanjut',
+    back: 'Kembali',
+    finish: 'Mulai Belajar!',
+
     /* Masuk */
     loginTitle: 'Selamat datang kembali',
     loginSubtitle: 'Masuk untuk melanjutkan membaca',
@@ -129,6 +200,16 @@ export const id = {
     /* Galat */
     fillEverything: 'Semua kolom perlu diisi dulu ya.',
     unexpectedError: 'Terjadi kesalahan tak terduga. Coba lagi.',
+
+    /*
+     * Satu pesan per langkah, bukan satu pesan umum. Tombol "Lanjut" sengaja
+     * tidak dibuat mati saat isian belum lengkap: tombol mati tidak memberi
+     * tahu apa yang kurang, dan yang memakainya belum tentu bisa menyimpulkan
+     * sendiri sebabnya.
+     */
+    needName: 'Tulis namamu dulu ya.',
+    needSchool: 'Pilih dulu salah satu ya.',
+    needReading: 'Pilih dulu yang paling cocok denganmu ya.',
   },
 
   dashboard: {
@@ -283,6 +364,26 @@ export const id = {
     syllableTitle: 'Pisahkan suku kata',
     syllableDesc: 'Tulis kata sebagai "Ma ta ha ri" supaya lebih mudah dieja.',
     voiceOfflineNote: 'Suara memakai mesin bawaan HP — tetap berbunyi tanpa internet.',
+
+    /* Pemilih suara */
+    voicePickerTitle: 'Pilih suara',
+    voiceLoading: 'Sedang mencari suara di HP kamu…',
+
+    /*
+     * Dinomori, bukan memakai nama aslinya. Nama dari mesin TTS berbentuk
+     * "id-id-x-idd-local" — tidak terbaca oleh siapa pun, apalagi oleh
+     * penggunanya. Nomornya cuma pembeda; yang menentukan pilihan adalah
+     * bunyinya saat diketuk.
+     */
+    voiceName: (index: number) => `Suara ${index}`,
+    voiceAuto: 'Otomatis',
+    voiceAutoDesc: 'Biar aplikasi memilihkan yang paling jernih.',
+    voiceEnhanced: 'Kualitas tinggi',
+    voiceStandard: 'Kualitas standar',
+    voicePickerHint: 'Ketuk untuk mendengarkan. Pilih yang paling enak didengar.',
+    voiceSample: 'Matahari bersinar cerah. Kelinci kecil melompat di taman.',
+    voiceNone:
+      'HP ini belum punya suara untuk bahasa tersebut. Buka Setelan HP → Aksesibilitas → Teks ke ucapan untuk memasangnya.',
 
     /* Akun */
     accountEyebrow: 'Akun',

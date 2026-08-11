@@ -54,7 +54,7 @@ function RootNavigator({ intro, onAdvance }: { intro: Intro; onAdvance: (next: I
     if (intro !== 'done' || !sessionRestored) return;
     if (token || authPromptDismissed) return;
 
-    router.replace('/(auth)/register');
+    router.replace('/(auth)/welcome');
   }, [intro, sessionRestored, token, authPromptDismissed, router]);
 
   // Ditumpuk di atas navigator, bukan jadi rute, supaya Beranda tidak sempat

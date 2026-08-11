@@ -16,6 +16,15 @@ class ReadersTable
         Reader::LEVEL_LANCAR => ['Sudah lancar', 'success'],
     ];
 
+    /** Label tiap jenjang sekolah; urutannya sama dengan kartu di aplikasi. */
+    private const SCHOOLS = [
+        Reader::SCHOOL_SD1 => 'SD Kelas 1–3',
+        Reader::SCHOOL_SD2 => 'SD Kelas 4–6',
+        Reader::SCHOOL_SMP => 'SMP',
+        Reader::SCHOOL_SMA => 'SMA',
+        Reader::SCHOOL_UMUM => 'Umum',
+    ];
+
     public static function configure(Table $table): Table
     {
         return $table
@@ -38,6 +47,19 @@ class ReadersTable
                     ->formatStateUsing(fn (string $state): string => self::LEVELS[$state][0] ?? $state)
                     ->color(fn (string $state): string => self::LEVELS[$state][1] ?? 'gray')
                     ->sortable(),
+
+                /*
+                 * Kosong untuk akun yang mendaftar sebelum pertanyaan jenjang
+                 * ada. Sengaja tidak diisi nilai tebakan — lihat migrasi
+                 * add_school_level_to_readers_table.
+                 */
+                TextColumn::make('school_level')
+                    ->label('Jenjang')
+                    ->badge()
+                    ->placeholder('belum ditanyakan')
+                    ->formatStateUsing(fn (string $state): string => self::SCHOOLS[$state] ?? $state)
+                    ->color('info')
+                    ->toggleable(),
 
                 /*
                  * Kosong berarti penggunanya belum pernah menyimpang dari
@@ -67,6 +89,10 @@ class ReadersTable
                 SelectFilter::make('reading_level')
                     ->label('Kemampuan membaca')
                     ->options(array_map(fn (array $level): string => $level[0], self::LEVELS)),
+
+                SelectFilter::make('school_level')
+                    ->label('Jenjang')
+                    ->options(self::SCHOOLS),
             ]);
     }
 }

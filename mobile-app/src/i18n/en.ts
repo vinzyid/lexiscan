@@ -78,7 +78,58 @@ export const en: Translation = {
     },
   },
 
+  schoolLevels: {
+    sd1: { name: 'Primary 1–3', age: 'Ages 6–9' },
+    sd2: { name: 'Primary 4–6', age: 'Ages 9–12' },
+    smp: { name: 'Junior high', age: 'Ages 12–15' },
+    sma: { name: 'Senior high', age: 'Ages 15–18' },
+    umum: { name: 'Anyone', age: 'All ages' },
+  },
+
   auth: {
+    appTagline: 'A dyslexia-friendly study buddy',
+
+    stepLabel: (step: number, total: number, name: string) => `STEP ${step} / ${total} — ${name}`,
+    stepHalo: 'HELLO!',
+    stepJenjang: 'SCHOOL',
+    stepMembaca: 'READING',
+
+    tabNew: 'New here',
+    tabExisting: 'I have an account',
+
+    askNameTitle: 'What is your name?',
+    askNameSubtitle: 'Introduce yourself to Lexi!',
+    namePlaceholderLong: 'Tap here to write your name…',
+    welcomeBackTitle: 'Welcome back!',
+    welcomeBackSubtitle: 'Enter your name to continue.',
+
+    askSchoolTitle: 'Where do you go to school?',
+    askSchoolSubtitle: 'Lexi will tune the text for you.',
+
+    askReadingTitle: 'Reading text is…',
+    askReadingSubtitle: 'Lexi will get the right help ready for you.',
+
+    readingChoice: {
+      lancar: {
+        title: 'I can read on my own',
+        desc: 'I just want a calmer, friendlier layout.',
+      },
+      mengeja: {
+        title: 'I still sound words out',
+        desc: 'Split words into syllables, with the voice ready if I need it.',
+      },
+      belum: {
+        title: 'I need the voice to help',
+        desc: 'Every button and every text will be read out to me automatically.',
+      },
+    },
+
+    voiceAutoNote: 'The voice turns on automatically. Tap anything and Lexi will read it aloud!',
+
+    next: 'Continue',
+    back: 'Back',
+    finish: 'Start learning!',
+
     loginTitle: 'Welcome back',
     loginSubtitle: 'Sign in to keep reading',
     loginAction: 'Sign in',
@@ -113,6 +164,10 @@ export const en: Translation = {
 
     fillEverything: 'Please fill in every field first.',
     unexpectedError: 'Something unexpected went wrong. Please try again.',
+
+    needName: 'Write your name first.',
+    needSchool: 'Pick one first.',
+    needReading: 'Pick the one that fits you best first.',
   },
 
   dashboard: {
@@ -256,6 +311,18 @@ export const en: Translation = {
     syllableTitle: 'Split syllables',
     syllableDesc: 'Write words as "Sun shine" so they are easier to sound out.',
     voiceOfflineNote: 'The voice uses your phone built-in engine, so it works without internet.',
+
+    voicePickerTitle: 'Pick a voice',
+    voiceLoading: 'Looking for voices on your phone…',
+    voiceName: (index: number) => `Voice ${index}`,
+    voiceAuto: 'Automatic',
+    voiceAutoDesc: 'Let the app pick the clearest one.',
+    voiceEnhanced: 'High quality',
+    voiceStandard: 'Standard quality',
+    voicePickerHint: 'Tap to listen. Keep whichever sounds best to you.',
+    voiceSample: 'The sun is shining brightly. A little rabbit hops across the garden.',
+    voiceNone:
+      'This phone has no voice for that language yet. Open Settings → Accessibility → Text-to-speech to install one.',
 
     accountEyebrow: 'Account',
     accountTitle: 'Your profile',

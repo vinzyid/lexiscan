@@ -1,6 +1,8 @@
+import { Platform } from 'react-native';
 import * as Speech from 'expo-speech';
 
 import type { LanguageId } from '../store/useStore';
+import { resolveVoice } from './voices';
 
 /**
  * Satu-satunya tempat expo-speech dipanggil.
@@ -18,16 +20,31 @@ import type { LanguageId } from '../store/useStore';
  * `stop()`.
  */
 
-/** Bahasa antarmuka → kode BCP 47 yang dimengerti mesin TTS perangkat. */
-const BCP47: Record<LanguageId, string> = {
-  id: 'id-ID',
-  en: 'en-US',
-};
+/**
+ * Bahasa antarmuka → kode bahasa untuk mesin TTS.
+ *
+ * BEDA ANTAR PLATFORM, DAN ITU TERPAKSA. iOS memakai
+ * `AVSpeechSynthesisVoice(language:)` yang memang mengharapkan BCP 47 lengkap.
+ * Android tidak: `SpeechModule.kt` menyusun `Locale(kode)`, dan konstruktor
+ * Java satu argumen itu memperlakukan seluruh string sebagai kode bahasa —
+ * "id-ID" menjadi bahasa bernama "id-id" yang tidak ada, `isLanguageAvailable`
+ * menolaknya, lalu mesin diam-diam mundur ke bahasa sistem HP. Mengirim "id"
+ * saja membuat locale-nya sah dan bahasanya benar-benar terpasang.
+ */
+const LANGUAGE_CODE: Record<LanguageId, string> = Platform.select({
+  android: { id: 'id', en: 'en' },
+  default: { id: 'id-ID', en: 'en-US' },
+});
 
 export type SpeakOptions = {
   language: LanguageId;
   /** Dari preset kemampuan membaca; lihat `src/theme/reading-levels.ts`. */
   rate: number;
+  /**
+   * Suara pilihan pengguna dari Pengaturan. Kosong berarti biarkan
+   * `resolveVoice` memilihkan yang terbaik di HP ini.
+   */
+  voice?: string | null;
   onStart?: () => void;
   /** Dipanggil saat selesai, dihentikan, MAUPUN gagal — tepatnya sekali. */
   onSettled?: () => void;
@@ -53,6 +70,13 @@ export async function speak(text: string, options: SpeakOptions): Promise<void> 
   await stop();
 
   /*
+   * Suaranya dicari SESUDAH stop(), bukan sebelum: pencarian pertama harus
+   * menunggu mesin TTS menyala, dan menunda penghentian ucapan lama selama itu
+   * membuat tombol terasa tidak menanggapi.
+   */
+  const voice = await resolveVoice(options.language, options.voice);
+
+  /*
    * Penjaga supaya onSettled tidak terpanggil dua kali. expo-speech bisa
    * memanggil onDone dan onStopped untuk satu ucapan yang sama, dan pemanggil
    * memakai callback ini untuk mematikan indikator "sedang berbunyi".
@@ -65,7 +89,8 @@ export async function speak(text: string, options: SpeakOptions): Promise<void> 
   };
 
   Speech.speak(clean, {
-    language: BCP47[options.language],
+    language: LANGUAGE_CODE[options.language],
+    voice,
     rate: options.rate,
     onStart: options.onStart,
     onDone: settle,
@@ -104,8 +129,29 @@ export async function isSpeaking(): Promise<boolean> {
  * memuat apa saja.
  */
 function normalize(text: string): string {
-  return text
-    .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return (
+    text
+      .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, ' ')
+
+      /*
+       * Sisa penanda markdown. Model diminta tidak memakainya, tapi sesekali
+       * lolos — dan bintang di tengah kalimat dibacakan sebagai "bintang",
+       * bukan diabaikan.
+       */
+      .replace(/[*_#`~]/g, ' ')
+
+      /*
+       * Titik yang menempel ke kata berikutnya, khas hasil OCR ("hari.Besok").
+       * Tanpa spasi itu mesin TTS membaca keduanya sebagai satu kata panjang
+       * dan tidak memberi jeda antar kalimat — jeda yang justru paling
+       * dibutuhkan pembaca yang sedang mencocokkan bunyi dengan tulisan.
+       */
+      .replace(/([.!?,;:])(\p{Lu})/gu, '$1 $2')
+
+      // Titik-titik beruntun dilafalkan satu per satu; satu saja sudah cukup
+      // untuk memberi jeda.
+      .replace(/\.{2,}/g, '.')
+      .replace(/\s+/g, ' ')
+      .trim()
+  );
 }

@@ -159,6 +159,17 @@ export const GRADIENTS = {
     colors: ['#4c1d95', '#5b21b6', '#1e40af'] as const,
     locations: [0, 0.45, 1] as const,
   },
+  /**
+   * Latar penuh layar pendaftaran (Figma: AuthScreen).
+   *
+   * Empat singgahan, bukan tiga seperti `hero`, dan sengaja jauh lebih gelap di
+   * pangkalnya: kartu putih di layar ini menutup dua pertiga bawah, jadi
+   * gradiennya harus sudah tuntas sebelum sampai ke sana.
+   */
+  authHero: {
+    colors: ['#1e1040', '#2e0759', '#4c1d95', '#7c3aed'] as const,
+    locations: [0.085, 0.375, 0.666, 0.915] as const,
+  },
   /** Header layar Baca — lebih gelap/kebiruan dari banner dashboard. */
   readerHeader: {
     colors: ['#1e1b4b', '#312e81', '#1e3a8a'] as const,

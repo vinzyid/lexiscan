@@ -39,6 +39,7 @@ export function useSpeech() {
   const language = useOCRStore((s) => s.language);
   const enabled = useOCRStore((s) => s.ttsEnabled);
   const readingLevel = useOCRStore((s) => s.readingLevel);
+  const voice = useOCRStore((s) => s.voiceIds[s.language]);
   const speakingKey = useSpeechState((s) => s.speakingKey);
   const setSpeakingKey = useSpeechState((s) => s.setSpeakingKey);
 
@@ -58,6 +59,7 @@ export function useSpeech() {
       void speakOut(text, {
         language,
         rate,
+        voice,
         /*
          * Dibandingkan dengan key-nya sendiri: saat ucapan lama dihentikan
          * karena ada yang baru, callback-nya masih ikut berbunyi. Tanpa
@@ -71,7 +73,7 @@ export function useSpeech() {
         },
       });
     },
-    [enabled, language, rate, setSpeakingKey],
+    [enabled, language, rate, voice, setSpeakingKey],
   );
 
   /** Tekan untuk membacakan, tekan lagi untuk berhenti. */

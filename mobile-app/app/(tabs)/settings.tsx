@@ -14,6 +14,7 @@ import { DyslexicText } from '../../src/components/dyslexic-text';
 import { PressableScale } from '../../src/components/pressable-scale';
 import { ReadingLevelPicker } from '../../src/components/reading-level-picker';
 import { SpeakButton } from '../../src/components/speak-button';
+import { VoicePicker } from '../../src/components/voice-picker';
 import { useStopSpeechOnBlur } from '../../src/speech/use-speech';
 import { Blob, HexDecor, Ring, ScreenBackdrop, Sparkle } from '../../src/components/figma-decor';
 import { FootprintCard } from '../../src/components/footprint-card';
@@ -177,7 +178,7 @@ export default function SettingsScreen() {
                   </PressableScale>
                 ) : (
                   <PressableScale
-                    onPress={() => router.push('/(auth)/register')}
+                    onPress={() => router.push('/(auth)/welcome')}
                     accessibilityRole="button"
                     accessibilityLabel={t.settings.loginAction}
                     scaleTo={0.95}
@@ -306,6 +307,20 @@ export default function SettingsScreen() {
           <Text className="mt-2.5 font-ui-medium text-[13px] leading-5 text-text-muted">
             {t.settings.voiceOfflineNote}
           </Text>
+
+          {/*
+            Pemilih suara hanya muncul saat suaranya menyala. Menawarkan
+            pilihan yang tiap ketukannya berbunyi kepada orang yang baru saja
+            mematikan suara adalah persis kebalikan dari yang ia minta.
+          */}
+          {ttsEnabled ? (
+            <>
+              <Text className="mb-3 mt-6 font-ui-bold text-[15px] text-text-main">
+                {t.settings.voicePickerTitle}
+              </Text>
+              <VoicePicker />
+            </>
+          ) : null}
 
           {/* ── Tema warna ──────────────────────────────────────────────── */}
           <View className="pt-7">

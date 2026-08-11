@@ -43,9 +43,12 @@ export function AuthField({ label, hint, password, speechKey, ...rest }: Props) 
         <SpeakButton text={spoken} speechKey={speechKey} size={16} />
       </View>
 
+      {/* Radius 24 & garis 2px mengikuti kolom isian di Figma (node 126:2220) —
+          kolom di layar pendaftaran memang lebih tumpul dan lebih tegas
+          garisnya daripada kartu-kartu lain di aplikasi. */}
       <View
-        className="flex-row items-center rounded-2xl border border-border/10 bg-surface px-4"
-        style={{ height: 64, gap: 8 }}>
+        className="flex-row items-center rounded-3xl border-2 border-border/10 bg-surface-alt px-4"
+        style={{ height: 66, gap: 8 }}>
         <TextInput
           {...rest}
           accessibilityLabel={label}

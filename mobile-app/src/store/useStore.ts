@@ -146,6 +146,22 @@ interface OCRState {
   ttsAutoPlay: boolean;
   setTtsAutoPlay: (value: boolean) => void;
 
+  /**
+   * Suara mesin TTS pilihan pengguna, per bahasa. Kosong berarti biarkan
+   * aplikasi memilihkan yang terbaik di HP ini.
+   *
+   * DISIMPAN PER BAHASA karena identifier-nya memang milik satu bahasa:
+   * "id-id-x-idd-local" tidak berarti apa-apa saat antarmuka berbahasa
+   * Inggris, dan menyimpannya di satu kolom berarti pilihan yang satu
+   * menghapus pilihan yang lain setiap kali bahasanya berganti.
+   *
+   * TIDAK ikut ke server, berbeda dengan preferensi lain. Daftar suara berbeda
+   * di tiap HP — mesin TTS-nya lain, data suaranya lain — jadi identifier yang
+   * ikut pindah HP hampir pasti menunjuk suara yang tidak ada di sana.
+   */
+  voiceIds: Partial<Record<LanguageId, string>>;
+  setVoiceId: (language: LanguageId, identifier: string | null) => void;
+
   /** Reader */
   simplifyLevel: SimplifyLevelId;
   setSimplifyLevel: (id: SimplifyLevelId) => void;
@@ -233,6 +249,19 @@ export const useOCRStore = create<OCRState>()(
       setTtsAutoPlay: (value) =>
         set(value ? { ttsAutoPlay: true, ttsEnabled: true } : { ttsAutoPlay: false }),
 
+      voiceIds: {},
+      setVoiceId: (language, identifier) =>
+        set((s) => {
+          const next = { ...s.voiceIds };
+
+          // Dihapus, bukan disimpan sebagai null: kunci yang tidak ada berarti
+          // "pilihkan otomatis", dan itu juga yang berlaku bagi pengguna baru.
+          if (identifier === null) delete next[language];
+          else next[language] = identifier;
+
+          return { voiceIds: next };
+        }),
+
       preferencesTouched: false,
       /*
        * Bawaan dari admin hanya berlaku bagi yang belum pernah memilih sendiri.
@@ -297,6 +326,7 @@ export const useOCRStore = create<OCRState>()(
         syllableSpacing: s.syllableSpacing,
         ttsEnabled: s.ttsEnabled,
         ttsAutoPlay: s.ttsAutoPlay,
+        voiceIds: s.voiceIds,
         bicolorMode: s.bicolorMode,
         authPromptDismissed: s.authPromptDismissed,
       }),

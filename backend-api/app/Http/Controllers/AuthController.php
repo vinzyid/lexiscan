@@ -46,6 +46,14 @@ class AuthController extends Controller
             'password' => ['required', 'string', 'min:6', 'max:72'],
 
             'reading_level' => ['required', Rule::in(Reader::readingLevels())],
+
+            /*
+             * Boleh kosong, tidak seperti reading_level. Jenjang sekolah tidak
+             * mengubah apa pun di tampilan — ia hanya konteks umur — jadi
+             * menahan pendaftaran gara-gara pertanyaan ini tidak sepadan.
+             */
+            'school_level' => ['nullable', Rule::in(Reader::schoolLevels())],
+
             'language' => ['nullable', Rule::in(['id', 'en'])],
         ]);
 
@@ -67,6 +75,7 @@ class AuthController extends Controller
             'username' => $username,
             'password' => $data['password'],
             'reading_level' => $data['reading_level'],
+            'school_level' => $data['school_level'] ?? null,
             'language' => $data['language'] ?? 'id',
         ]);
 
@@ -128,6 +137,7 @@ class AuthController extends Controller
     {
         $data = $request->validate([
             'reading_level' => ['sometimes', Rule::in(Reader::readingLevels())],
+            'school_level' => ['sometimes', 'nullable', Rule::in(Reader::schoolLevels())],
             'language' => ['sometimes', 'nullable', Rule::in(['id', 'en'])],
             'theme' => ['sometimes', 'nullable', 'string', 'max:20'],
             'type_level' => ['sometimes', 'nullable', 'string', 'max:20'],
