@@ -17,7 +17,7 @@ type Props = {
  * Langkah 3 pendaftaran — kemampuan membaca (Figma: node 126:4440 & 126:4463).
  *
  * BEDANYA DENGAN `ReadingLevelPicker` DI PENGATURAN, DAN KENAPA KEDUANYA ADA.
- * Yang di Pengaturan memperlihatkan CONTOH bentuk teksnya ("Ma ta ha ri" lawan
+ * Yang di Pengaturan memperlihatkan CONTOH bentuk teksnya ("Ma-ta-ha-ri" lawan
  * "Matahari") karena di sana pengguna sedang membandingkan hasil yang sudah
  * pernah dilihatnya. Di sini contoh itu belum berarti apa-apa — aplikasinya
  * belum pernah dipakai — jadi Figma menggantinya dengan pernyataan orang

@@ -90,6 +90,16 @@ class Reader extends Authenticatable
     public static function preferenceKeys(): array
     {
         return [
+            /*
+             * `name` boleh, `username` tetap tidak — dan bedanya bukan
+             * sekadar teknis. Nama panggilan cuma tulisan yang tampil di kartu
+             * profil; mengubahnya tidak memutus siapa pun dari akunnya.
+             * Username adalah kunci masuk: menggantinya lewat endpoint
+             * "preferensi" berarti seseorang bisa terkunci dari akun sendiri
+             * karena salah ketik di layar pengaturan.
+             */
+            'name',
+
             'reading_level',
             'school_level',
             'language',

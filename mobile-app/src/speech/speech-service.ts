@@ -36,6 +36,21 @@ const LANGUAGE_CODE: Record<LanguageId, string> = Platform.select({
   default: { id: 'id-ID', en: 'en-US' },
 });
 
+/**
+ * Nada suara, sedikit di atas normal.
+ *
+ * Angkanya diambil dari prototipe web LexiScan (`pitch = 1.05` di sana), yang
+ * dipakai sebagai acuan bunyi. Di atas 1,0 suara terdengar lebih cerah dan
+ * tepiannya lebih tegas; mesin TTS bawaan cenderung berat dan berdengung di
+ * nada asalnya, dan dengung itulah yang paling sering disebut "kurang jelas".
+ *
+ * Tidak dibuat bisa diatur pengguna: satu setelan lagi di layar Pengaturan
+ * menambah pilihan yang harus dimengerti, sedangkan bedanya jauh lebih kecil
+ * daripada beda antar suara maupun beda kecepatan — dua hal yang SUDAH bisa
+ * diatur di sana.
+ */
+const PITCH = 1.05;
+
 export type SpeakOptions = {
   language: LanguageId;
   /** Dari preset kemampuan membaca; lihat `src/theme/reading-levels.ts`. */
@@ -92,6 +107,7 @@ export async function speak(text: string, options: SpeakOptions): Promise<void> 
     language: LANGUAGE_CODE[options.language],
     voice,
     rate: options.rate,
+    pitch: PITCH,
     onStart: options.onStart,
     onDone: settle,
     onStopped: settle,

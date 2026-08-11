@@ -25,11 +25,37 @@ import type { LanguageId } from '../store/useStore';
  * `setVoice` dipanggil SESUDAH bahasa dipasang, jadi ia menang.
  */
 
-/** Awalan kode bahasa yang dicocokkan dengan `Voice.language` dari mesin TTS. */
-const PREFIX: Record<LanguageId, string> = {
-  id: 'id',
-  en: 'en',
+/**
+ * Kode bahasa yang dianggap sama saat mencocokkan `Voice.language`.
+ *
+ * KENAPA 'in' IKUT, DAN INI BUKAN SALAH KETIK. Java menyimpan kode ISO 639
+ * LAMA untuk tiga bahasa demi kesesuaian ke belakang — Ibrani `iw`, Yiddish
+ * `ji`, dan Indonesia `in` — sehingga `Locale("id").getLanguage()` menjawab
+ * "in". `LanguageUtils.getISOCode()` di expo-speech menurunkan kodenya lewat
+ * jalan itu, jadi suara Indonesia dilaporkan ke JavaScript sebagai "in-ID".
+ *
+ * Mencari awalan "id" saja membuat daftarnya SELALU kosong di Android: tidak
+ * ada suara yang disebut, mesin memakai bahasa sistem HP, dan teks Indonesia
+ * dibacakan dengan fonetik Inggris. Keduanya harus diterima.
+ */
+const CODES: Record<LanguageId, string[]> = {
+  id: ['id', 'in'],
+  en: ['en'],
 };
+
+/**
+ * Cocokkan subtag bahasanya saja, bukan awalan mentah.
+ *
+ * "in-ID" dan "id" sama-sama Indonesia, tapi awalan mentah juga akan
+ * meloloskan kode lain yang kebetulan berawalan sama.
+ */
+function matches(voiceLanguage: string | undefined, language: LanguageId): boolean {
+  if (!voiceLanguage) return false;
+
+  const subtag = voiceLanguage.toLowerCase().split(/[-_]/)[0];
+
+  return CODES[language].includes(subtag);
+}
 
 export type VoiceOption = {
   /** Nilai yang dikirim ke `Speech.speak({ voice })`. */
@@ -73,10 +99,8 @@ export function loadVoices(): Promise<Speech.Voice[]> {
  * buruk daripada suara yang kurang halus.
  */
 export async function voicesFor(language: LanguageId): Promise<VoiceOption[]> {
-  const prefix = PREFIX[language];
-
   return (await loadVoices())
-    .filter((voice) => voice.language?.toLowerCase().startsWith(prefix))
+    .filter((voice) => matches(voice.language, language))
     .map((voice) => ({
       identifier: voice.identifier,
       enhanced: voice.quality === Speech.VoiceQuality.Enhanced,

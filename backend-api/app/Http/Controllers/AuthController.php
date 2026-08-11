@@ -136,6 +136,10 @@ class AuthController extends Controller
     public function preferences(Request $request): JsonResponse
     {
         $data = $request->validate([
+            // Aturannya sama persis dengan saat mendaftar, dan `nullable`
+            // sengaja TIDAK ikut: nama boleh diganti, tidak boleh dikosongkan.
+            'name' => ['sometimes', 'string', 'min:2', 'max:60'],
+
             'reading_level' => ['sometimes', Rule::in(Reader::readingLevels())],
             'school_level' => ['sometimes', 'nullable', Rule::in(Reader::schoolLevels())],
             'language' => ['sometimes', 'nullable', Rule::in(['id', 'en'])],

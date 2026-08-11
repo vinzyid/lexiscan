@@ -16,7 +16,7 @@ type Props = {
 /**
  * Pemilih kemampuan membaca — pertanyaan terpenting di seluruh pendaftaran.
  *
- * Tiap kartu memperlihatkan CONTOH bentuk teks yang akan didapat ("Ma ta ha ri"
+ * Tiap kartu memperlihatkan CONTOH bentuk teks yang akan didapat ("Ma-ta-ha-ri"
  * lawan "Matahari"), bukan hanya menjelaskannya dengan kata-kata. Orang yang
  * paling perlu menjawab pertanyaan ini adalah orang yang paling mungkin tidak
  * bisa membaca pilihannya, jadi jawabannya harus bisa dilihat dan didengar,

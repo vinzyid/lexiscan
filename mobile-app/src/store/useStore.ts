@@ -147,6 +147,34 @@ interface OCRState {
   setTtsAutoPlay: (value: boolean) => void;
 
   /**
+   * Pengingat "Tips Belajar Harian" tiap pagi.
+   *
+   * Tidak diturunkan dari preset kemampuan membaca, berbeda dengan sakelar
+   * suara di bawah: mau diingatkan atau tidak sama sekali bukan soal seberapa
+   * lancar seseorang membaca.
+   */
+  dailyTipEnabled: boolean;
+  setDailyTipEnabled: (value: boolean) => void;
+
+  /** Tiap tombol menyebut namanya sendiri saat ditekan. */
+  speakButtonLabels: boolean;
+  setSpeakButtonLabels: (value: boolean) => void;
+
+  /**
+   * Kecepatan bicara pilihan pengguna; `null` berarti ikut preset kemampuan
+   * membaca.
+   *
+   * ADA KARENA KEJERNIHAN TIDAK BISA DITEBAK DARI SINI. Mesin TTS bawaan
+   * melar-melarkan suaranya di kecepatan rendah, dan seberapa parah itu berbeda
+   * di tiap HP dan tiap suara. Preset memilih 0,75 untuk yang belum bisa
+   * membaca dengan alasan yang benar — ia butuh jeda antar kata — tapi kalau di
+   * HP tertentu justru jadi tidak terdengar jelas, yang paling tahu adalah orang
+   * yang mendengarkannya, bukan tabel di kode.
+   */
+  speechRate: number | null;
+  setSpeechRate: (rate: number | null) => void;
+
+  /**
    * Suara mesin TTS pilihan pengguna, per bahasa. Kosong berarti biarkan
    * aplikasi memilihkan yang terbaik di HP ini.
    *
@@ -219,6 +247,8 @@ export const useOCRStore = create<OCRState>()(
           syllableSpacing: preset.syllableSpacing,
           ttsEnabled: preset.ttsEnabled,
           ttsAutoPlay: preset.ttsAutoPlay,
+          speakButtonLabels: preset.speakButtonLabels,
+          speechRate: null,
           bicolorMode: preset.bicolorWords,
           /*
            * Bawaan dari admin tidak boleh lagi ikut campur setelah ini: preset
@@ -243,11 +273,23 @@ export const useOCRStore = create<OCRState>()(
       setTtsEnabled: (value) =>
         // Mematikan suara ikut mematikan pembacaan otomatis, kalau tidak
         // sakelar induknya mati sementara akibatnya masih terdengar.
-        set(value ? { ttsEnabled: true } : { ttsEnabled: false, ttsAutoPlay: false }),
+        set(value ? { ttsEnabled: true } : { ttsEnabled: false, ttsAutoPlay: false, speakButtonLabels: false }),
       ttsAutoPlay: getReadingLevel(DEFAULT_READING_LEVEL).ttsAutoPlay,
       // Menyalakan pembacaan otomatis tidak masuk akal saat suaranya mati.
       setTtsAutoPlay: (value) =>
         set(value ? { ttsAutoPlay: true, ttsEnabled: true } : { ttsAutoPlay: false }),
+
+      dailyTipEnabled: false,
+      setDailyTipEnabled: (value) => set({ dailyTipEnabled: value }),
+
+      speakButtonLabels: getReadingLevel(DEFAULT_READING_LEVEL).speakButtonLabels,
+      // Menyalakannya saat suara mati tidak masuk akal — tombolnya tidak akan
+      // berbunyi juga, dan sakelar yang menyala tanpa akibat itu menyesatkan.
+      setSpeakButtonLabels: (value) =>
+        set(value ? { speakButtonLabels: true, ttsEnabled: true } : { speakButtonLabels: false }),
+
+      speechRate: null,
+      setSpeechRate: (rate) => set({ speechRate: rate }),
 
       voiceIds: {},
       setVoiceId: (language, identifier) =>
@@ -326,6 +368,9 @@ export const useOCRStore = create<OCRState>()(
         syllableSpacing: s.syllableSpacing,
         ttsEnabled: s.ttsEnabled,
         ttsAutoPlay: s.ttsAutoPlay,
+        dailyTipEnabled: s.dailyTipEnabled,
+        speakButtonLabels: s.speakButtonLabels,
+        speechRate: s.speechRate,
         voiceIds: s.voiceIds,
         bicolorMode: s.bicolorMode,
         authPromptDismissed: s.authPromptDismissed,

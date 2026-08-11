@@ -70,12 +70,12 @@ export const id = {
     belum: {
       name: 'Belum bisa membaca',
       desc: 'Huruf paling besar, kata dipecah per suku kata, dan semuanya dibacakan suara.',
-      example: 'Ma ta ha ri',
+      example: 'Ma-ta-ha-ri',
     },
     mengeja: {
       name: 'Masih mengeja sedikit-sedikit',
       desc: 'Kata dipecah per suku kata, suara tersedia kalau dibutuhkan.',
-      example: 'Ma ta ha ri',
+      example: 'Ma-ta-ha-ri',
     },
     lancar: {
       name: 'Sudah lancar membaca',
@@ -263,6 +263,8 @@ export const id = {
     focus: 'Fokus',
     ruler: 'Penggaris',
     bicolor: 'Dua Warna',
+    /** Memperagakan dirinya sendiri, seperti chip "A-B Su-ku" di Figma. */
+    syllables: 'Su-ku',
     swipeHint: 'Geser layar untuk ganti paragraf',
     prevParagraph: 'Paragraf sebelumnya',
     nextParagraph: 'Paragraf berikutnya',
@@ -340,6 +342,37 @@ export const id = {
      * itulah yang benar-benar menentukan tampilan aplikasinya.
      */
     role: 'Pelajar',
+
+    /* ── Tata letak ProfileScreen di Figma ─────────────────────────────── */
+    editAction: 'Edit',
+    displayEyebrow: 'Tampilan',
+    displayTitle: 'Tema & Aksesibilitas',
+    prefsEyebrow: 'Preferensi',
+    prefsTitle: 'Notifikasi & Suara',
+    profileTitle: 'Profil & Keamanan',
+    rowTheme: 'Tema Warna',
+    rowDyslexia: 'Mode Disleksia',
+    rowDailyTip: 'Tips Belajar Harian',
+    dailyTipOn: 'Aktif · Setiap pagi',
+    dailyTipOff: 'Nonaktif',
+    /** Muncul kalau izin notifikasi ditolak permanen — sakelarnya kembali mati. */
+    dailyTipDenied: 'Izinkan notifikasi dulu lewat setelan HP',
+    rowVoice: 'Suara & Umpan Balik',
+    rowLanguage: 'Bahasa',
+    rowReading: 'Kemampuan Membaca',
+    rowFootprint: 'Jejak Karbon',
+    rowFootprintDesc: 'Energi & emisi dari permintaan AI',
+    rowName: 'Ubah Nama',
+    rowHelp: 'Bantuan & Dukungan',
+    rowHelpDesc: 'FAQ, lapor masalah',
+    nameSheetTitle: 'Ubah Nama',
+    nameSave: 'Simpan',
+    logoutTitle: 'Keluar dari Akun?',
+    logoutBody:
+      'Kamu perlu login kembali untuk menggunakan LexiScan. Progres tersimpan aman.',
+    cancel: 'Batal',
+    logoutConfirm: 'Keluar',
+    footer: (version: string) => `LexiScan · v${version} · Untuk semua pelajar`,
     languageEyebrow: 'Bahasa',
     languageTitle: 'Bahasa aplikasi',
     languageNote: 'Ikut mengubah bahasa jawaban AI.',
@@ -361,8 +394,10 @@ export const id = {
     ttsDesc: 'Tampilkan tombol bacakan di setiap paragraf dan jawaban Lexi.',
     autoPlayTitle: 'Bacakan otomatis',
     autoPlayDesc: 'Paragraf yang sedang dibaca langsung berbunyi tanpa ditekan.',
+    speakLabelsTitle: 'Bacakan nama tombol',
+    speakLabelsDesc: 'Tiap tombol menyebut namanya sendiri saat ditekan, jadi kamu tahu fungsinya tanpa perlu membaca.',
     syllableTitle: 'Pisahkan suku kata',
-    syllableDesc: 'Tulis kata sebagai "Ma ta ha ri" supaya lebih mudah dieja.',
+    syllableDesc: 'Tulis kata sebagai "Ma-ta-ha-ri" supaya lebih mudah dieja.',
     voiceOfflineNote: 'Suara memakai mesin bawaan HP — tetap berbunyi tanpa internet.',
 
     /* Pemilih suara */
@@ -379,9 +414,15 @@ export const id = {
     voiceAuto: 'Otomatis',
     voiceAutoDesc: 'Biar aplikasi memilihkan yang paling jernih.',
     voiceEnhanced: 'Kualitas tinggi',
+    voiceNetwork: 'Paling jernih — butuh internet',
     voiceStandard: 'Kualitas standar',
+    rateTitle: 'Kecepatan suara',
+    rates: { slow: 'Pelan', medium: 'Sedang', normal: 'Normal' },
+    switchOn: 'nyala',
+    switchOff: 'mati',
     voicePickerHint: 'Ketuk untuk mendengarkan. Pilih yang paling enak didengar.',
     voiceSample: 'Matahari bersinar cerah. Kelinci kecil melompat di taman.',
+    voiceOpenSettings: 'Buka setelan suara HP',
     voiceNone:
       'HP ini belum punya suara untuk bahasa tersebut. Buka Setelan HP → Aksesibilitas → Teks ke ucapan untuk memasangnya.',
 
@@ -498,10 +539,24 @@ export const id = {
     gelap: 'Mode Gelap',
   },
 
+  /*
+   * Namanya mengikuti Figma: sebutan yang membesarkan hati, bukan label yang
+   * mengurutkan orang dari 'ringan' ke 'berat'. Yang memilih 'Petualang' tidak
+   * sedang mengaku paling parah, ia sedang memilih bantuan paling lengkap.
+   */
   typeLevels: {
-    ringan: { name: 'Ringan', desc: 'Ukuran & spasi sedikit lebih besar' },
-    sedang: { name: 'Sedang', desc: 'Spasi lebar, awal kata ditebalkan' },
-    berat: { name: 'Berat', desc: 'Aksesibilitas maksimal' },
+    ringan: {
+      name: 'Pejuang Muda',
+      desc: 'Huruf sedikit lebih besar, spasi nyaman untuk belajar membaca',
+    },
+    sedang: {
+      name: 'Penjelajah',
+      desc: 'Spasi lebar & awal kata ditebalkan agar mudah diikuti',
+    },
+    berat: {
+      name: 'Petualang',
+      desc: 'Aksesibilitas penuh untuk pembaca yang membutuhkan bantuan ekstra',
+    },
   },
 
   simplifyLevels: {

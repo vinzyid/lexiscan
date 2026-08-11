@@ -43,7 +43,10 @@ export function useSpeech() {
   const speakingKey = useSpeechState((s) => s.speakingKey);
   const setSpeakingKey = useSpeechState((s) => s.setSpeakingKey);
 
-  const rate = getReadingLevel(readingLevel).speechRate;
+  // Pilihan pengguna menang atas preset; `null` berarti ia belum pernah
+  // mengaturnya sendiri, jadi presetlah yang berlaku.
+  const customRate = useOCRStore((s) => s.speechRate);
+  const rate = customRate ?? getReadingLevel(readingLevel).speechRate;
 
   const stop = useCallback(() => {
     setSpeakingKey(null);
@@ -94,6 +97,49 @@ export function useSpeech() {
 }
 
 /**
+ * Awalan `key` untuk ucapan yang berasal dari NAMA TOMBOL, bukan dari isi
+ * bacaan. Dibedakan karena umurnya beda: nama tombol sengaja dibiarkan selesai
+ * meski layarnya sudah berganti — lihat `shouldKeepSpeaking`.
+ */
+const UI_KEY_PREFIX = 'ui:';
+
+/**
+ * Bacakan nama tombol saat ditekan.
+ *
+ * Dipakai satu kali saja, di dalam `PressableScale`, sehingga seluruh tombol
+ * aplikasi ikut tanpa perlu disentuh satu per satu. Yang dibacakan adalah
+ * `accessibilityLabel`-nya — label yang memang sudah ditulis untuk pembaca
+ * layar, jadi tidak ada teks baru yang perlu dikarang dan tidak ada tombol yang
+ * kelewat.
+ */
+export function useSpeakLabel(): (label: string) => void {
+  const active = useOCRStore((s) => s.speakButtonLabels);
+  const { speak } = useSpeech();
+
+  return useCallback(
+    (label: string) => {
+      if (!active) return;
+
+      speak(label, `${UI_KEY_PREFIX}${label}`);
+    },
+    [active, speak],
+  );
+}
+
+/**
+ * Bolehkah ucapan yang sedang berjalan diteruskan saat layar ditinggalkan.
+ *
+ * Nama tombol justru paling sering ditekan untuk BERPINDAH layar — "Pindai
+ * dokumen", "Buka layar baca". Kalau perpindahannya menghentikan ucapan, satu-
+ * satunya tombol yang namanya sempat terdengar adalah tombol yang tidak ke mana
+ * -mana, dan pengguna yang belum bisa membaca tidak pernah tahu ia menekan apa.
+ * Labelnya pendek, jadi ia selesai sendiri sesaat setelah layar barunya tampil.
+ */
+function shouldKeepSpeaking(): boolean {
+  return useSpeechState.getState().speakingKey?.startsWith(UI_KEY_PREFIX) ?? false;
+}
+
+/**
  * Hentikan suara saat layar atau lembar ditutup.
  *
  * Tanpa ini, menutup "Tanya Lexi" di tengah jawaban meninggalkan suara yang
@@ -103,6 +149,8 @@ export function useSpeech() {
 export function useStopSpeechOnUnmount(): void {
   useEffect(
     () => () => {
+      if (shouldKeepSpeaking()) return;
+
       useSpeechState.getState().setSpeakingKey(null);
       void stopOut();
     },
@@ -121,6 +169,8 @@ export function useStopSpeechOnBlur(): void {
   useFocusEffect(
     useCallback(
       () => () => {
+        if (shouldKeepSpeaking()) return;
+
         useSpeechState.getState().setSpeakingKey(null);
         void stopOut();
       },

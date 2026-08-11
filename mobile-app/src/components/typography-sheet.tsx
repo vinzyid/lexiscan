@@ -7,6 +7,7 @@ import { useThemeColors } from '../theme/theme-provider';
 import { useT } from '../i18n';
 import { DyslexicText } from './dyslexic-text';
 import { PressableScale } from './pressable-scale';
+import { useSpeakLabel } from '../speech/use-speech';
 
 /**
  * Sheet "Atur Tulisan": tiga preset ukuran/spasi dengan pratinjau langsung,
@@ -119,6 +120,9 @@ function ToggleRow({
   onValueChange: () => void;
   trackColor: string;
 }) {
+  const t = useT();
+  const speakLabel = useSpeakLabel();
+
   return (
     <View className="mb-3 flex-row items-center justify-between rounded-3xl border border-border/10 bg-surface p-4">
       <View className="flex-1 pr-3">
@@ -127,9 +131,16 @@ function ToggleRow({
         </Text>
         <Text className="font-ui-medium text-[13px] leading-[19px] text-text-muted">{desc}</Text>
       </View>
+      {/* Sama seperti ToggleRow di layar Atur: Switch tidak lewat PressableScale,
+          jadi keadaan barunya harus diucapkan di sini. */}
       <Switch
         value={value}
-        onValueChange={onValueChange}
+        onValueChange={(next) => {
+          speakLabel(`${title}, ${next ? t.settings.switchOn : t.settings.switchOff}`);
+          // Tanpa argumen: yang dioper ke sini `toggleBicolorMode` &
+          // `toggleRulerMode`, yang membalik nilainya sendiri.
+          onValueChange();
+        }}
         accessibilityLabel={title}
         trackColor={{ false: '#D6D3CC', true: trackColor }}
         thumbColor="#FFFFFF"

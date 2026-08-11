@@ -36,6 +36,7 @@ export function SpeakButton({ text, speechKey, onDark, size = 18 }: Props) {
 
   return (
     <PressableScale
+      silent
       onPress={() => toggle(text, speechKey)}
       accessibilityRole="button"
       accessibilityLabel={speaking ? t.speech.stopLabel : t.speech.playLabel}

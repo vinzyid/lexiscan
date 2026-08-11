@@ -34,6 +34,9 @@ const stripPunctuation = (word: string) => word.replace(/[^\p{L}\p{N}]/gu, '');
  */
 const AFFIXES = /^([^\p{L}\p{N}]*)([\s\S]*?)([^\p{L}\p{N}]*)$/u;
 
+/** Penyambung antar suku kata: "Mi-to-kon-dri-a", mengikuti Figma. */
+const HYPHEN = '-';
+
 type Chunk =
   | { kind: 'space' }
   | {
@@ -100,7 +103,7 @@ function toChunks(text: string, syllableSpacing: boolean, language: LanguageId):
  * - Visual fixation: huruf pertama tiap kata Bold, sisanya Regular. Hanya aktif
  *   di preset Sedang & Berat.
  * - Bicolor Words: kata ganjil/genap berganti warna (bicolorA / bicolorB).
- * - Pemenggalan suku kata: "Mitokondria" ditulis "Mi to kon dri a", langsung di
+ * - Pemenggalan suku kata: "Mitokondria" ditulis "Mi-to-kon-dri-a", langsung di
  *   teksnya dan tanpa perlu diketuk lebih dulu.
  */
 export function DyslexicText({
@@ -131,15 +134,15 @@ export function DyslexicText({
   );
 
   /*
-   * Jarak antar suku kata harus lebih sempit daripada jarak antar kata; kalau
-   * sama, "Mi to kon dri a" terbaca sebagai lima kata terpisah dan batas
-   * katanya justru hilang.
+   * Jarak antar kata tetap satu spasi, bahkan saat pemenggalan menyala.
    *
-   * Diatur lewat fontSize pada spasi, bukan margin, karena elemen <Text> inline
-   * di React Native mengabaikan margin.
+   * Dulu dilebarkan jadi dua spasi karena suku kata dipisahkan spasi juga —
+   * tanpa pembeda itu, "Mi to kon dri a" terbaca sebagai lima kata terpisah.
+   * Sekarang suku kata disambung TANDA HUBUNG (mengikuti Figma), dan tanda
+   * hubung sudah mengikat suku katanya secara visual: melebarkan jarak antar
+   * kata di atasnya justru merenggangkan baris tanpa guna.
    */
-  const syllableGap = level.fontSize * 0.45;
-  const wordGap = syllableSpacing ? '  ' : ' ';
+  const wordGap = ' ';
 
   return (
     <Text
@@ -147,7 +150,7 @@ export function DyslexicText({
       onTextLayout={onTextLayout}
       /*
        * Label diisi teks aslinya. TalkBack membaca isi elemen apa adanya, jadi
-       * tanpa ini pembaca layar ikut mengeja "Mi to kon dri a" suku kata demi
+       * tanpa ini pembaca layar ikut mengeja "Mi-to-kon-dri-a" suku kata demi
        * suku kata — persis kebalikan dari maksud fiturnya.
        */
       accessible
@@ -175,7 +178,7 @@ export function DyslexicText({
         return (
           <Text key={index} style={color ? { color } : undefined} onPress={press}>
             {chunk.syllables.length > 0
-              ? renderSyllables(chunk, level.bodyBold, syllableGap)
+              ? renderSyllables(chunk, level.bodyBold)
               : renderWhole(chunk.text, level.bodyBold)}
           </Text>
         );
@@ -197,23 +200,23 @@ function renderWhole(text: string, bodyBold: boolean) {
 }
 
 /**
- * Kata yang dipecah jadi suku kata, dipisah spasi sempit.
+ * Kata yang dipecah jadi suku kata, disambung tanda hubung.
+ *
+ * Tanda hubungnya DILEWATI kalau suku kata sebelumnya sudah berakhir dengan
+ * tanda hubung — "anak-anak" dipenggal jadi ["a","nak-","a","nak"], dan
+ * menambahkan satu lagi akan menghasilkan "a-nak--a-nak".
  *
  * Yang ditebalkan tetap huruf pertama KATA, bukan huruf pertama tiap suku kata:
  * penebalan itu penanda tempat mata mulai membaca satu kata, dan lima penanda
  * dalam satu kata tidak menandai apa pun.
  */
-function renderSyllables(
-  chunk: Extract<Chunk, { kind: 'word' }>,
-  bodyBold: boolean,
-  gap: number,
-) {
+function renderSyllables(chunk: Extract<Chunk, { kind: 'word' }>, bodyBold: boolean) {
   return (
     <>
       {chunk.prefix}
       {chunk.syllables.map((syllable, index) => (
         <Text key={index}>
-          {index > 0 ? <Text style={{ fontSize: gap }}> </Text> : null}
+          {index > 0 && !chunk.syllables[index - 1].endsWith(HYPHEN) ? HYPHEN : null}
           {index === 0 ? renderWhole(syllable, bodyBold) : syllable}
         </Text>
       ))}

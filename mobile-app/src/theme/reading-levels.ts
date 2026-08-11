@@ -38,6 +38,16 @@ export type ReadingLevelPreset = {
   /** Paragraf yang sedang aktif dibacakan sendiri tanpa ditekan. */
   ttsAutoPlay: boolean;
 
+  /**
+   * Tiap tombol menyebutkan namanya sendiri saat ditekan.
+   *
+   * Untuk yang belum bisa membaca, ikon dan tulisan di tombol sama-sama tidak
+   * memberi tahu apa pun. Tanpa ini, satu-satunya cara mengetahui sebuah
+   * tombol untuk apa adalah menekannya dan melihat akibatnya — yang berarti
+   * belajar aplikasi dengan cara tersesat di dalamnya.
+   */
+  speakButtonLabels: boolean;
+
   /** Warna kata berselang-seling supaya mata tidak kehilangan baris. */
   bicolorWords: boolean;
 
@@ -66,6 +76,7 @@ export const READING_LEVELS: ReadingLevelPreset[] = [
     syllableSpacing: true,
     ttsEnabled: true,
     ttsAutoPlay: true,
+    speakButtonLabels: true,
     bicolorWords: true,
     speechRate: 0.75,
   },
@@ -81,6 +92,9 @@ export const READING_LEVELS: ReadingLevelPreset[] = [
      * tetap ada, jadi bantuan tinggal diminta saat mentok.
      */
     ttsAutoPlay: false,
+    /* Mati: yang sudah bisa mengeja mampu membaca nama tombolnya sendiri,
+       dan tiap ketukan yang berbunyi jadi gangguan, bukan bantuan. */
+    speakButtonLabels: false,
     bicolorWords: true,
     speechRate: 0.85,
   },
@@ -90,6 +104,7 @@ export const READING_LEVELS: ReadingLevelPreset[] = [
     syllableSpacing: false,
     ttsEnabled: false,
     ttsAutoPlay: false,
+    speakButtonLabels: false,
     bicolorWords: false,
     speechRate: 1,
   },

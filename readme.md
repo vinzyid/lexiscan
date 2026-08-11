@@ -19,6 +19,7 @@
   <img alt="Laravel" src="https://img.shields.io/badge/Laravel-FF2D20?logo=laravel&logoColor=white" />
   <img alt="Supabase" src="https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white" />
   <img alt="Gemini" src="https://img.shields.io/badge/Gemini-4285F4?logo=google&logoColor=white" />
+  <img alt="Versi" src="https://img.shields.io/badge/versi-1.2.0-7C3AED" />
 </p>
 
 ---
@@ -34,12 +35,12 @@
 | # | Fitur | Deskripsi |
 |---|-------|-----------|
 | 1 | 📸 **Smart OCR Scan** | Foto dokumen fisik → teks digital instan menggunakan *Google ML Kit* (OCR on-device). Dilengkapi koreksi typo berbasis AI. |
-| 2 | 🔤 **Adaptive Typography Engine** | Restrukturisasi tipografi otomatis: font Atkinson Hyperlegible, spasi baris, ukuran huruf, **pemenggalan suku kata** ("Mi to kon dri a"), serta mode **Bicolor Words** & **Reading Ruler**. |
+| 2 | 🔤 **Adaptive Typography Engine** | Restrukturisasi tipografi otomatis: font Atkinson Hyperlegible, spasi baris, ukuran huruf, **pemenggalan suku kata** ("Mi-to-kon-dri-a"), serta mode **Bicolor Words** & **Reading Ruler**. |
 | 3 | 🧠 **AI Text Simplification** | Sederhanakan teks dalam 5 level (L1–L5) — dari teks asli hingga kalimat sangat pendek dengan kata sehari-hari — menggunakan *Large Language Model* tanpa mengubah fakta. |
 | 4 | 🎯 **Focus Reading Mode** | Sorot satu paragraf aktif dan redupkan sisanya. Dilengkapi navigasi antar paragraf & *Reading Ruler* untuk menjaga konsentrasi baca. |
 | 5 | 💡 **AI Explain This** | Pilih teks/kalimat yang sulit → Lexi jelaskan dengan 3 gaya: bahasa paling sederhana, analogi, atau contoh nyata. Panjang jawabannya menyesuaikan kemampuan membaca pengguna. |
-| 6 | 🔊 **Text-to-Speech** | Setiap paragraf, jawaban Lexi, dan suku kata bisa dibacakan. Memakai mesin TTS bawaan perangkat lewat `expo-speech` — gratis tanpa batas, jalan offline, dan **tidak memakai kuota LLM**. |
-| 7 | 👤 **Profil Kemampuan Membaca** | Dipilih saat mendaftar (didampingi guru atau orang tua). Tipografi, pemenggalan suku kata, suara, dan panjang jawaban AI menyesuaikan sendiri — dan semuanya tetap bisa dimatikan manual. |
+| 6 | 🔊 **Text-to-Speech** | Setiap paragraf, jawaban Lexi, dan suku kata bisa dibacakan. Memakai mesin TTS bawaan perangkat lewat `expo-speech` — gratis tanpa batas, jalan offline, dan **tidak memakai kuota LLM**. Suara dan kecepatannya bisa dipilih sendiri di Pengaturan, dan nama tiap tombol ikut dibacakan bagi yang belum bisa membaca. |
+| 7 | 👤 **Profil Kemampuan Membaca & Jenjang** | Dipilih saat mendaftar (didampingi guru atau orang tua). Tipografi, pemenggalan suku kata, suara, dan panjang jawaban AI menyesuaikan sendiri — dan semuanya tetap bisa dimatikan manual. |
 
 ---
 
@@ -196,7 +197,8 @@ OPENROUTER_API_KEY=sk-or-...
 | `POST` | `/api/auth/login` | Masuk, membalas token Sanctum | 10/menit |
 | `GET` | `/api/auth/me` | Profil akun (butuh token) | 60/menit |
 | `POST` | `/api/auth/logout` | Cabut token yang sedang dipakai | 60/menit |
-| `PATCH` | `/api/auth/preferences` | Simpan preferensi tampilan & suara ke akun | 60/menit |
+| `PATCH` | `/api/auth/preferences` | Simpan nama, preferensi tampilan & suara ke akun | 60/menit |
+| `POST` | `/api/feedback` | Laporan masalah dari dalam aplikasi | 10/menit |
 
 `simplify-text` dan `explain-word` menerima field opsional `reading_level`
 (`belum` / `mengeja` / `lancar`) yang menentukan seberapa pendek jawabannya.
@@ -212,6 +214,7 @@ mobile-app/
 ├── app/
 │   └── (tabs)/
 │       ├── index.tsx        # Dashboard (Beranda)
+│       ├── settings.tsx     # Atur: tema, tipografi, suara, akun
 │       ├── scanner.tsx      # Halaman Scan OCR & Upload
 │       ├── reader.tsx       # Halaman Baca + Simplify + Explain
 │       └── _layout.tsx      # Konfigurasi tab navigasi
@@ -222,7 +225,7 @@ mobile-app/
 │   │   ├── explain-sheet.tsx    # Sheet AI Explain This
 │   │   ├── typography-sheet.tsx # Sheet pengaturan tipografi
 │   │   ├── word-sheet.tsx       # Sheet suku kata
-│   │   ├── dyslexic-text.tsx    # Komponen teks dengan OpenDyslexic
+│   │   ├── dyslexic-text.tsx    # Teks bacaan (Atkinson Hyperlegible)
 │   │   └── ...
 │   ├── store/
 │   │   └── useStore.ts      # Zustand global state
@@ -239,6 +242,28 @@ mobile-app/
 
 ---
 
+## 🚢 Versi & Rilis
+
+Versi saat ini: **1.2.0**.
+
+`runtimeVersion.policy` di `app.json` bernilai `appVersion`, jadi **nomor versi
+aplikasi sekaligus menjadi kunci kecocokan OTA**. Konsekuensinya ada dua jalur rilis,
+dan memilih yang salah membuat aplikasi penguji crash:
+
+| Yang berubah | Cara merilis |
+|---|---|
+| Hanya JavaScript, aset, atau teks | `eas update --channel preview --environment preview` — turun ke HP tanpa pasang ulang |
+| Ada modul native baru (mis. `expo-notifications`) | Naikkan `version`, lalu `eas build --profile preview --platform android`. Semua penguji **wajib pasang ulang APK** |
+
+Jangan pernah mengirim OTA berisi modul native baru ke runtime lama — JavaScript-nya
+akan memanggil kode yang tidak ada di dalam APK itu.
+
+Backend di-deploy Railway langsung dari branch `main`; `backend-api/.env` lokal
+menunjuk ke database Supabase **produksi**, jadi `php artisan migrate` dari laptop
+mengubah data yang dipakai pengguna.
+
+---
+
 ## 🔮 Pengembangan Selanjutnya (Roadmap)
 
 | Fitur | Keterangan |
@@ -247,7 +272,7 @@ mobile-app/
 | 🎥 **Live Camera Mode** | Ganti teks fisik dengan teks termodifikasi secara *real-time* (AR) |
 | 🧠 **AI Mind Map** | Peta pikiran otomatis dari hasil scan |
 | 📊 **Personal Vocabulary Builder** | Kosakata pribadi + riwayat penjelasan |
-| 🌐 **Backend Auth** | Middleware Sanctum untuk keamanan publikasi |
+| 🔊 **Suara neural** | Gemini API TTS sebagai pilihan di atas mesin bawaan HP |
 
 ---
 
@@ -259,7 +284,7 @@ mobile-app/
 | Frontend | React Native + Expo + NativeWind |
 | Backend | Laravel + Supabase |
 | AI Integration | Gemini / Grok / OpenRouter |
-| UI/UX Implementation | OpenDyslexic + Adaptive Typography |
+| UI/UX Implementation | Atkinson Hyperlegible + Fredoka + Adaptive Typography |
 
 ---
 

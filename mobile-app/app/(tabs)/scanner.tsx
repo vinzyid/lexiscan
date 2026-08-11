@@ -24,7 +24,7 @@ import {
 } from 'lucide-react-native';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
 import * as DocumentPicker from 'expo-document-picker';
-import { ImageManipulator } from 'expo-image-manipulator';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 import { useOCRStore } from '../../src/store/useStore';
 import { PressableScale } from '../../src/components/pressable-scale';
@@ -36,6 +36,7 @@ import { useT } from '../../src/i18n';
 import { correctTypo } from '../../src/api/ai';
 import { Blob, HexDecor, Ring, ScreenBackdrop, Sparkle } from '../../src/components/figma-decor';
 import { IlluScan } from '../../src/components/illustrations';
+import { cropRectForGuide } from '../../src/utils/crop-frame';
 
 type Phase = 'idle' | 'scanning' | 'done';
 
@@ -43,6 +44,16 @@ type Phase = 'idle' | 'scanning' | 'done';
 const SCAN_HEADER = ['#3b0764', '#4c1d95', '#1e3a8a'] as const;
 /** Kotak pratinjau kamera. */
 const VIEWFINDER = ['#0c0c1e', '#141430'] as const;
+
+/**
+ * Jarak siku panduan dari tepi pratinjau, dalam poin layar.
+ *
+ * Dipakai DUA KALI — untuk menempatkan sikunya dan untuk menghitung kotak
+ * potongnya. Itu memang maksudnya: begitu keduanya memakai angka yang berbeda,
+ * yang dipotong bukan lagi yang dilihat pengguna, dan itulah cacat yang dulu
+ * membuat teks di luar kotak ikut terbaca.
+ */
+const GUIDE_INSET = 16;
 
 /** Ubin ikon 36x36 tiap baris tip — satu warna per tip, urut seperti Figma. */
 const TIP_TILES = [
@@ -58,6 +69,13 @@ export default function ScannerScreen() {
   const colors = useThemeColors();
   const router = useRouter();
   const cameraRef = useRef<CameraView>(null);
+
+  /*
+   * Ukuran kotak pratinjau, diukur saat tata letaknya jadi. Diperlukan untuk
+   * menerjemahkan kotak panduan di layar menjadi kotak potong di foto — lihat
+   * `cropRectForGuide`.
+   */
+  const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
   const t = useT();
 
   // Pindah tab sambil hasil pindaian sedang dibacakan tidak boleh meninggalkan
@@ -125,20 +143,37 @@ export default function ScannerScreen() {
 
     try {
       setPhase('scanning');
-      const photo = await cameraRef.current.takePictureAsync();
+
+      /*
+       * quality 1 & exif mati. Kompresi JPEG meninggalkan bercak di sekitar
+       * huruf, dan bercak itulah yang membuat ML Kit tertukar antara rn/m dan
+       * cl/d. EXIF dibuang karena hanya menambah ukuran berkas; orientasinya
+       * sudah diterapkan ke pikselnya selama `skipProcessing` tidak dinyalakan.
+       */
+      const photo = await cameraRef.current.takePictureAsync({ quality: 1, exif: false });
       if (!photo?.uri) throw new Error(t.scanner.cameraNoImage);
 
-      // Crop ke area tengah (60% dari lebar & tinggi) — sesuai batas kotak panduan.
-      const context = ImageManipulator.manipulate(photo.uri).crop({
-        originX: photo.width * 0.2,
-        originY: photo.height * 0.2,
-        width: photo.width * 0.6,
-        height: photo.height * 0.6,
-      });
-      const imageRef = await context.renderAsync();
-      const cropped = await imageRef.saveAsync({ format: 'jpeg' as any });
+      /*
+       * Dipotong sesuai KOTAK YANG DILIHAT PENGGUNA, dihitung dari ukuran
+       * pratinjau yang sebenarnya — bukan pecahan tetap. Lihat `cropRectForGuide`
+       * untuk alasannya. Kalau pratinjaunya belum sempat terukur, fotonya
+       * dipakai utuh: kelebihan teks masih bisa dihapus pengguna, sedangkan
+       * teks yang terlanjur terpotong hilang tanpa jejak.
+       */
+      const crop = cropRectForGuide(photo, previewSize, GUIDE_INSET);
 
-      const result = await TextRecognition.recognize(cropped.uri);
+      let sourceUri = photo.uri;
+
+      if (crop) {
+        const context = ImageManipulator.manipulate(photo.uri).crop(crop);
+        const imageRef = await context.renderAsync();
+        // compress 1: sama alasannya dengan quality di atas — ini gambar untuk
+        // dibaca mesin, bukan untuk dikirim lewat jaringan.
+        const cropped = await imageRef.saveAsync({ compress: 1, format: SaveFormat.JPEG });
+        sourceUri = cropped.uri;
+      }
+
+      const result = await TextRecognition.recognize(sourceUri);
       const rawText = result?.text?.trim() ?? '';
 
       if (!rawText) {
@@ -419,25 +454,45 @@ export default function ScannerScreen() {
                 colors={[...VIEWFINDER]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
+                onLayout={(event) => setPreviewSize(event.nativeEvent.layout)}
                 style={{
-                  height: 210,
+                  /*
+                   * Tegak 3:4 saat kamera aktif, menyamai bentuk foto sensor dan
+                   * bentuk halaman buku sekaligus. Kotak lebar-pendek yang dulu
+                   * memaksa pengguna menjauhkan HP sampai satu halaman muat,
+                   * sehingga hurufnya tinggal beberapa piksel dan itulah sebab
+                   * pembacaan meleset. Untuk tab Unggah tingginya tetap, karena
+                   * di sana isinya cuma gambar penanda.
+                   */
+                  ...(tab === 'camera' ? { aspectRatio: 3 / 4 } : { height: 210 }),
                   borderRadius: 24,
                   overflow: 'hidden',
                   borderWidth: 1,
                   borderColor: 'rgba(124,58,237,0.45)',
                 }}>
+                {/*
+                  ratio 4:3 mengunci bentuk gambar sensor supaya sama dengan kotak
+                  3:4 di atas. Begitu keduanya sebangun, tidak ada lagi bagian foto
+                  yang terekam tanpa pernah terlihat — pemetaan di `cropRectForGuide`
+                  jadi nyaris satu banding satu.
+
+                  autofocus dibiarkan bawaan ('off'), dan namanya memang menyesatkan:
+                  yang berarti fokus otomatis TERUS-MENERUS justru 'off', sedangkan
+                  'on' mengunci fokus sekali lalu berhenti — persis yang tidak
+                  diinginkan saat HP digerak-gerakkan di atas buku.
+                */}
                 {tab === 'camera' && isFocused ? (
-                  <CameraView ref={cameraRef} style={{ flex: 1 }} facing="back" />
+                  <CameraView ref={cameraRef} style={{ flex: 1 }} facing="back" ratio="4:3" />
                 ) : null}
 
                 <View
                   className="absolute h-full w-full items-center justify-center"
                   pointerEvents="none">
                   {/* Empat siku panduan bingkai */}
-                  <CornerBracket style={{ top: 16, left: 16 }} corners="tl" />
-                  <CornerBracket style={{ top: 16, right: 16 }} corners="tr" />
-                  <CornerBracket style={{ bottom: 16, left: 16 }} corners="bl" />
-                  <CornerBracket style={{ bottom: 16, right: 16 }} corners="br" />
+                  <CornerBracket style={{ top: GUIDE_INSET, left: GUIDE_INSET }} corners="tl" />
+                  <CornerBracket style={{ top: GUIDE_INSET, right: GUIDE_INSET }} corners="tr" />
+                  <CornerBracket style={{ bottom: GUIDE_INSET, left: GUIDE_INSET }} corners="bl" />
+                  <CornerBracket style={{ bottom: GUIDE_INSET, right: GUIDE_INSET }} corners="br" />
 
                   {tab === 'camera' ? (
                     <>

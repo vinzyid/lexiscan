@@ -64,12 +64,12 @@ export const en: Translation = {
     belum: {
       name: 'Cannot read yet',
       desc: 'Largest text, words split into syllables, and everything read aloud.',
-      example: 'Sun shine',
+      example: 'Sun-shine',
     },
     mengeja: {
       name: 'Still sounding words out',
       desc: 'Words split into syllables, with the voice there whenever it is needed.',
-      example: 'Sun shine',
+      example: 'Sun-shine',
     },
     lancar: {
       name: 'Reads fluently',
@@ -215,6 +215,7 @@ export const en: Translation = {
     focus: 'Focus',
     ruler: 'Ruler',
     bicolor: 'Two Colours',
+    syllables: 'Syl-la-ble',
     swipeHint: 'Swipe to change paragraph',
     prevParagraph: 'Previous paragraph',
     nextParagraph: 'Next paragraph',
@@ -287,6 +288,34 @@ export const en: Translation = {
 
   settings: {
     role: 'Student',
+
+    editAction: 'Edit',
+    displayEyebrow: 'Display',
+    displayTitle: 'Theme & Accessibility',
+    prefsEyebrow: 'Preferences',
+    prefsTitle: 'Notifications & Voice',
+    profileTitle: 'Profile & Security',
+    rowTheme: 'Colour Theme',
+    rowDyslexia: 'Dyslexia Mode',
+    rowDailyTip: 'Daily Study Tip',
+    dailyTipOn: 'On · Every morning',
+    dailyTipOff: 'Off',
+    dailyTipDenied: 'Allow notifications in your phone settings first',
+    rowVoice: 'Voice & Feedback',
+    rowLanguage: 'Language',
+    rowReading: 'Reading Ability',
+    rowFootprint: 'Carbon Footprint',
+    rowFootprintDesc: 'Energy & emissions from AI requests',
+    rowName: 'Change Name',
+    rowHelp: 'Help & Support',
+    rowHelpDesc: 'FAQ, report a problem',
+    nameSheetTitle: 'Change Name',
+    nameSave: 'Save',
+    logoutTitle: 'Sign out?',
+    logoutBody: 'You will need to sign in again to use LexiScan. Your progress stays safe.',
+    cancel: 'Cancel',
+    logoutConfirm: 'Sign out',
+    footer: (version: string) => `LexiScan · v${version} · For every student`,
     languageEyebrow: 'Language',
     languageTitle: 'App language',
     languageNote: 'Also changes the language of AI answers.',
@@ -308,8 +337,10 @@ export const en: Translation = {
     ttsDesc: 'Show a read-aloud button on every paragraph and on Lexi answers.',
     autoPlayTitle: 'Read automatically',
     autoPlayDesc: 'The paragraph you are on starts speaking without being tapped.',
+    speakLabelsTitle: 'Read button names aloud',
+    speakLabelsDesc: 'Every button says its own name when tapped, so you know what it does without reading.',
     syllableTitle: 'Split syllables',
-    syllableDesc: 'Write words as "Sun shine" so they are easier to sound out.',
+    syllableDesc: 'Write words as "Sun-shine" so they are easier to sound out.',
     voiceOfflineNote: 'The voice uses your phone built-in engine, so it works without internet.',
 
     voicePickerTitle: 'Pick a voice',
@@ -318,9 +349,15 @@ export const en: Translation = {
     voiceAuto: 'Automatic',
     voiceAutoDesc: 'Let the app pick the clearest one.',
     voiceEnhanced: 'High quality',
+    voiceNetwork: 'Clearest — needs internet',
     voiceStandard: 'Standard quality',
+    rateTitle: 'Voice speed',
+    rates: { slow: 'Slow', medium: 'Medium', normal: 'Normal' },
+    switchOn: 'on',
+    switchOff: 'off',
     voicePickerHint: 'Tap to listen. Keep whichever sounds best to you.',
     voiceSample: 'The sun is shining brightly. A little rabbit hops across the garden.',
+    voiceOpenSettings: 'Open phone voice settings',
     voiceNone:
       'This phone has no voice for that language yet. Open Settings → Accessibility → Text-to-speech to install one.',
 
@@ -437,9 +474,18 @@ export const en: Translation = {
   },
 
   typeLevels: {
-    ringan: { name: 'Light', desc: 'Slightly larger size and spacing' },
-    sedang: { name: 'Medium', desc: 'Wide spacing, first letter of each word bolded' },
-    berat: { name: 'Strong', desc: 'Maximum accessibility' },
+    ringan: {
+      name: 'Young Fighter',
+      desc: 'Slightly larger letters, comfortable spacing for learning to read',
+    },
+    sedang: {
+      name: 'Explorer',
+      desc: 'Wide spacing and bold word starts so lines are easy to follow',
+    },
+    berat: {
+      name: 'Adventurer',
+      desc: 'Full accessibility for readers who need extra support',
+    },
   },
 
   simplifyLevels: {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View, type TextLayoutLine } from 'react-native';
+import { ScrollView, Text, View, type TextLayoutLine } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,9 +28,11 @@ import {
   Type,
   Volume2,
   Square,
+  WholeWord,
 } from 'lucide-react-native';
 
 import { useOCRStore } from '../../src/store/useStore';
+import { useAuthStore } from '../../src/store/useAuthStore';
 import { useThemeColors } from '../../src/theme/theme-provider';
 import { GRADIENTS } from '../../src/theme/palettes';
 import { SIMPLIFY_LEVEL_IDS, type SimplifyLevelId } from '../../src/data/sample-document';
@@ -58,6 +60,7 @@ export default function ReaderScreen() {
   const colors = useThemeColors();
   const router = useRouter();
   const t = useT();
+  const pushPreference = useAuthStore((s) => s.pushPreference);
 
   const {
     rawText,
@@ -72,6 +75,8 @@ export default function ReaderScreen() {
     toggleRulerMode,
     bicolorMode,
     toggleBicolorMode,
+    syllableSpacing,
+    setSyllableSpacing,
     activeParagraphIndex,
     setActiveParagraphIndex,
   } = useOCRStore();
@@ -360,6 +365,22 @@ export default function ReaderScreen() {
               icon={<Palette size={16} color={bicolorMode ? '#ffffff' : colors.textMuted} />}
               label={t.reader.bicolor}
             />
+            {/*
+              Pemenggalan suku kata, dulu hanya bisa diubah lewat layar Atur.
+              Ditaruh di sini karena inilah satu-satunya tempat akibatnya
+              terlihat — dan yang membutuhkannya sedang membaca, bukan sedang
+              membuka pengaturan.
+            */}
+            <FeatureChip
+              active={syllableSpacing}
+              onPress={() => {
+                const next = !syllableSpacing;
+                setSyllableSpacing(next);
+                void pushPreference({ syllable_spacing: next });
+              }}
+              icon={<WholeWord size={16} color={syllableSpacing ? '#ffffff' : colors.textMuted} />}
+              label={t.reader.syllables}
+            />
           </View>
 
           <View className="mt-3 flex-row items-center" style={{ gap: 8 }}>
@@ -395,17 +416,20 @@ export default function ReaderScreen() {
             </PressableScale>
           </View>
 
+          {/* PressableScale, bukan Pressable polos: hanya lewat komponen itu nama
+              tombolnya ikut dibacakan bagi yang belum bisa membaca. */}
           {needsAi && !simplifyLoading && simplifyError ? (
-            <Pressable
+            <PressableScale
               onPress={fetchSimplified}
               accessibilityRole="button"
               accessibilityLabel={t.reader.retryLabel}
+              scaleTo={0.98}
               className="mt-2.5 rounded-[14px] bg-primary/[0.06] px-3 py-2.5">
               <Text className="font-ui-medium text-xs leading-5 text-text-muted">
                 {simplifyError}{' '}
                 <Text className="font-ui-bold text-primary">{t.reader.retryLink}</Text>
               </Text>
-            </Pressable>
+            </PressableScale>
           ) : null}
         </View>
 

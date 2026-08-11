@@ -12,9 +12,46 @@ const isDigraphAt = (word: string, index: number) =>
  * Aturannya dipisah per bahasa: pola Indonesia KV/KVK menghasilkan "rea-ding"
  * untuk kata Inggris, padahal yang benar "read-ing".
  */
+/**
+ * Kata yang kaidah IMBUHANNYA mengalahkan kaidah bunyi.
+ *
+ * Pemenggalan resmi memisahkan imbuhan dari kata dasarnya lebih dulu:
+ * "mengubah" adalah meng+ubah, jadi "meng-u-bah" — bukan "me-ngu-bah" yang
+ * dihasilkan aturan bunyi di bawah.
+ *
+ * KENAPA DAFTAR, BUKAN ATURAN. Aturan imbuhan tidak bisa diterapkan tanpa tahu
+ * apakah katanya memang berimbuhan, dan itu butuh kamus. "mengubah" (meng+ubah)
+ * dan "pengaruh" (kata dasar utuh) berbentuk sama persis, tapi dipenggal
+ * berbeda: "meng-u-bah" lawan "pe-nga-ruh". Aturan yang menebak akan
+ * memperbaiki satu dan merusak yang lain.
+ *
+ * Ditulis huruf kecil semua; pencocokannya mengabaikan besar-kecil huruf.
+ */
+const OVERRIDES: Record<string, string[]> = {
+  mengubah: ['meng', 'u', 'bah'],
+  mengajar: ['meng', 'a', 'jar'],
+  mengambil: ['meng', 'am', 'bil'],
+  mengikuti: ['meng', 'i', 'ku', 'ti'],
+  mengisi: ['meng', 'i', 'si'],
+  mengurangi: ['meng', 'u', 'ra', 'ngi'],
+};
+
 export function splitSyllables(word: string, language: LanguageId = 'id'): string[] {
   const clean = word.replace(/[^\p{L}\p{N}-]/gu, '');
   if (clean.length < 3) return clean ? [clean] : [];
+
+  /*
+   * Dicocokkan sebelum apa pun, tapi HANYA untuk bahasa Indonesia — daftar ini
+   * berisi kaidah imbuhan Indonesia, dan kata Inggris yang kebetulan sama
+   * ejaannya tidak boleh ikut terkena.
+   */
+  if (language === 'id') {
+    const override = OVERRIDES[clean.toLowerCase()];
+
+    // Besar-kecil huruf aslinya dipertahankan: yang disimpan cuma letak
+    // potongannya, bukan bentuk tulisannya.
+    if (override) return sliceLike(clean, override);
+  }
 
   if (clean.includes(HYPHEN)) return splitHyphenated(clean, language);
 
@@ -22,6 +59,28 @@ export function splitSyllables(word: string, language: LanguageId = 'id'): strin
 }
 
 const HYPHEN = '-';
+
+/**
+ * Potong `word` mengikuti panjang tiap bagian di `pattern`.
+ *
+ * Yang dikembalikan huruf aslinya, bukan huruf dari daftar pengecualian —
+ * supaya "Mengubah" di awal kalimat tidak berubah jadi "meng u bah".
+ */
+function sliceLike(word: string, pattern: string[]): string[] {
+  const parts: string[] = [];
+  let at = 0;
+
+  for (const piece of pattern) {
+    parts.push(word.slice(at, at + piece.length));
+    at += piece.length;
+  }
+
+  // Sisa huruf yang tak tercakup pola ditempelkan, bukan dibuang: lebih baik
+  // satu suku kata kepanjangan daripada kata yang hilang sebagian.
+  if (at < word.length) parts[parts.length - 1] += word.slice(at);
+
+  return parts;
+}
 
 /**
  * Kata bertanda hubung dipenggal per bagian, lalu tanda hubungnya ditempelkan

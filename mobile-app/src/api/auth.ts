@@ -76,6 +76,8 @@ export async function logout(): Promise<void> {
  */
 export async function savePreferences(
   preferences: Partial<{
+    /** Nama panggilan; boleh diganti, tidak boleh dikosongkan. */
+    name: string;
     reading_level: ReadingLevelId;
     school_level: SchoolLevelId | null;
     /*
