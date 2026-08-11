@@ -246,21 +246,21 @@ mobile-app/
 
 Versi saat ini: **1.2.0**.
 
-`runtimeVersion.policy` di `app.json` bernilai `appVersion`, jadi **nomor versi
-aplikasi sekaligus menjadi kunci kecocokan OTA**. Konsekuensinya ada dua jalur rilis,
-dan memilih yang salah membuat aplikasi penguji crash:
+LexiScan memakai dua jalur distribusi. `runtimeVersion.policy` pada `app.json`
+disetel ke `appVersion`, sehingga nomor versi aplikasi sekaligus berperan sebagai
+kunci kecocokan pembaruan.
 
-| Yang berubah | Cara merilis |
-|---|---|
-| Hanya JavaScript, aset, atau teks | `eas update --channel preview --environment preview` — turun ke HP tanpa pasang ulang |
-| Ada modul native baru (mis. `expo-notifications`) | Naikkan `version`, lalu `eas build --profile preview --platform android`. Semua penguji **wajib pasang ulang APK** |
+| Perubahan | Jalur rilis | Dampak ke pengguna |
+|---|---|---|
+| JavaScript, aset, atau teks | `eas update` (OTA) | Pembaruan turun sendiri saat aplikasi dibuka |
+| Modul native baru | Naik versi lalu `eas build` | Pengguna memasang APK terbaru |
 
-Jangan pernah mengirim OTA berisi modul native baru ke runtime lama — JavaScript-nya
-akan memanggil kode yang tidak ada di dalam APK itu.
+Pemisahan ini membuat perbaikan tampilan dan teks sampai ke pengguna dalam hitungan
+menit, sementara perubahan yang menyentuh kode native tetap melewati proses build
+yang utuh.
 
-Backend di-deploy Railway langsung dari branch `main`; `backend-api/.env` lokal
-menunjuk ke database Supabase **produksi**, jadi `php artisan migrate` dari laptop
-mengubah data yang dipakai pengguna.
+Backend berjalan di Railway dengan basis data Supabase PostgreSQL, di-deploy otomatis
+dari branch `main`.
 
 ---
 
