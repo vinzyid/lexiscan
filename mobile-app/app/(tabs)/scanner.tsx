@@ -6,6 +6,7 @@ import {
   ScrollView,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -55,6 +56,16 @@ const VIEWFINDER = ['#0c0c1e', '#141430'] as const;
  */
 const GUIDE_INSET = 16;
 
+/**
+ * Tinggi bilah tombol yang dipaku di dasar layar: tombol 55px + 12px padding
+ * atas dan bawah. Dipakai dua kali — sebagai tinggi bilahnya sendiri dan
+ * sebagai sisa ruang di bawah daftar tips supaya barisnya tidak tertutup.
+ */
+const ACTION_BAR_HEIGHT = 55 + 24;
+
+/** Pratinjau tidak pernah lebih pendek dari ini, sesempit apa pun layarnya. */
+const MIN_PREVIEW_HEIGHT = 200;
+
 /** Ubin ikon 36x36 tiap baris tip — satu warna per tip, urut seperti Figma. */
 const TIP_TILES = [
   { gradient: ['#f59e0b', '#fbbf24'] as const, Icon: Sun },
@@ -76,6 +87,15 @@ export default function ScannerScreen() {
    * `cropRectForGuide`.
    */
   const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
+
+  /*
+   * Tinggi area layar dan tinggi header diukur, bukan ditebak: keduanya
+   * bergeser oleh safe area, ukuran huruf sistem, dan tinggi perangkat.
+   */
+  const [screenHeight, setScreenHeight] = useState(0);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+
   const t = useT();
 
   // Pindah tab sambil hasil pindaian sedang dibacakan tidak boleh meninggalkan
@@ -257,16 +277,55 @@ export default function ScannerScreen() {
   const paragraphCount = detected.split(/\n{2,}|\n/).filter((line) => line.trim().length > 0).length;
   const busy = phase === 'scanning' || isCorrectingTypo;
 
+  /*
+   * Tinggi pratinjau diambil dari sisa ruang layar, dengan 3:4 sebagai batas
+   * ATAS — bukan sebagai ukuran mati.
+   *
+   * Versi sebelumnya selalu memakai 3:4 penuh. Di layar 6 inci tumpukan
+   * header + pemilih sumber + kotak itu sudah melewati satu layar, sehingga
+   * tombol Pindai jatuh di bawah lipatan: pengguna menggulir untuk menekannya,
+   * dan begitu digulir bagian atas pratinjau ikut hilang — ia memotret bingkai
+   * yang tidak pernah dilihatnya utuh. Sekarang kotaknya yang mengalah.
+   *
+   * Angka perkiraan hanya dipakai pada frame pertama, sebelum onLayout
+   * menjawab, supaya tingginya tidak terlihat melompat.
+   */
+  const spaceBelowHeader =
+    (screenHeight || windowHeight - 96) - (headerHeight || insets.top + 150);
+  const previewHeight = Math.round(
+    Math.max(
+      MIN_PREVIEW_HEIGHT,
+      Math.min(
+        // 3:4 tegak — sebangun dengan foto sensor dan dengan halaman buku.
+        (windowWidth - 32) * (4 / 3),
+        spaceBelowHeader -
+          20 - // padding atas isi
+          54 - // pemilih sumber kamera/unggah
+          40 - // dua jarak antar blok
+          ACTION_BAR_HEIGHT -
+          8, // sisa napas supaya tombol tidak menempel tepi
+      ),
+    ),
+  );
+
   return (
-    <View className="flex-1 bg-background">
+    <View
+      className="flex-1 bg-background"
+      onLayout={(event) => setScreenHeight(event.nativeEvent.layout.height)}>
       <ScreenBackdrop />
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={{
+          // Bilah tombol menutupi dasar layar, jadi tips perlu ruang di bawahnya.
+          paddingBottom: phase === 'done' ? 32 : ACTION_BAR_HEIGHT + 24,
+        }}
+        showsVerticalScrollIndicator={false}>
         {/* ── Header ────────────────────────────────────────────────────── */}
         <LinearGradient
           colors={[...SCAN_HEADER]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
+          onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}
           style={{ paddingTop: insets.top + 8, overflow: 'hidden' }}>
           <Blob size={100} opacity={0.06} style={{ position: 'absolute', top: -26, right: 10 }} />
           <Ring size={80} style={{ position: 'absolute', top: 20, right: -14 }} />
@@ -457,14 +516,15 @@ export default function ScannerScreen() {
                 onLayout={(event) => setPreviewSize(event.nativeEvent.layout)}
                 style={{
                   /*
-                   * Tegak 3:4 saat kamera aktif, menyamai bentuk foto sensor dan
-                   * bentuk halaman buku sekaligus. Kotak lebar-pendek yang dulu
+                   * Setinggi mungkin sampai batas 3:4 — bentuk itu menyamai foto
+                   * sensor sekaligus halaman buku. Kotak lebar-pendek yang dulu
                    * memaksa pengguna menjauhkan HP sampai satu halaman muat,
                    * sehingga hurufnya tinggal beberapa piksel dan itulah sebab
-                   * pembacaan meleset. Untuk tab Unggah tingginya tetap, karena
-                   * di sana isinya cuma gambar penanda.
+                   * pembacaan meleset; batas bawahnya dihitung di previewHeight.
+                   * Untuk tab Unggah tingginya tetap, karena di sana isinya cuma
+                   * gambar penanda.
                    */
-                  ...(tab === 'camera' ? { aspectRatio: 3 / 4 } : { height: 210 }),
+                  height: tab === 'camera' ? previewHeight : 210,
                   borderRadius: 24,
                   overflow: 'hidden',
                   borderWidth: 1,
@@ -534,36 +594,50 @@ export default function ScannerScreen() {
                   })}
                 </View>
               </View>
-
-              <PressableScale
-                onPress={tab === 'camera' ? handleScan : handleUpload}
-                disabled={busy}
-                accessibilityRole="button"
-                accessibilityLabel={tab === 'camera' ? t.scanner.startScanLabel : t.scanner.pickImageLabel}
-                scaleTo={0.97}>
-                <PrimaryButtonSurface dimmed={busy}>
-                  {busy ? (
-                    <ActivityIndicator color="#ffffff" />
-                  ) : tab === 'camera' ? (
-                    <CameraIcon size={20} color="#ffffff" />
-                  ) : (
-                    <Upload size={20} color="#ffffff" />
-                  )}
-                  <Text className="font-ui-bold text-base text-white">
-                    {phase === 'scanning'
-                      ? t.scanner.processing
-                      : isCorrectingTypo
-                        ? t.scanner.tidyingUp
-                        : tab === 'camera'
-                          ? t.scanner.startScan
-                          : t.scanner.pickImage}
-                  </Text>
-                </PrimaryButtonSurface>
-              </PressableScale>
             </>
           )}
         </View>
       </ScrollView>
+
+      {/*
+        Tindakan utama dipaku di dasar layar, bukan ikut menggulir. Daftar tips
+        boleh sepanjang apa pun tanpa lagi mendorong tombol Pindai keluar layar.
+      */}
+      {phase === 'done' ? null : (
+        <View
+          className="px-4 pb-3 pt-3"
+          style={{
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            backgroundColor: colors.background,
+          }}>
+          <PressableScale
+            onPress={tab === 'camera' ? handleScan : handleUpload}
+            disabled={busy}
+            accessibilityRole="button"
+            accessibilityLabel={tab === 'camera' ? t.scanner.startScanLabel : t.scanner.pickImageLabel}
+            scaleTo={0.97}>
+            <PrimaryButtonSurface dimmed={busy}>
+              {busy ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : tab === 'camera' ? (
+                <CameraIcon size={20} color="#ffffff" />
+              ) : (
+                <Upload size={20} color="#ffffff" />
+              )}
+              <Text className="font-ui-bold text-base text-white">
+                {phase === 'scanning'
+                  ? t.scanner.processing
+                  : isCorrectingTypo
+                    ? t.scanner.tidyingUp
+                    : tab === 'camera'
+                      ? t.scanner.startScan
+                      : t.scanner.pickImage}
+              </Text>
+            </PrimaryButtonSurface>
+          </PressableScale>
+        </View>
+      )}
     </View>
   );
 }

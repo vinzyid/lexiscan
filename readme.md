@@ -1,9 +1,10 @@
 
 <p align="center">
-  <img src="./assets/images/icon.png" alt="LexiScan Logo" width="100" height="100" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./assets/brand/lexiscan-lockup-dark.png" />
+    <img src="./assets/brand/lexiscan-lockup-light.png" alt="LexiScan" width="440" />
+  </picture>
 </p>
-
-<h1 align="center">LexiScan</h1>
 
 <p align="center">
   <strong>Aksesibilitas Membaca untuk Disleksia — OCR Cerdas + AI Text Simplification</strong>

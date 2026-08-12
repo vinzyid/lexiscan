@@ -28,6 +28,11 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->brandName('LexiScan')
+            ->brandLogo(asset('brand/lexiscan-logo-light.png'))
+            ->darkModeBrandLogo(asset('brand/lexiscan-logo-dark.png'))
+            ->brandLogoHeight('2.25rem')
+            ->favicon(asset('favicon.ico'))
             ->colors([
                 'primary' => Color::Amber,
             ])
