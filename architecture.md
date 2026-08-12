@@ -4,7 +4,7 @@ Version 1.2.0 · Updated 11 August 2026
 
 ## 1. High-Level Architecture
 
-LexiScan is a decoupled client–server system: a React Native (Expo SDK 57) mobile
+LexiScan is a decoupled client-server system: a React Native (Expo SDK 57) mobile
 app and a Laravel 13 API backend.
 
 - **Mobile app** owns the interface, the camera, on-device OCR, all reading-comfort
@@ -12,7 +12,7 @@ app and a Laravel 13 API backend.
   it works without a network.
 - **Backend** is an API gateway and processing hub. It holds the LLM keys, enforces
   quotas, caches answers, and persists reader accounts.
-- **Deployment** — the backend runs on Railway (Docker image, `backend-api/railway.json`)
+- **Deployment** - the backend runs on Railway (Docker image, `backend-api/railway.json`)
   against a Supabase PostgreSQL database. The app ships as an EAS build with over-the-air
   JavaScript updates on the `preview` channel.
 
@@ -26,7 +26,7 @@ genuinely needed. OCR, typography, syllable splitting, and text-to-speech never 
 - **Backend:** Laravel 13 (PHP 8.3+), Sanctum tokens, Filament admin panel at `/admin`.
 - **Database:** Supabase PostgreSQL.
 - **On-device ML:** `@react-native-ml-kit/text-recognition` (Google ML Kit OCR).
-- **Speech:** `expo-speech` — the device TTS engine, with an explicitly selected voice.
+- **Speech:** `expo-speech` - the device TTS engine, with an explicitly selected voice.
 - **LLM:** Gemini as primary, with a configurable fallback provider (OpenRouter).
 
 **There is no TanStack Query.** State is Zustand plus plain `fetch` in `src/api/`.
@@ -46,7 +46,7 @@ from breaking one of them:
    nullable so the backend can tell an untouched setting from a deliberate `false`.
    Only the untouched ones may be re-applied by a preset.
 
-Device-only settings — the chosen TTS voice identifier and speech rate — are never sent
+Device-only settings - the chosen TTS voice identifier and speech rate - are never sent
 to the server, because the available voices differ on every phone.
 
 ## 4. Feature Data Flow
@@ -64,9 +64,9 @@ to the server, because the available voices differ on every phone.
 
 `src/components/dyslexic-text.tsx` renders every paragraph:
 
-- Atkinson Hyperlegible, line-height 1.85–2.4×, wide letter-spacing.
-- **Visual fixation:** only the *first letter* of each word is bold — not the first
-  40–50% of characters.
+- Atkinson Hyperlegible, line-height 1.85-2.4×, wide letter-spacing.
+- **Visual fixation:** only the *first letter* of each word is bold - not the first
+  40-50% of characters.
 - **Syllable splitting:** `src/utils/syllables.ts` applies Indonesian KV/KVK rules with
   digraph handling (`ng`, `ny`, `sy`, `kh`) plus a small override table for words where
   the affix rule beats the phonological one. Syllables are joined with hyphens
@@ -78,10 +78,10 @@ text, so speech never pronounces syllables as separate words.
 
 ### C. AI Text Simplification
 
-1. `POST /api/simplify-text` with the text, level (L2–L5), and language.
+1. `POST /api/simplify-text` with the text, level (L2-L5), and language.
 2. `AiTextService` builds a strict prompt, capping answer length by the reader's level.
 3. `FallbackProvider` tries Gemini, then the configured backup.
-4. The response carries a `footprint` block — estimated energy and CO₂e — which the app
+4. The response carries a `footprint` block - estimated energy and CO₂e - which the app
    accumulates locally and shows in Settings.
 5. Answers are cached server-side, so a repeated request emits nothing new.
 
@@ -103,7 +103,7 @@ styles (`sederhana`, `analogi`, `nyata`). Answer length again follows the readin
 - **The voice is named explicitly.** Passing only a language is unreliable: expo-speech's
   Android module builds `Locale("id-ID")`, which Java reads as a single invalid language
   code, so the engine falls back to the phone's system language. `src/speech/voices.ts`
-  picks a real voice identifier instead, matching both `id` and `in` — Java reports
+  picks a real voice identifier instead, matching both `id` and `in` - Java reports
   Indonesian using the legacy code `in`.
 - **Button labels are spoken too.** `PressableScale` announces its `accessibilityLabel`
   on press, so a reader who cannot yet read learns what each control does.
@@ -115,7 +115,7 @@ every row there can open `/admin`. A reader account exists for one reason: to st
 reading level and school level that drive the app's adaptations across devices.
 
 `POST /api/auth/register` takes name, username, password, reading level, and optional
-school level. `PATCH /api/auth/preferences` updates display name and preferences —
+school level. `PATCH /api/auth/preferences` updates display name and preferences -
 never `username` or `password`, which need their own flow.
 
 ## 6. API Surface
@@ -128,7 +128,7 @@ never `username` or `password`, which need their own flow.
 | `GET` | `/api/auth/me` | Current reader profile |
 | `POST` | `/api/auth/logout` | Revoke the current token only |
 | `PATCH` | `/api/auth/preferences` | Save name, reading level, and display preferences |
-| `POST` | `/api/simplify-text` | Simplify a document to level L2–L5 |
+| `POST` | `/api/simplify-text` | Simplify a document to level L2-L5 |
 | `POST` | `/api/explain-word` | Explain a term in one of three styles |
 | `POST` | `/api/correct-typo` | Clean up OCR output |
 | `POST` | `/api/feedback` | In-app problem reports |
@@ -147,4 +147,4 @@ carbon-footprint estimate auditable rather than decorative.
 compatibility key**. Pure JavaScript and asset changes ship instantly via
 `eas update --channel preview --environment preview`. Adding a native module
 (`expo-notifications` in 1.2.0, for example) requires bumping the version and building a
-new APK — an OTA carrying new JS to an older binary would crash it.
+new APK - an OTA carrying new JS to an older binary would crash it.

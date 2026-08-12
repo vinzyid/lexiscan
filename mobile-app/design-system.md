@@ -13,7 +13,7 @@ Dua keluarga font, dengan pembagian tugas yang tegas:
 | **Atkinson Hyperlegible** | Khusus teks bacaan & suku kata di Word Isolation | 400 / 700 |
 
 Atkinson Hyperlegible dipilih karena huruf-huruf yang mudah tertukar (b/d, p/q,
-I/l, 0/O) sengaja dibedakan bentuknya — inilah font aksesibilitas yang dipakai
+I/l, 0/O) sengaja dibedakan bentuknya - inilah font aksesibilitas yang dipakai
 mockup, menggantikan OpenDyslexic.
 
 Tiap berat didaftarkan sebagai **family tersendiri**, bukan varian `fontWeight`.
@@ -32,7 +32,7 @@ Diterapkan seragam oleh `DyslexicText` (`src/components/dyslexic-text.tsx`):
 - **Line-height** minimal 1.85× untuk mencegah *visual crowding*.
 - **Letter spacing** renggang, 0.06em (18px → 1.08px, persis nilai Figma).
 - **Visual fixation:** hanya **huruf pertama** tiap kata yang memakai berat Bold,
-  sisanya Regular. Ini pola `characterStyleOverrides` di Figma — bukan separuh
+  sisanya Regular. Ini pola `characterStyleOverrides` di Figma - bukan separuh
   kata. Aktif di preset Sedang & Berat saja.
 - **Bicolor Words:** kata ganjil memakai `bicolorA`, kata genap `bicolorB`.
 
@@ -52,7 +52,7 @@ layar Pengaturan:
 
 ## 3. Palet Warna
 
-Figma menyediakan tiga baris tema penuh — Dark Mode, Warm Cream, Soft Green.
+Figma menyediakan tiga baris tema penuh - Dark Mode, Warm Cream, Soft Green.
 Dua tema sisanya (Kuning Lembut, Biru Pastel) hanya muncul di kartu pemilih tema,
 sehingga `surface`-nya diturunkan memakai rumus yang sama.
 
@@ -64,14 +64,14 @@ sehingga `surface`-nya diturunkan memakai rumus yang sama.
 | Hijau Lembut | `#eef7f1` | `#f5fbf7` | `#0b2518` | `#2e6a42` |
 | Mode Gelap | `#111122` | `#1c1e35` | `#e8e8f8` | `#7070a0` |
 
-Aksen **identik di semua tema** — Figma memakai nilai yang persis sama di ketiga
+Aksen **identik di semua tema** - Figma memakai nilai yang persis sama di ketiga
 baris, jadi hanya permukaan & teks yang berganti:
 
 - Primary `#7c3aed`, primary-deep `#6d28d9`
 - Warm `#f59e0b`, success `#10b981`
 
 **Garis pemisah** selalu `textMain` @ 8%. Karena itu token `border` bernilai sama
-dengan `textMain` dan **selalu dipakai dengan opacity** — `border-border/10`,
+dengan `textMain` dan **selalu dipakai dengan opacity** - `border-border/10`,
 bukan `border-border` polos.
 
 ## 4. Gradien
@@ -81,18 +81,18 @@ Gradien tidak ikut berganti saat tema diubah. Semuanya ada di `GRADIENTS`
 
 | Nama | Nilai |
 | --- | --- |
-| `hero` | `#4c1d95 → #5b21b6 (45%) → #1e40af` — banner dashboard |
-| `readerHeader` | `#1e1b4b → #312e81 → #1e3a8a` — header layar Baca |
-| `profileHeader` | `#1e1b4b → #312e81 → #0f172a` — kartu profil |
-| `brand` | `#7c3aed → #ec4899 (50%) → #f59e0b` — Bicolor Words, strip Tip |
-| `activePill` / `navPill` | `#7c3aed → #4f46e5` — segmen & tab aktif |
+| `hero` | `#4c1d95 → #5b21b6 (45%) → #1e40af` - banner dashboard |
+| `readerHeader` | `#1e1b4b → #312e81 → #1e3a8a` - header layar Baca |
+| `profileHeader` | `#1e1b4b → #312e81 → #0f172a` - kartu profil |
+| `brand` | `#7c3aed → #ec4899 (50%) → #f59e0b` - Bicolor Words, strip Tip |
+| `activePill` / `navPill` | `#7c3aed → #4f46e5` - segmen & tab aktif |
 | `avatar` | `#7c3aed → #4338ca` |
 | `profileAvatar` | `#7c3aed → #ec4899` |
 | `ruler` | `#b45309 → #f59e0b` |
 | `isolation` | `#0d9488 → #4f46e5` |
 | `isolationSheet` | `#5b21b6 → #4338ca` |
 
-Ubin ikon 52x52 tiap FeatureCard punya gradien & warna panahnya sendiri —
+Ubin ikon 52x52 tiap FeatureCard punya gradien & warna panahnya sendiri -
 lihat `FEATURE_ACCENTS`.
 
 `BACKDROP_WASHES` adalah empat sapuan radial sangat samar di latar tiap layar
@@ -118,13 +118,13 @@ lewat `vars()` dari NativeWind. Formatnya channel RGB tanpa fungsi
 (`124 58 237`) supaya utilitas opacity seperti `bg-primary/10` tetap bekerja.
 Nilai default ada di `global.css`.
 
-Untuk prop yang tidak menerima `className` — misal `color` pada ikon
-`lucide-react-native` atau `colors` pada `LinearGradient` — pakai hook
+Untuk prop yang tidak menerima `className` - misal `color` pada ikon
+`lucide-react-native` atau `colors` pada `LinearGradient` - pakai hook
 `useThemeColors()`.
 
 ## 6. Ilustrasi & Hiasan
 
-**`assets/figma/*.svg`** — aset asli hasil export dari file Figma, dipakai apa
+**`assets/figma/*.svg`** - aset asli hasil export dari file Figma, dipakai apa
 adanya (bukan gambar ulang):
 
 | Berkas | Node Figma | Dipakai di |
@@ -141,9 +141,9 @@ adanya (bukan gambar ulang):
 
 Berkas `.svg` di-resolve jadi komponen React oleh `react-native-svg-transformer`
 (lihat `metro.config.js` dan `svg.d.ts`). Menyegarkan aset cukup dengan menimpa
-berkasnya — kode di `src/components/illustrations.tsx` tidak perlu berubah.
+berkasnya - kode di `src/components/illustrations.tsx` tidak perlu berubah.
 
-**`src/components/figma-decor.tsx`** — hiasan yang berulang di banyak layar:
+**`src/components/figma-decor.tsx`** - hiasan yang berulang di banyak layar:
 `Blob`, `Ring`, `HexDecor`, `Sparkle`, `WaveCut`, dan `ScreenBackdrop`. Data
 path-nya diambil dari node Figma, tapi warna & opacity sengaja dibuat jadi prop
 karena bentuk yang sama dipakai ulang dengan kepekatan berbeda-beda (mis. `Blob`

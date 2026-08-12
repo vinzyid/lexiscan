@@ -7,9 +7,9 @@
 </p>
 
 <p align="center">
-  <strong>Aksesibilitas Membaca untuk Disleksia — OCR Cerdas + AI Text Simplification</strong>
+  <strong>Aksesibilitas Membaca untuk Disleksia - OCR Cerdas + AI Text Simplification</strong>
   <br />
-  <em>GEMASTIK XVIII — Kategori VIII (Pengembangan Perangkat Lunak)</em>
+  <em>GEMASTIK XIX 2026 - Kategori VIII (Pengembangan Perangkat Lunak)</em>
 </p>
 
 <p align="center">
@@ -37,11 +37,11 @@
 |---|-------|-----------|
 | 1 | 📸 **Smart OCR Scan** | Foto dokumen fisik → teks digital instan menggunakan *Google ML Kit* (OCR on-device). Dilengkapi koreksi typo berbasis AI. |
 | 2 | 🔤 **Adaptive Typography Engine** | Restrukturisasi tipografi otomatis: font Atkinson Hyperlegible, spasi baris, ukuran huruf, **pemenggalan suku kata** ("Mi-to-kon-dri-a"), serta mode **Bicolor Words** & **Reading Ruler**. |
-| 3 | 🧠 **AI Text Simplification** | Sederhanakan teks dalam 5 level (L1–L5) — dari teks asli hingga kalimat sangat pendek dengan kata sehari-hari — menggunakan *Large Language Model* tanpa mengubah fakta. |
+| 3 | 🧠 **AI Text Simplification** | Sederhanakan teks dalam 5 level (L1-L5) - dari teks asli hingga kalimat sangat pendek dengan kata sehari-hari - menggunakan *Large Language Model* tanpa mengubah fakta. |
 | 4 | 🎯 **Focus Reading Mode** | Sorot satu paragraf aktif dan redupkan sisanya. Dilengkapi navigasi antar paragraf & *Reading Ruler* untuk menjaga konsentrasi baca. |
 | 5 | 💡 **AI Explain This** | Pilih teks/kalimat yang sulit → Lexi jelaskan dengan 3 gaya: bahasa paling sederhana, analogi, atau contoh nyata. Panjang jawabannya menyesuaikan kemampuan membaca pengguna. |
-| 6 | 🔊 **Text-to-Speech** | Setiap paragraf, jawaban Lexi, dan suku kata bisa dibacakan. Memakai mesin TTS bawaan perangkat lewat `expo-speech` — gratis tanpa batas, jalan offline, dan **tidak memakai kuota LLM**. Suara dan kecepatannya bisa dipilih sendiri di Pengaturan, dan nama tiap tombol ikut dibacakan bagi yang belum bisa membaca. |
-| 7 | 👤 **Profil Kemampuan Membaca & Jenjang** | Dipilih saat mendaftar (didampingi guru atau orang tua). Tipografi, pemenggalan suku kata, suara, dan panjang jawaban AI menyesuaikan sendiri — dan semuanya tetap bisa dimatikan manual. |
+| 6 | 🔊 **Text-to-Speech** | Setiap paragraf, jawaban Lexi, dan suku kata bisa dibacakan. Memakai mesin TTS bawaan perangkat lewat `expo-speech` - gratis tanpa batas, jalan offline, dan **tidak memakai kuota LLM**. Suara dan kecepatannya bisa dipilih sendiri di Pengaturan, dan nama tiap tombol ikut dibacakan bagi yang belum bisa membaca. |
+| 7 | 👤 **Profil Kemampuan Membaca & Jenjang** | Dipilih saat mendaftar (didampingi guru atau orang tua). Tipografi, pemenggalan suku kata, suara, dan panjang jawaban AI menyesuaikan sendiri - dan semuanya tetap bisa dimatikan manual. |
 
 ---
 
@@ -60,7 +60,7 @@
 │  │              Zustand (Global State)                   │    │
 │  └──────────────────────────────────────────────────────┘    │
 │       │                                                       │
-│       │ HTTP (fetch) — POST /api/*                           │
+│       │ HTTP (fetch) - POST /api/*                           │
 └───────┼───────────────────────────────────────────────────────┘
         │
         ▼
@@ -95,7 +95,7 @@
 
 ## 🛠️ Tech Stack
 
-### 📱 Frontend (Mobile App — `mobile-app/`)
+### 📱 Frontend (Mobile App - `mobile-app/`)
 
 | Teknologi | Kegunaan |
 |-----------|----------|
@@ -110,7 +110,7 @@
 | **[expo-document-picker](https://docs.expo.dev/versions/v57.0.0/sdk/document-picker/)** | Upload gambar dari galeri/file manager |
 | **[expo-dev-client](https://docs.expo.dev/develop/development-builds/introduction/)** | Development build untuk native module kustom |
 
-### ⚙️ Backend (API Only — `backend-api/`)
+### ⚙️ Backend (API Only - `backend-api/`)
 
 | Teknologi | Kegunaan |
 |-----------|----------|
@@ -146,7 +146,7 @@
 cd backend-api
 cp .env.example .env
 
-# Edit file .env — isi konfigurasi AI:
+# Edit file .env - isi konfigurasi AI:
 #   AI_PROVIDER=gemini
 #   GEMINI_API_KEY=your_api_key
 
@@ -164,16 +164,16 @@ npm install
 npx expo run:android    # Install development build ke HP
 ```
 
-> Jika belum memiliki development build, jalankan `npx expo start` lalu scan QR dengan **Expo Go** (terbatas — ML Kit tidak berfungsi di Expo Go).
+> Jika belum memiliki development build, jalankan `npx expo start` lalu scan QR dengan **Expo Go** (terbatas - ML Kit tidak berfungsi di Expo Go).
 
 ### 3. Konfigurasi AI
 
 Buka `backend-api/.env` dan atur AI provider:
 
 ```env
-# ——— Pilih salah satu ———
+# --- Pilih salah satu ---
 
-# Opsi 1: Gemini (default — gratis di Google AI Studio)
+# Opsi 1: Gemini (default - gratis di Google AI Studio)
 AI_PROVIDER=gemini
 GEMINI_API_KEY=AIza...
 
@@ -190,7 +190,7 @@ OPENROUTER_API_KEY=sk-or-...
 
 | Method | Endpoint | Fungsi | Throttle |
 |--------|----------|--------|----------|
-| `POST` | `/api/simplify-text` | Sederhanakan teks (L2–L5) | 20/menit |
+| `POST` | `/api/simplify-text` | Sederhanakan teks (L2-L5) | 20/menit |
 | `POST` | `/api/explain-word` | Jelaskan kata/kalimat dengan gaya tertentu | 20/menit |
 | `POST` | `/api/correct-typo` | Koreksi typo hasil OCR | 20/menit |
 | `GET` | `/api/ai/health` | Cek status provider AI | - |
@@ -290,7 +290,7 @@ dari branch `main`.
 ---
 
 <p align="center">
-  <sub>© 2026 Tim LexiScan — GEMASTIK XVIII Kategori VIII (Pengembangan Perangkat Lunak)</sub>
+  <sub>© 2026 Tim LexiScan - GEMASTIK XIX Kategori VIII (Pengembangan Perangkat Lunak)</sub>
   <br />
   <sub>Dibangun dengan ❤️ untuk aksesibilitas pendidikan di Indonesia</sub>
 </p>
