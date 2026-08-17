@@ -1,7 +1,7 @@
 import '../global.css';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRootNavigationState, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -32,36 +32,101 @@ SplashScreen.preventAutoHideAsync();
 /** Tahap pembuka sebelum aplikasi terlihat. */
 type Intro = 'splash' | 'onboarding' | 'done';
 
+/**
+ * Menunggu preferensi tersimpan selesai dibaca dari AsyncStorage.
+ *
+ * `persist` milik Zustand memulihkan isinya secara asinkron, jadi sesaat setelah
+ * aplikasi dijalankan `authPromptDismissed` masih bernilai bawaan `false` walau
+ * penggunanya dulu sudah memilih "lihat-lihat dulu". Gerbang di bawah membaca
+ * penanda itu, dan sekarang membacanya jauh lebih awal daripada sebelumnya,
+ * sehingga penantian ini wajib: tanpa itu yang sudah menolak sekali akan
+ * dilempar ke layar akun lagi setiap kali membuka aplikasi.
+ */
+function usePreferencesRestored() {
+  /*
+   * Dibaca lewat useSyncExternalStore, bukan useState + useEffect. Statusnya
+   * milik store, bukan milik komponen ini, dan pembacaan seperti ini menutup
+   * celah pemulihan yang selesai tepat di sela render pertama dan efeknya.
+   */
+  return useSyncExternalStore(
+    (notify) => useOCRStore.persist.onFinishHydration(notify),
+    () => useOCRStore.persist.hasHydrated(),
+    () => useOCRStore.persist.hasHydrated(),
+  );
+}
+
 function RootNavigator({ intro, onAdvance }: { intro: Intro; onAdvance: (next: Intro) => void }) {
   const colors = useThemeColors();
   const router = useRouter();
 
+  // Navigasi sebelum navigator akarnya terpasang akan dilempar sebagai galat.
+  const navigatorReady = Boolean(useRootNavigationState()?.key);
+
   const sessionRestored = useAuthStore((s) => s.hydrated);
   const token = useAuthStore((s) => s.token);
+  const preferencesRestored = usePreferencesRestored();
   const authPromptDismissed = useOCRStore((s) => s.authPromptDismissed);
 
   /*
-   * Gerbang masuk, dijalankan sekali setelah pembukaan selesai.
+   * Gerbang masuk sudah menentukan tujuannya, jadi pembukaan boleh dibuka.
    *
-   * Syaratnya tiga, dan ketiganya perlu:
-   * - `intro === 'done'`, supaya navigasi tidak terjadi di balik layar splash;
+   * Ini penandanya, bukan penjaga efek di bawah: efeknya tetap ikut berubah
+   * mengikuti `token`, supaya keluar dari akun tetap melempar penggunanya ke
+   * layar akun seperti sebelumnya.
+   */
+  const [gateSettled, setGateSettled] = useState(false);
+
+  /*
+   * Gerbang masuk, dijalankan SELAGI layar pembuka masih menutupi navigator.
+   *
+   * Dulu syaratnya menunggu `intro === 'done'`, dan justru itu sumber kedipnya:
+   * pembukaan dilepas lebih dulu, Beranda sempat tampil satu sampai dua detik,
+   * barulah `router.replace` berjalan dan memasang layar akun di atasnya.
+   * Sekarang urutannya dibalik. Perpindahannya terjadi di balik pembukaan, dan
+   * pembukaan baru dilepas setelah tujuannya terpasang.
+   *
+   * Dua penantian sebelum memutuskan, dan keduanya perlu:
    * - `sessionRestored`, supaya pemilik akun yang sah tidak sempat dilempar ke
    *   layar daftar hanya karena sesinya belum selesai dibaca dari penyimpanan;
-   * - belum punya token DAN belum pernah memilih "lihat-lihat dulu", supaya
-   *   yang sudah menolak sekali tidak ditagih setiap kali membuka aplikasi.
+   * - `preferencesRestored`, dengan alasan yang dijelaskan di kait di atas.
    */
   useEffect(() => {
-    if (intro !== 'done' || !sessionRestored) return;
-    if (token || authPromptDismissed) return;
+    if (!navigatorReady || !sessionRestored || !preferencesRestored) return;
 
-    router.replace('/(auth)/welcome');
-  }, [intro, sessionRestored, token, authPromptDismissed, router]);
+    if (!token && !authPromptDismissed) {
+      router.replace('/(auth)/welcome');
+    }
+
+    /*
+     * Satu render tambahan memang yang diinginkan di sini, jadi peringatan
+     * react-hooks/set-state-in-effect tidak berlaku: pembukaan hanya boleh
+     * dilepas SETELAH perpindahan di atas dijalankan, dan urutan itulah yang
+     * menghilangkan kedipnya. Menghitungnya saat render akan melepas pembukaan
+     * satu commit terlalu cepat.
+     */
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setGateSettled(true);
+  }, [
+    navigatorReady,
+    sessionRestored,
+    preferencesRestored,
+    token,
+    authPromptDismissed,
+    router,
+  ]);
+
+  /*
+   * Pembukaan bertahan sampai dua hal terpenuhi: slide terakhir sudah dilewati
+   * DAN gerbangnya sudah memutuskan. Syarat kedua yang menutup kedipnya kalau
+   * pemulihan penyimpanan ternyata lebih lambat daripada penggunanya menggeser.
+   */
+  const introVisible = intro !== 'done' || !gateSettled;
 
   // Ditumpuk di atas navigator, bukan jadi rute, supaya Beranda tidak sempat
   // berkedip lebih dulu.
   return (
     <>
-      <StatusBar style={intro !== 'done' || colors.isDark ? 'light' : 'dark'} />
+      <StatusBar style={introVisible || colors.isDark ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(auth)" />
@@ -73,7 +138,7 @@ function RootNavigator({ intro, onAdvance }: { intro: Intro; onAdvance: (next: I
         </View>
       ) : null}
 
-      {intro === 'onboarding' ? (
+      {intro !== 'splash' && introVisible ? (
         <View style={StyleSheet.absoluteFill}>
           <Onboarding onDone={() => onAdvance('done')} />
         </View>
