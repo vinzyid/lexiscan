@@ -19,7 +19,11 @@
   <img alt="NativeWind" src="https://img.shields.io/badge/NativeWind-06B6D4?logo=tailwindcss&logoColor=white" />
   <img alt="Laravel" src="https://img.shields.io/badge/Laravel-FF2D20?logo=laravel&logoColor=white" />
   <img alt="Supabase" src="https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white" />
-  <img alt="Gemini" src="https://img.shields.io/badge/Gemini-4285F4?logo=google&logoColor=white" />
+  <img alt="Gemini" src="https://img.shields.io/badge/Gemini-4285F4?logo=googlegemini&logoColor=white" />
+  <img alt="Grok (xAI)" src="https://img.shields.io/badge/Grok_(xAI)-000000?logo=x&logoColor=white" />
+  <img alt="Mistral" src="https://img.shields.io/badge/Mistral-FA520F?logo=mistralai&logoColor=white" />
+  <img alt="OpenRouter" src="https://img.shields.io/badge/OpenRouter-6566F1?logo=openrouter&logoColor=white" />
+  <img alt="DeepSeek" src="https://img.shields.io/badge/DeepSeek-4D6BFE?logo=deepseek&logoColor=white" />
   <img alt="Versi" src="https://img.shields.io/badge/versi-1.2.0-7C3AED" />
 </p>
 
@@ -37,7 +41,7 @@
 |---|-------|-----------|
 | 1 | 📸 **Smart OCR Scan** | Foto dokumen fisik → teks digital instan menggunakan *Google ML Kit* (OCR on-device). Dilengkapi koreksi typo berbasis AI. |
 | 2 | 🔤 **Adaptive Typography Engine** | Restrukturisasi tipografi otomatis: font Atkinson Hyperlegible, spasi baris, ukuran huruf, **pemenggalan suku kata** ("Mi-to-kon-dri-a"), serta mode **Bicolor Words** & **Reading Ruler**. |
-| 3 | 🧠 **AI Text Simplification** | Sederhanakan teks dalam 5 level (L1-L5) - dari teks asli hingga kalimat sangat pendek dengan kata sehari-hari - menggunakan *Large Language Model* tanpa mengubah fakta. |
+| 3 | 🧠 **AI Text Simplification** | Lima tingkat, dengan nama yang sama seperti di aplikasi: **Teks Asli → Sedikit Lebih Mudah → Bahasa Santai → Poin Singkat → Paling Mudah**. Dari teks sesuai sumber sampai kalimat sangat pendek dengan kata sehari-hari, memakai *Large Language Model* tanpa mengubah fakta. Tingkat Teks Asli tidak memanggil AI sama sekali. |
 | 4 | 🎯 **Focus Reading Mode** | Sorot satu paragraf aktif dan redupkan sisanya. Dilengkapi navigasi antar paragraf & *Reading Ruler* untuk menjaga konsentrasi baca. |
 | 5 | 💡 **AI Explain This** | Pilih teks/kalimat yang sulit → Lexi jelaskan dengan 3 gaya: bahasa paling sederhana, analogi, atau contoh nyata. Panjang jawabannya menyesuaikan kemampuan membaca pengguna. |
 | 6 | 🔊 **Text-to-Speech** | Setiap paragraf, jawaban Lexi, dan suku kata bisa dibacakan. Memakai mesin TTS bawaan perangkat lewat `expo-speech` - gratis tanpa batas, jalan offline, dan **tidak memakai kuota LLM**. Suara dan kecepatannya bisa dipilih sendiri di Pengaturan, dan nama tiap tombol ikut dibacakan bagi yang belum bisa membaca. |
@@ -79,7 +83,7 @@
 │                          │                                     │
 │              ┌───────────▼────────────┐                        │
 │              │  AI Provider           │                        │
-│              │  (Gemini / Grok / OR)  │                        │
+│              │(Gemini/Grok/Mistral/OR)│                        │
 │              └────────────────────────┘                        │
 │                          │                                     │
 └──────────────────────────┼─────────────────────────────────────┘
@@ -117,6 +121,7 @@
 | **[Laravel 13](https://laravel.com/)** | Framework API backend |
 | **[PHP 8.3+](https://www.php.net/)** | Runtime bahasa backend |
 | **[Laravel Sanctum](https://laravel.com/docs/sanctum)** | Token-based API authentication |
+| **[Filament 5](https://filamentphp.com/)** | Panel admin di `/admin`: pemantauan pemakaian AI dan parameter sistem |
 | **[Supabase PostgreSQL](https://supabase.com/)** | Database relasional di cloud |
 | **[GuzzleHttp](https://docs.guzzlephp.org/)** | HTTP client untuk komunikasi dengan AI provider |
 
@@ -125,8 +130,17 @@
 | Service | Peran | Status |
 |---------|-------|--------|
 | **[Google ML Kit](https://developers.google.com/ml-kit)** | OCR *on-device* (tanpa internet) | ✅ Terintegrasi |
-| **[Gemini API](https://aistudio.google.com/)** | AI Simplification, Explain This, Correct Typo | ✅ **Aktif (default)** |
-| **[OpenRouter](https://openrouter.ai/)** / **[xAI (Grok)](https://console.x.ai/)** | Alternatif AI provider (dapat dipilih via `.env`) | ✅ Didukung |
+| **[Gemini API](https://aistudio.google.com/)** | AI Simplification, Explain This, Correct Typo. Model `gemini-3.6-flash` | ✅ **Aktif (default)** |
+| **[xAI (Grok)](https://console.x.ai/)** | Penyedia alternatif, model `grok-4.5` | ✅ Didukung |
+| **[Mistral](https://console.mistral.ai/)** | Penyedia alternatif, model `mistral-small-latest` | ✅ Didukung |
+| **[OpenRouter](https://openrouter.ai/)** | Satu kunci untuk banyak model, bawaannya DeepSeek (`deepseek/deepseek-v4-flash`) | ✅ Didukung, sekaligus cadangan bawaan |
+
+Keempatnya dipilih lewat satu baris `AI_PROVIDER` di `.env`; prompt, cache, dan
+taksiran jejak karbon dipakai bersama, hanya lapisan HTTP-nya yang berbeda.
+`AI_FALLBACK_PROVIDER` menunjuk penyedia yang mengambil alih saat yang utama
+kehabisan jatah - kuota harian habis, rate limit, atau saldo kurang. Kunci yang
+salah dan model yang tidak ada sengaja TIDAK memicu perpindahan, supaya salah
+konfigurasi tetap ketahuan.
 
 ---
 
@@ -173,24 +187,37 @@ Buka `backend-api/.env` dan atur AI provider:
 ```env
 # --- Pilih salah satu ---
 
-# Opsi 1: Gemini (default - gratis di Google AI Studio)
+# Opsi 1: Gemini (default - kunci gratis di Google AI Studio)
 AI_PROVIDER=gemini
 GEMINI_API_KEY=AIza...
+GEMINI_MODEL=gemini-3.6-flash
 
 # Opsi 2: Grok (xAI)
 AI_PROVIDER=grok
 XAI_API_KEY=xai-...
+XAI_MODEL=grok-4.5
 
-# Opsi 3: OpenRouter (model gratis, lebih lambat)
+# Opsi 3: Mistral
+AI_PROVIDER=mistral
+MISTRAL_API_KEY=...
+MISTRAL_MODEL=mistral-small-latest
+
+# Opsi 4: OpenRouter, bawaannya DeepSeek.
+# DeepSeek tidak punya varian :free di sini, jadi model ini berbayar (murah).
+# Jangan pakai deepseek-r1: langkah berpikirnya ikut masuk ke jawaban.
 AI_PROVIDER=openrouter
 OPENROUTER_API_KEY=sk-or-...
+OPENROUTER_MODEL=deepseek/deepseek-v4-flash
+
+# Cadangan saat penyedia utama kehabisan jatah. Kosongkan untuk mematikannya.
+AI_FALLBACK_PROVIDER=openrouter
 ```
 
 ### 4. Endpoint API yang Tersedia
 
 | Method | Endpoint | Fungsi | Throttle |
 |--------|----------|--------|----------|
-| `POST` | `/api/simplify-text` | Sederhanakan teks (L2-L5) | 20/menit |
+| `POST` | `/api/simplify-text` | Sederhanakan teks, level `L2`-`L5` (Sedikit Lebih Mudah sampai Paling Mudah). `L1` tidak dikirim ke sini karena itu teks aslinya | 20/menit |
 | `POST` | `/api/explain-word` | Jelaskan kata/kalimat dengan gaya tertentu | 20/menit |
 | `POST` | `/api/correct-typo` | Koreksi typo hasil OCR | 20/menit |
 | `GET` | `/api/ai/health` | Cek status provider AI | - |
@@ -205,6 +232,20 @@ OPENROUTER_API_KEY=sk-or-...
 (`belum` / `mengeja` / `lancar`) yang menentukan seberapa pendek jawabannya.
 Endpoint AI sengaja **tidak** menuntut token: fitur bacanya harus bisa dicoba
 sebelum mendaftar.
+
+### 5. Panel Admin
+
+`/admin` (Filament 5), untuk melihat apa yang sedang terjadi di backend tanpa
+membuka basis data:
+
+| Bagian | Isi |
+|--------|-----|
+| **Pemakaian AI (30 hari)** | Jumlah permintaan, berapa yang benar-benar memanggil model, token terpakai, taksiran emisi, perangkat aktif, latensi rata-rata |
+| **Kesehatan layanan** | Penyedia LLM yang sedang dipakai, status simpanan hasil AI, umur simpanannya |
+| **Parameter sistem** | Aturan tiap tingkat penyederhanaan dan gaya penjelasan, bisa diubah tanpa deploy ulang |
+
+Angka "berapa yang benar-benar memanggil model" itu yang membedakan permintaan
+baru dari yang dijawab simpanan, jadi hemat kuota dan emisinya kelihatan.
 
 ---
 
@@ -260,6 +301,9 @@ Pemisahan ini membuat perbaikan tampilan dan teks sampai ke pengguna dalam hitun
 menit, sementara perubahan yang menyentuh kode native tetap melewati proses build
 yang utuh.
 
+Ikon aplikasi, ikon adaptif, dan splash native tidak ikut jalur OTA: ketiganya
+ditanam ke APK saat build, jadi menggantinya selalu berarti `eas build` ulang.
+
 Backend berjalan di Railway dengan basis data Supabase PostgreSQL, di-deploy otomatis
 dari branch `main`.
 
@@ -284,7 +328,7 @@ dari branch `main`.
 | *Solo Full-Stack Developer* | **Rafi** |
 | Frontend | React Native + Expo + NativeWind |
 | Backend | Laravel + Supabase |
-| AI Integration | Gemini / Grok / OpenRouter |
+| AI Integration | Gemini / Grok / Mistral / OpenRouter (DeepSeek) |
 | UI/UX Implementation | Atkinson Hyperlegible + Fredoka + Adaptive Typography |
 
 ---

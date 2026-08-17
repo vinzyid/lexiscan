@@ -113,14 +113,22 @@ return [
     ],
 
     /*
-     * Model harus mendukung structured outputs, kalau tidak jaminan format
-     * paragraf hilang. Alternatif gratis: nvidia/nemotron-3-super-120b-a12b:free,
-     * openai/gpt-oss-20b:free, nvidia/nemotron-nano-9b-v2:free.
-     * Daftar terkini: https://openrouter.ai/api/v1/models
+     * Bawaannya DeepSeek: Grok dan Mistral sudah punya penyedianya sendiri, jadi
+     * OpenRouter di sini gunanya justru menjangkau model yang tidak punya jalur
+     * langsung. Nilainya sama dengan .env.example supaya keduanya tidak berbeda
+     * diam-diam.
+     *
+     * DeepSeek tidak punya varian :free di OpenRouter, jadi model ini berbayar
+     * (murah). Jangan pakai deepseek-r1: langkah berpikirnya ikut masuk ke
+     * jawaban. Model apa pun yang dipilih harus mendukung structured outputs,
+     * kalau tidak jaminan format paragraf hilang - alternatif gratis yang
+     * mendukungnya: nvidia/nemotron-3-super-120b-a12b:free, openai/gpt-oss-20b:free,
+     * nvidia/nemotron-nano-9b-v2:free. Daftar terkini:
+     * https://openrouter.ai/api/v1/models
      */
     'openrouter' => [
         'key' => env('OPENROUTER_API_KEY'),
-        'model' => env('OPENROUTER_MODEL', 'x-ai/grok-2-1212'),
+        'model' => env('OPENROUTER_MODEL', 'deepseek/deepseek-v4-flash'),
     ],
 
 ];

@@ -27,7 +27,10 @@ genuinely needed. OCR, typography, syllable splitting, and text-to-speech never 
 - **Database:** Supabase PostgreSQL.
 - **On-device ML:** `@react-native-ml-kit/text-recognition` (Google ML Kit OCR).
 - **Speech:** `expo-speech` - the device TTS engine, with an explicitly selected voice.
-- **LLM:** Gemini as primary, with a configurable fallback provider (OpenRouter).
+- **LLM:** four interchangeable providers behind one `AI_PROVIDER` switch - Gemini
+  (default, `gemini-3.6-flash`), xAI Grok, Mistral, and OpenRouter (DeepSeek).
+  A configurable fallback provider takes over on quota exhaustion, OpenRouter by
+  default.
 
 **There is no TanStack Query.** State is Zustand plus plain `fetch` in `src/api/`.
 **There is no OpenDyslexic.** The reading face is Atkinson Hyperlegible; the interface
@@ -80,7 +83,7 @@ text, so speech never pronounces syllables as separate words.
 
 1. `POST /api/simplify-text` with the text, level (L2-L5), and language.
 2. `AiTextService` builds a strict prompt, capping answer length by the reader's level.
-3. `FallbackProvider` tries Gemini, then the configured backup.
+3. `FallbackProvider` tries the configured provider, then the backup.
 4. The response carries a `footprint` block - estimated energy and CO₂e - which the app
    accumulates locally and shows in Settings.
 5. Answers are cached server-side, so a repeated request emits nothing new.
