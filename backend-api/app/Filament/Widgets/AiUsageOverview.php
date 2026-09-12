@@ -57,7 +57,7 @@ class AiUsageOverview extends StatsOverviewWidget
 
             Stat::make('Emisi terpakai', $this->mass($spent))
                 ->description('Dihindari lewat simpanan: '.$this->mass($avoided))
-                ->descriptionIcon('heroicon-m-leaf')
+                ->descriptionIcon('heroicon-m-globe-alt')
                 ->color('success'),
 
             Stat::make('Perangkat aktif', number_format(
