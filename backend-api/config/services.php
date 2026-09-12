@@ -131,4 +131,21 @@ return [
         'model' => env('OPENROUTER_MODEL', 'deepseek/deepseek-v4-flash'),
     ],
 
+    /*
+     * Griphub Router — satu kunci untuk banyak model, OpenAI-compatible.
+     *
+     * base_url diisi sampai /v1 saja; akhiran /chat/completions ditambahkan di
+     * GriphubProvider, supaya tidak perlu diulang di .env (dan tidak terjadi
+     * dobel kalau suatu saat nilainya diubah).
+     *
+     * Modelnya TIDAK diberi bawaan di sini: daftarnya bisa berubah kapan saja,
+     * dan salah tebak berarti permintaan gagal dengan 404. Isi lewat
+     * GRIPHUB_MODEL di .env. Pilih model yang mendukung mode JSON.
+     */
+    'griphub' => [
+        'key' => env('GRIPHUB_API_KEY'),
+        'base_url' => env('GRIPHUB_BASE_URL', 'https://griphubrouter.web.id/v1'),
+        'model' => env('GRIPHUB_MODEL'),
+    ],
+
 ];

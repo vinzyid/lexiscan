@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Services\Ai\AiProvider;
 use App\Services\Ai\FallbackProvider;
 use App\Services\Ai\GeminiProvider;
+use App\Services\Ai\GriphubProvider;
 use App\Services\Ai\GrokProvider;
 use App\Services\Ai\MistralProvider;
 use App\Services\Ai\OpenRouterProvider;
@@ -63,8 +64,9 @@ class AppServiceProvider extends ServiceProvider
             'grok' => new GrokProvider,
             'mistral' => new MistralProvider,
             'openrouter' => new OpenRouterProvider,
+            'griphub' => new GriphubProvider,
             default => throw new InvalidArgumentException(
-                "{$setting} tidak dikenal: '{$name}'. Pilihannya: gemini, grok, mistral, openrouter."
+                "{$setting} tidak dikenal: '{$name}'. Pilihannya: gemini, grok, mistral, openrouter, griphub."
             ),
         };
     }
