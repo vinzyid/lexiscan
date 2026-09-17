@@ -66,20 +66,37 @@ class AiController extends Controller
             'context' => ['nullable', 'string', 'max:2000'],
             'language' => $this->languageRule(),
             'reading_level' => $this->readingLevelRule(),
+            'provider' => ['sometimes', 'string', Rule::in(['griphub', 'gemini', 'openrouter', 'xai'])],
         ]);
 
         $language = $data['language'] ?? AiTextService::DEFAULT_LANGUAGE;
         $startedAt = hrtime(true);
 
         try {
-            $answer = $this->ai->explain(
-                $data['term'],
-                $data['style'],
-                $data['context'] ?? null,
-                $language,
-                $data['reading_level'] ?? AiTextService::DEFAULT_READING_LEVEL,
-            );
-        } catch (RuntimeException $e) {
+            // Jika ada parameter provider, coba semua provider yang tersedia
+            if (isset($data['provider'])) {
+                $selector = \App\Services\Ai\ProviderSelector::makeFromConfig($data['provider']);
+                $temporaryAi = new \App\Services\AiTextService($selector);
+                $answer = $temporaryAi->explain(
+                    $data['term'],
+                    $data['style'],
+                    $data['context'] ?? null,
+                    $language,
+                    $data['reading_level'] ?? AiTextService::DEFAULT_READING_LEVEL,
+                );
+                $usedProvider = $data['provider'];
+            } else {
+                // Pakai default provider dari config
+                $answer = $this->ai->explain(
+                    $data['term'],
+                    $data['style'],
+                    $data['context'] ?? null,
+                    $language,
+                    $data['reading_level'] ?? AiTextService::DEFAULT_READING_LEVEL,
+                );
+                $usedProvider = $this->ai->providerName();
+            }
+        } catch (\RuntimeException $e) {
             return $this->failure($e);
         }
 
@@ -89,7 +106,7 @@ class AiController extends Controller
             'style' => $data['style'],
             'language' => $language,
             'paragraphs' => $answer->paragraphs,
-            'provider' => $this->ai->providerName(),
+            'provider' => $usedProvider,
             'footprint' => $answer->footprint->toArray(),
         ]);
     }

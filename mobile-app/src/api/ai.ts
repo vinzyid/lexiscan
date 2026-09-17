@@ -165,17 +165,42 @@ export async function explainTerm(
   style: ExplainStyleId,
   context?: string,
 ): Promise<string[]> {
-  const json = await postJson('/api/explain-word', {
-    term: term.slice(0, MAX_TERM_CHARS),
-    style,
-    context: context ? context.slice(0, MAX_CONTEXT_CHARS) : undefined,
-  });
+  const t = strings();
+  
+  // Urutan fallback: griphub → gemini → openrouter
+  const providers = ['griphub', 'gemini', 'openrouter'];
+  let lastError: AiApiError | null = null;
+  
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const provider = providers[attempt];
+      
+      const json = await postJson('/api/explain-word', {
+        term: term.slice(0, MAX_TERM_CHARS),
+        style,
+        context: context ? context.slice(0, MAX_CONTEXT_CHARS) : undefined,
+        provider, // Request pakai provider spesifik
+      });
 
-  if (!Array.isArray(json?.paragraphs) || json.paragraphs.length === 0) {
-    throw new AiApiError(strings().api.noExplainResult);
+      if (!Array.isArray(json?.paragraphs) || json.paragraphs.length === 0) {
+        throw new AiApiError(t.api.noExplainResult);
+      }
+
+      return json.paragraphs;
+    } catch (error) {
+      lastError = error instanceof AiApiError ? error : new AiApiError(t.api.unreachable);
+      
+      // Jika ini adalah request terakhir, lempar error
+      if (attempt === 2) {
+        break;
+      }
+      
+      // Delay sedikit sebelum retry (1 detik)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
   }
-
-  return json.paragraphs;
+  
+  throw lastError!;
 }
 
 /** POST /api/correct-typo — perbaiki typo hasil OCR dari kamera. */
