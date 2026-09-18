@@ -186,11 +186,37 @@ export default function ReaderScreen() {
     [activeIndex, paragraphs.length, setActiveParagraphIndex, rulerIndex, lineMetrics],
   );
 
+  // Auto-scroll to active paragraph when it changes in Focus Mode
+  useEffect(() => {
+    const yPosition = paragraphPositions.current[activeIndex];
+    if (yPosition !== undefined && scrollViewRef.current && focusMode) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ 
+          y: Math.max(0, yPosition - 30), 
+          animated: true 
+        });
+      }, 150);
+    }
+  }, [activeIndex, focusMode]);
+
   const moveRuler = (delta: number) => {
     const maxLine = Math.max(0, lineCount - 1);
     const next = Math.min(maxLine, Math.max(0, rulerIndex.value + delta));
     rulerIndex.value = next;
     setRulerLine(next);
+    
+    // Auto-scroll when ruler moves to follow reading in focus mode
+    if (focusMode && lineMetrics.value.length > 0) {
+      const currentLine = lineMetrics.value[next];
+      if (currentLine) {
+        setTimeout(() => {
+          scrollViewRef.current?.scrollTo({ 
+            y: currentLine.y - 30, 
+            animated: true 
+          });
+        }, 50);
+      }
+    }
   };
 
   /**
@@ -215,6 +241,20 @@ export default function ReaderScreen() {
     () => rulerIndex.value,
     (current, previous) => {
       if (current !== previous) scheduleOnRN(setRulerLine, current);
+      
+      // Auto-scroll in focus mode when ruler moves
+      if (focusMode && lineMetrics.value.length > 0) {
+        const clamped = Math.min(Math.max(current, 0), lineMetrics.value.length - 1);
+        const line = lineMetrics.value[clamped];
+        if (line) {
+          setTimeout(() => {
+            scrollViewRef.current?.scrollTo({ 
+              y: line.y - 30, 
+              animated: true 
+            });
+          }, 50);
+        }
+      }
     },
   );
 
