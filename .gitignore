@@ -21,3 +21,6 @@ berapa persen sudah progress lexiscan.png
 # Berkas hasil, bukan kode sumber
 *.docx
 COMMIT_MSG.txt
+
+# Metadata Finder macOS
+.DS_Store
