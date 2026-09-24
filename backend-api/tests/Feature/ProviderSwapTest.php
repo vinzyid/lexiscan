@@ -28,6 +28,7 @@ class ProviderSwapTest extends TestCase
             'grok' => ['grok', 'api.x.ai/*'],
             'mistral' => ['mistral', 'api.mistral.ai/*'],
             'openrouter' => ['openrouter', 'openrouter.ai/*'],
+            'griphub' => ['griphub', 'griphubrouter.web.id/*'],
         ];
     }
 
@@ -78,7 +79,7 @@ class ProviderSwapTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
         // Pesannya menyebut pilihan yang sah supaya salah ketik cepat ketemu.
-        $this->expectExceptionMessage('Pilihannya: gemini, grok, mistral, openrouter.');
+        $this->expectExceptionMessage('Pilihannya: gemini, grok, mistral, openrouter, griphub.');
 
         app(AiProvider::class);
     }

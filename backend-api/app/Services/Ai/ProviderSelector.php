@@ -3,88 +3,142 @@
 namespace App\Services\Ai;
 
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
+use Throwable;
 
 /**
- * Factory untuk memilih provider AI berdasarkan permintaan pengguna.
+ * Rantai penyedia AI untuk fitur Tanya Lexi (AI Explain This).
  *
- * Digunakan untuk fallback otomatis: jika Griphub gagal, coba Gemini/OpenRouter/XAI.
+ * Backend mencobanya berurutan dan berhenti di penyedia pertama yang berhasil.
+ * Tujuannya sama seperti FallbackProvider pada fitur penyederhanaan: kuota
+ * gratis bisa habis di tengah demo, dan "coba lagi besok" bukan jawaban yang
+ * bisa diterima saat juri sedang mencoba aplikasinya.
+ *
+ * DAFTAR PENYEDIA DIBANGUN DARI KUNCI YANG ADA, bukan dari nama yang diminta
+ * aplikasi. Nama itu hanya dipakai untuk menyusun urutannya: yang diminta
+ * dicoba lebih dulu, sisanya menyusul sebagai cadangan. Dengan begitu aplikasi
+ * tidak perlu tahu kunci mana yang terisi di server, dan menambah atau melepas
+ * kunci tidak menuntut rilis ulang APK.
+ *
+ * Nama penyedia yang tidak dikenal cukup dilewati, bukan dijadikan galat:
+ * aplikasi versi baru boleh saja menyarankan penyedia yang belum ada waktu
+ * backend ini dirilis.
  */
 class ProviderSelector implements AiProvider
 {
+    /**
+     * Semua nama penyedia yang dikenal kode ini. Daftar tunggal, dipakai untuk
+     * validasi permintaan dan untuk pesan galat, supaya menambah penyedia baru
+     * tidak perlu menyunting dua tempat.
+     *
+     * @var array<int, string>
+     */
+    public const SUPPORTED = ['gemini', 'grok', 'mistral', 'openrouter', 'griphub'];
+
+    /**
+     * Urutan cadangan bawaan, dari yang paling diutamakan. Yang diminta
+     * aplikasi selalu dicoba lebih dulu, apa pun isi daftar ini.
+     */
+    private const ORDER = ['griphub', 'gemini', 'openrouter', 'grok', 'mistral'];
+
+    /** @param  array<int, AiProvider>  $providers  Terurut; kosong berarti tidak ada yang siap. */
     public function __construct(
         private readonly array $providers,
     ) {}
 
-    /** Pilih provider berdasarkan nama (griphub, gemini, openrouter, xai). */
-    public static function makeFromConfig(string $providerName): self
+    public static function makeFromConfig(?string $preferred = null): self
     {
-        $providers = [];
-        
-        // Buat instance untuk semua provider yang sudah dikonfigurasi
-        if ((new GriphubProvider)->isConfigured()) {
-            $providers['griphub'] = new GriphubProvider;
+        $ordered = [];
+
+        // Yang diminta aplikasi lebih dulu, kalau memang terkonfigurasi.
+        $wanted = $preferred !== null ? self::build($preferred) : null;
+
+        if ($wanted !== null && $wanted->isConfigured()) {
+            $ordered[] = $wanted;
         }
-        
-        if ((new GeminiProvider)->isConfigured()) {
-            $providers['gemini'] = new GeminiProvider;
+
+        // Sisanya menyusul tanpa mengulang yang sudah masuk.
+        foreach (self::ORDER as $name) {
+            $provider = self::build($name);
+
+            if ($provider === null || ! $provider->isConfigured()) {
+                continue;
+            }
+
+            foreach ($ordered as $already) {
+                if ($already->name() === $provider->name()) {
+                    continue 2;
+                }
+            }
+
+            $ordered[] = $provider;
         }
-        
-        if ((new OpenRouterProvider)->isConfigured()) {
-            $providers['openrouter'] = new OpenRouterProvider;
-        }
-        
-        if ((new GrokProvider)->isConfigured()) {
-            $providers['xai'] = new GrokProvider;
-        }
-        
-        return new self($providers);
+
+        return new self($ordered);
     }
 
-    /** Ambil provider tertentu berdasarkan nama. */
-    private function getProvider(string $name): AiProvider
+    /** Null untuk nama yang tidak dikenal — bukan galat, hanya dilewati. */
+    private static function build(string $name): ?AiProvider
     {
-        return $this->providers[$name] ?? throw new \RuntimeException("Provider '{$name}' tidak tersedia.");
+        return match ($name) {
+            'gemini' => new GeminiProvider,
+            'grok' => new GrokProvider,
+            'mistral' => new MistralProvider,
+            'openrouter' => new OpenRouterProvider,
+            'griphub' => new GriphubProvider,
+            default => null,
+        };
     }
 
     /**
-     * Coba semua provider yang tersedia, lempar error hanya jika semuanya gagal.
+     * Coba setiap penyedia berurutan; hanya gagal kalau semuanya gagal.
+     *
+     * Pesan galat terakhir dilempar apa adanya setelah semua percobaan habis,
+     * supaya yang dilihat pengguna adalah keadaan penyedia terakhir yang
+     * benar-benar dicoba — bukan tumpukan galat yang menyesatkan.
      */
     public function paragraphsFor(string $prompt): LlmResult
     {
-        $errors = [];
-        
-        foreach ($this->providers as $name => $provider) {
+        if ($this->providers === []) {
+            throw new RuntimeException(
+                'Tidak ada penyedia AI yang terkonfigurasi di server. Hubungi pengelola aplikasi.'
+            );
+        }
+
+        $last = null;
+
+        foreach ($this->providers as $provider) {
             try {
-                Log::info('Menjawab dengan ' . $name, ['prompt_preview' => substr($prompt, 0, 100)]);
-                
                 return $provider->paragraphsFor($prompt);
-            } catch (\Throwable $e) {
-                $errors[$name] = $e->getMessage();
-                Log::warning('Provider ' . $name . ' gagal', [
+            } catch (Throwable $e) {
+                $last = $e;
+
+                Log::warning('Penyedia AI gagal, mencoba berikutnya', [
+                    'provider' => $provider->name(),
                     'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
                 ]);
             }
         }
-        
-        // Semua provider gagal
-        throw new \RuntimeException(
-            'Semua penyedia AI gagal: ' . implode('; ', $errors)
-        );
+
+        throw $last;
     }
 
+    /**
+     * Identitas penyedia pertama pada rantai. Dipakai untuk log, kunci cache,
+     * dan laporan pemakaian — sama seperti FallbackProvider.
+     */
     public function name(): string
     {
-        return 'multi';
+        return $this->providers[0]->name();
     }
 
     public function model(): string
     {
-        return join(', ', array_keys($this->providers));
+        return $this->providers[0]->model();
     }
 
     public function isConfigured(): bool
     {
-        return count($this->providers) > 0;
+        return $this->providers !== [];
     }
 }

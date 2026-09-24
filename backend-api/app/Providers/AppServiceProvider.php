@@ -9,6 +9,7 @@ use App\Services\Ai\GriphubProvider;
 use App\Services\Ai\GrokProvider;
 use App\Services\Ai\MistralProvider;
 use App\Services\Ai\OpenRouterProvider;
+use App\Services\Ai\ProviderSelector;
 use App\Services\SystemSettings;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
@@ -66,7 +67,7 @@ class AppServiceProvider extends ServiceProvider
             'openrouter' => new OpenRouterProvider,
             'griphub' => new GriphubProvider,
             default => throw new InvalidArgumentException(
-                "{$setting} tidak dikenal: '{$name}'. Pilihannya: gemini, grok, mistral, openrouter, griphub."
+                "{$setting} tidak dikenal: '{$name}'. Pilihannya: " . implode(', ', ProviderSelector::SUPPORTED) . '.'
             ),
         };
     }

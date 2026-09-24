@@ -87,6 +87,7 @@ return [
     /*
      * Default-nya Flash: seri itu yang tersedia di free tier Google AI Studio
      * dan cukup cepat untuk dipakai interaktif.
+     */
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
         'model' => env('GEMINI_MODEL', 'gemini-3.6-flash'),

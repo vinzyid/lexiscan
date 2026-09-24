@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AiUsageLog;
 use App\Services\Ai\AiAnswer;
+use App\Services\Ai\ProviderSelector;
 use App\Services\AiTextService;
 use App\Services\SystemSettings;
 use App\Services\UsageRecorder;
@@ -66,47 +67,40 @@ class AiController extends Controller
             'context' => ['nullable', 'string', 'max:2000'],
             'language' => $this->languageRule(),
             'reading_level' => $this->readingLevelRule(),
-            'provider' => ['sometimes', 'string', Rule::in(['griphub', 'gemini', 'openrouter', 'xai'])],
+            'provider' => $this->providerRule(),
         ]);
 
         $language = $data['language'] ?? AiTextService::DEFAULT_LANGUAGE;
         $startedAt = hrtime(true);
 
+        /*
+         * Aplikasi boleh menyebut penyedia yang ingin dicoba lebih dulu; server
+         * mencobanya berurutan lalu berpindah ke penyedia lain yang terpasang
+         * begitu jatahnya habis. Tanpa saran itu, rantai bawaannya yang dipakai.
+         */
+        $service = isset($data['provider'])
+            ? new AiTextService(ProviderSelector::makeFromConfig($data['provider']))
+            : $this->ai;
+
         try {
-            // Jika ada parameter provider, coba semua provider yang tersedia
-            if (isset($data['provider'])) {
-                $selector = \App\Services\Ai\ProviderSelector::makeFromConfig($data['provider']);
-                $temporaryAi = new \App\Services\AiTextService($selector);
-                $answer = $temporaryAi->explain(
-                    $data['term'],
-                    $data['style'],
-                    $data['context'] ?? null,
-                    $language,
-                    $data['reading_level'] ?? AiTextService::DEFAULT_READING_LEVEL,
-                );
-                $usedProvider = $data['provider'];
-            } else {
-                // Pakai default provider dari config
-                $answer = $this->ai->explain(
-                    $data['term'],
-                    $data['style'],
-                    $data['context'] ?? null,
-                    $language,
-                    $data['reading_level'] ?? AiTextService::DEFAULT_READING_LEVEL,
-                );
-                $usedProvider = $this->ai->providerName();
-            }
-        } catch (\RuntimeException $e) {
+            $answer = $service->explain(
+                $data['term'],
+                $data['style'],
+                $data['context'] ?? null,
+                $language,
+                $data['reading_level'] ?? AiTextService::DEFAULT_READING_LEVEL,
+            );
+        } catch (RuntimeException $e) {
             return $this->failure($e);
         }
 
-        $this->record($request, AiUsageLog::FEATURE_EXPLAIN, $data['style'], $language, $answer, $startedAt);
+        $this->record($request, AiUsageLog::FEATURE_EXPLAIN, $data['style'], $language, $answer, $startedAt, $service);
 
         return response()->json([
             'style' => $data['style'],
             'language' => $language,
             'paragraphs' => $answer->paragraphs,
-            'provider' => $usedProvider,
+            'provider' => $service->providerName(),
             'footprint' => $answer->footprint->toArray(),
         ]);
     }
@@ -209,17 +203,34 @@ class AiController extends Controller
         string $language,
         AiAnswer $answer,
         float|int $startedAt,
+        ?AiTextService $service = null,
     ): void {
+        $service ??= $this->ai;
+
         $this->usage->record(
             $request,
             $feature,
             $variant,
             $language,
             $answer,
-            $this->ai->providerName(),
-            $this->ai->model(),
+            $service->providerName(),
+            $service->model(),
             (int) round((hrtime(true) - $startedAt) / 1_000_000),
         );
+    }
+
+    /**
+     * Penyedia yang disarankan aplikasi, opsional.
+     *
+     * Dipakai fitur Tanya Lexi untuk mencoba penyedia tertentu lebih dulu.
+     * Daftar yang sah diambil dari provider yang benar-benar ada di kode, jadi
+     * menambah penyedia baru tidak perlu menyunting dua tempat.
+     *
+     * @return array<int, mixed>
+     */
+    private function providerRule(): array
+    {
+        return ['sometimes', 'nullable', 'string', Rule::in(ProviderSelector::SUPPORTED)];
     }
 
     /**

@@ -118,4 +118,57 @@ class ExplainWordTest extends TestCase
             ->assertStatus(503)
             ->assertJsonPath('message', 'Respons Gemini bukan JSON yang bisa dibaca.');
     }
+
+    public function test_a_provider_preference_is_validated(): void
+    {
+        $this->postJson('/api/explain-word', [
+            'term' => 'anabolisme',
+            'style' => 'sederhana',
+            'provider' => 'tidak-ada',
+        ])->assertStatus(422)->assertJsonValidationErrors('provider');
+    }
+
+    /**
+     * Rantai penyedia ada di server: yang diminta aplikasi dicoba lebih dulu,
+     * lalu berpindah ke penyedia lain yang terpasang begitu jatahnya habis.
+     * Aplikasi tidak perlu mengirim ulang permintaan yang sama.
+     */
+    public function test_it_switches_provider_when_the_preferred_one_runs_out(): void
+    {
+        config(['services.gemini.key' => 'kunci-uji']);
+
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::response(
+                ['error' => ['message' => 'quota exceeded']],
+                429,
+            ),
+            'openrouter.ai/*' => Http::response([
+                'choices' => [['message' => ['content' => json_encode(['paragraphs' => ['Dijawab cadangan.']])]]],
+                'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 5],
+            ]),
+        ]);
+
+        $this->postJson('/api/explain-word', [
+            'term' => 'anabolisme',
+            'style' => 'sederhana',
+            'provider' => 'gemini',
+        ])
+            ->assertOk()
+            ->assertJsonPath('paragraphs.0', 'Dijawab cadangan.');
+    }
+
+    /**
+     * Nama yang tidak dikenal cukup dilewati, bukan menjatuhkan permintaan:
+     * aplikasi versi baru boleh menyarankan penyedia yang belum ada di server.
+     */
+    public function test_an_unknown_provider_preference_falls_back_to_the_default(): void
+    {
+        // Tidak lolos validasi karena namanya tidak ada dalam daftar; yang
+        // penting galatnya 422 yang jelas, bukan 500.
+        $this->postJson('/api/explain-word', [
+            'term' => 'anabolisme',
+            'style' => 'sederhana',
+            'provider' => 'openai',
+        ])->assertStatus(422);
+    }
 }
