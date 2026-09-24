@@ -42,7 +42,7 @@ const REQUEST_TIMEOUT_MS = 70_000;
  *
  * Harus salah satu dari `ProviderSelector::SUPPORTED` di backend.
  */
-const PREFERRED_EXPLAIN_PROVIDER = 'griphub';
+const PREFERRED_EXPLAIN_PROVIDER = 'gemini';
 
 /**
  * Jauh lebih pendek dari permintaan AI: pemanggilnya berjalan saat aplikasi

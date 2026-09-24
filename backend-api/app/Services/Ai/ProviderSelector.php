@@ -39,7 +39,7 @@ class ProviderSelector implements AiProvider
      * Urutan cadangan bawaan, dari yang paling diutamakan. Yang diminta
      * aplikasi selalu dicoba lebih dulu, apa pun isi daftar ini.
      */
-    private const ORDER = ['griphub', 'gemini', 'openrouter', 'grok', 'mistral'];
+    private const ORDER = ['gemini', 'griphub', 'openrouter', 'grok', 'mistral'];
 
     /** @param  array<int, AiProvider>  $providers  Terurut; kosong berarti tidak ada yang siap. */
     public function __construct(

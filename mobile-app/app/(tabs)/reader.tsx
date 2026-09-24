@@ -55,6 +55,17 @@ const SWIPE_THRESHOLD = 55;
 
 const SPRING = { damping: 20, stiffness: 260, mass: 0.6 } as const;
 
+/*
+ * Baris penggaris selalu didudukkan pada jarak tetap dari puncak area
+ * gulungan. Satu jangkar konstan, bukan sekadar "usahakan terlihat", supaya
+ * baris berikutnya tidak berhenti di tepi layar — di sanalah penggaris dulu
+ * menghilang sampai pengguna menggulir sendiri.
+ */
+const RULER_ANCHOR = 110;
+
+/* Jeda setelah guliran terakhir sebelum baris penggaris dipasang ulang. */
+const REANCHOR_DELAY = 220;
+
 export default function ReaderScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
@@ -85,6 +96,12 @@ export default function ReaderScreen() {
   const [explainTarget, setExplainTarget] = useState<ExplainTarget | null>(null);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const [lineCount, setLineCount] = useState(0);
+  /*
+   * Penghitung kecil yang bertambah tiap metrik baris benar-benar berubah.
+   * `lineCount` saja tidak cukup: paragraf berikutnya bisa punya jumlah baris
+   * yang persis sama, dan efek pemasangan penggaris tidak akan tersulut.
+   */
+  const [lineMetricsVersion, setLineMetricsVersion] = useState(0);
   const [rulerLine, setRulerLine] = useState(0);
   const [simplifyLoading, setSimplifyLoading] = useState(false);
   const [simplifyError, setSimplifyError] = useState<string | null>(null);
@@ -103,6 +120,21 @@ export default function ReaderScreen() {
    * menjembatani keduanya agar penggaris menggulir ke baris yang benar.
    */
   const paragraphBodyOffsets = useRef<{ [key: number]: number }>({});
+
+  /*
+   * Penanda guliran sedang berjalan. Dipakai untuk memasang ulang penggaris
+   * setelah guliran manual berhenti, sehingga penggaris ikut turun saat
+   * pembaca menggulir sendiri.
+   */
+  const scrollStopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /*
+   * Indeks paragraf pemilik metrik baris yang terakhir disinkronkan. Dipakai
+   * sebagai penjaga: paragraf baru bisa punya jumlah baris yang persis sama,
+   * dan tanpa penjaga ini penggaris bisa mengukur ulang memakai metrik
+   * paragraf lama sebelum tata letak barunya siap.
+   */
+  const metricsParagraphIndex = useRef(activeParagraphIndex);
 
   // Shared value, bukan state React: seretan jari dijawab di UI thread.
   const lineMetrics = useSharedValue<LineMetric[]>([]);
@@ -213,24 +245,47 @@ export default function ReaderScreen() {
   }, []);
 
   /*
-   * Baris penggaris hidup di dalam paragraf aktif, jadi koordinatnya harus
-   * dijumlahkan berlapis: posisi wadah paragraf, jarak blok teks dari puncak
-   * paragraf, baru posisi baris di dalam teksnya sendiri.
+   * Koordinat baris penggaris ditumpuk dari tiga lapis: posisi wadah paragraf
+   * relatif terhadap isi gulungan, jarak blok teks dari puncak paragrafnya,
+   * baru posisi baris di dalam teks itu sendiri.
+   */
+  const contentYOfLine = useCallback(
+    (lineIndex: number) => {
+      const line = lineMetrics.value[lineIndex];
+      if (!line) return null;
+
+      const paragraphOffset = paragraphPositions.current[activeIndex] ?? 0;
+      const bodyOffset = paragraphBodyOffsets.current[activeIndex] ?? 0;
+
+      return paragraphsTop.current + paragraphOffset + bodyOffset + line.y;
+    },
+    [activeIndex, lineMetrics],
+  );
+
+  /*
+   * Baris penggaris didudukkan pada jangkar tetap, bukan sekadar dibuat
+   * terlihat. Kalau hanya "sekadar terlihat", baris terakhir yang masih di
+   * layar berhenti tepat di tepi bawah — begitulah penggaris dulu menghilang
+   * dan pembaca harus menggulir sendiri.
    */
   const scrollToLine = useCallback(
     (lineIndex: number) => {
-      const line = lineMetrics.value[lineIndex];
-      const bodyOffset = paragraphBodyOffsets.current[activeIndex] ?? 0;
-      const paragraphOffset = paragraphPositions.current[activeIndex] ?? 0;
+      const contentY = contentYOfLine(lineIndex);
+      if (contentY === null || !scrollViewRef.current) return;
 
-      if (line && scrollViewRef.current) {
-        scrollViewRef.current.scrollTo({
-          y: Math.max(0, paragraphsTop.current + paragraphOffset + bodyOffset + line.y - 30),
-          animated: true,
-        });
-      }
+      scrollViewRef.current.scrollTo({
+        y: Math.max(0, contentY - RULER_ANCHOR),
+        animated: true,
+      });
     },
-    [activeIndex, lineMetrics],
+    [contentYOfLine],
+  );
+
+  const scrollToRulerLine = useCallback(
+    (lineIndex: number) => {
+      scrollToLine(lineIndex);
+    },
+    [scrollToLine],
   );
 
   /*
@@ -242,6 +297,39 @@ export default function ReaderScreen() {
   useEffect(() => {
     scrollToParagraph(activeIndex);
   }, [activeIndex, scrollToParagraph]);
+
+  /*
+   * Setiap kali paragraf aktif selesai ditata (jumlah/metrik barisnya baru),
+   * penggaris dipasang ulang ke baris yang sedang dipilih. Ini juga yang
+   * membuat penggaris ikut berpindah begitu paragraf baru selesai dirender,
+   * tanpa menunggu pengguna menggulir.
+   */
+  useEffect(() => {
+    if (!rulerMode || !focusMode) return;
+    if (lineMetrics.value.length === 0) return;
+
+    /*
+     * Metrik yang tersimpan masih milik paragraf sebelumnya. Berhenti dulu —
+     * begitu `syncLines` paragraf baru selesai, `lineCount` berubah dan efek
+     * ini menyala lagi dengan metrik yang benar.
+     */
+    if (metricsParagraphIndex.current !== activeIndex) return;
+
+    const timer = setTimeout(() => {
+      scrollToLine(Math.min(rulerIndex.value, lineMetrics.value.length - 1));
+    }, 60);
+
+    return () => clearTimeout(timer);
+  }, [
+    lineMetricsVersion,
+    lineCount,
+    rulerMode,
+    focusMode,
+    rulerIndex,
+    lineMetrics,
+    scrollToLine,
+    activeIndex,
+  ]);
 
   /*
    * Guliran ke baris penggaris TIDAK dilakukan di sini: mengubah
@@ -256,20 +344,50 @@ export default function ReaderScreen() {
     setRulerLine(next);
   };
 
+  /*
+   * Menggulir halaman tanpa memindahkan penggaris tak boleh membuat penggaris
+   * menghilang ke atas/bawah layar. Setelah guliran berhenti, baris yang
+   * sedang dipilih dipasang ulang ke jangkarnya. Timer ditunda tiap kali masih
+   * ada guliran baru, jadi hanya guliran yang benar-benar berhenti yang
+   * memicunya — dan tidak bertabrakan dengan guliran program.
+   */
+  const handleScroll = useCallback(() => {
+    if (!rulerMode || !focusMode) return;
+
+    if (scrollStopTimer.current) clearTimeout(scrollStopTimer.current);
+    scrollStopTimer.current = setTimeout(() => {
+      scrollStopTimer.current = null;
+      if (lineMetrics.value.length === 0) return;
+      scrollToLine(Math.min(Math.max(rulerIndex.value, 0), lineMetrics.value.length - 1));
+    }, REANCHOR_DELAY);
+  }, [focusMode, rulerMode, lineMetrics, rulerIndex, scrollToLine]);
+
+  useEffect(
+    () => () => {
+      if (scrollStopTimer.current) clearTimeout(scrollStopTimer.current);
+    },
+    [],
+  );
+
   /**
    * onTextLayout terpanggil tiap render dengan array `lines` yang selalu objek
    * baru, jadi perlu dibandingkan isinya supaya tidak render tanpa henti.
    */
   const syncLines = useCallback(
-    (next: TextLayoutLine[]) => {
+    (index: number, next: TextLayoutLine[]) => {
+      const previousIndex = metricsParagraphIndex.current;
+      metricsParagraphIndex.current = index;
+
       const current = lineMetrics.value;
       const unchanged =
+        previousIndex === index &&
         current.length === next.length &&
         current.every((line, i) => line.y === next[i].y && line.height === next[i].height);
       if (unchanged) return;
 
       lineMetrics.value = next.map((line) => ({ y: line.y, height: line.height }));
       setLineCount(next.length);
+      setLineMetricsVersion((version) => version + 1);
     },
     [lineMetrics],
   );
@@ -287,7 +405,7 @@ export default function ReaderScreen() {
 
       scheduleOnRN(setRulerLine, current);
 
-      if (focusMode) scheduleOnRN(scrollToLine, current);
+      if (focusMode) scheduleOnRN(scrollToRulerLine, current);
     },
   );
 
@@ -511,6 +629,8 @@ export default function ReaderScreen() {
           <ScrollView
             ref={scrollViewRef}
             className="flex-1"
+            onScroll={handleScroll}
+            scrollEventThrottle={80}
             contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
             {/* Tanpa penanda ini, dokumen contoh terlihat seperti hasil pindaian sendiri. */}
             {!isScanned ? (
@@ -758,7 +878,7 @@ function ParagraphBlock({
   /** Jarak blok teks dari puncak paragraf; dipakai menghitung guliran penggaris. */
   onBodyLayoutY: (y: number) => void;
   onWordPress: (word: string) => void;
-  onSyncLines: (lines: TextLayoutLine[]) => void;
+  onSyncLines: (index: number, lines: TextLayoutLine[]) => void;
 }) {
   const t = useT();
   const dimmed = focusMode && !isActive;
@@ -823,7 +943,7 @@ function ParagraphBlock({
         dimmed={dimmed}
         onWordPress={dimmed ? undefined : onWordPress}
         onTextLayout={
-          rulerMode && isActive ? (event) => onSyncLines(event.nativeEvent.lines) : undefined
+          rulerMode && isActive ? (event) => onSyncLines(index, event.nativeEvent.lines) : undefined
         }>
         {paragraph}
       </DyslexicText>
