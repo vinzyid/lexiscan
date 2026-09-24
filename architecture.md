@@ -12,7 +12,7 @@ app and a Laravel 13 API backend.
   it works without a network.
 - **Backend** is an API gateway and processing hub. It holds the LLM keys, enforces
   quotas, caches answers, and persists reader accounts.
-- **Deployment** - the backend runs on Railway (Docker image, `backend-api/railway.json`)
+- **Deployment** - the backend runs on the campus host (Docker image, `backend-api/Dockerfile`)
   against a Supabase PostgreSQL database. The app ships as an EAS build with over-the-air
   JavaScript updates on the `preview` channel.
 

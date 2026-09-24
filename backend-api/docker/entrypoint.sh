@@ -1,8 +1,9 @@
 #!/bin/sh
 set -e
 
-# Railway menentukan nomor port lewat $PORT, sedangkan FrankenPHP membacanya
-# dari SERVER_NAME. Titik dua di depan berarti "semua alamat, port sekian".
+# Sebagian penyedia hosting menentukan nomor port lewat $PORT, sedangkan
+# FrankenPHP membacanya dari SERVER_NAME. Titik dua di depan berarti "semua
+# alamat, port sekian"; 8080 dipakai kalau $PORT tidak diset.
 export SERVER_NAME=":${PORT:-8080}"
 
 php artisan config:cache

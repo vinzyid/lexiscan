@@ -24,9 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         /*
-         * Di belakang proxy Railway, alamat IP asli hanya ada di header
-         * X-Forwarded-For. Tanpa ini seluruh permintaan terlihat berasal dari
-         * satu IP dan berbagi jatah throttle:20,1 yang sama.
+         * Di belakang proxy hosting (Docker, reverse proxy), alamat IP asli
+         * hanya ada di header X-Forwarded-For. Tanpa ini seluruh permintaan
+         * terlihat berasal dari satu IP dan berbagi jatah throttle:20,1 yang
+         * sama.
          */
         $middleware->trustProxies(at: '*');
     })

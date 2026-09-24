@@ -304,8 +304,10 @@ yang utuh.
 Ikon aplikasi, ikon adaptif, dan splash native tidak ikut jalur OTA: ketiganya
 ditanam ke APK saat build, jadi menggantinya selalu berarti `eas build` ulang.
 
-Backend berjalan di Railway dengan basis data Supabase PostgreSQL, di-deploy otomatis
-dari branch `main`.
+Backend berjalan di hosting kampus dengan basis data Supabase PostgreSQL.
+Menyediakan `backend-api/Dockerfile`, jadi backend bisa dijalankan di mana saja
+yang mendukung Docker (`docker build` di `backend-api/`, lalu jalankan image-nya
+dengan environment variable dari `.env.example`).
 
 ---
 

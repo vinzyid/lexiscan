@@ -2,7 +2,7 @@
 vendor/
 node_modules/
 
-# Kredensial mesin lokal — nilainya diisi lewat Variables di Railway.
+# Kredensial mesin lokal — nilainya diisi lewat environment variable hosting.
 .env
 .env.backup
 .env.production

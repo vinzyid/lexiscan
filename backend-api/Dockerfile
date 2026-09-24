@@ -1,4 +1,7 @@
-# Backend LexiScan untuk Railway.
+# Backend LexiScan — image Docker mandiri.
+#
+# Bukan khusus satu penyedia: alamat dan kredensial diisi lewat environment
+# variable, jadi image ini jalan di mana saja yang mendukung Docker.
 #
 # FrankenPHP dipakai karena satu proses sudah mencakup web server + PHP, jadi
 # tidak perlu nginx, php-fpm, maupun supervisor. Aplikasi wajib berada di /app
@@ -51,7 +54,7 @@ RUN composer dump-autoload --optimize --no-dev \
     && chmod -R ug+rw storage bootstrap/cache database/database.sqlite
 
 # Cache konfigurasi sengaja dibuat saat container jalan, bukan di sini: env var
-# Railway belum ada pada tahap build.
+# runtime (kunci AI, kredensial database) belum ada pada tahap build.
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
