@@ -147,14 +147,28 @@ export default function ScannerScreen() {
     return () => clearTimeout(timer);
   }, [phase, stepsDone, t.scanner.processSteps.length]);
 
+  /*
+   * Nomor urut pindaian. Koreksi typo berjalan di latar, jadi jawabannya bisa
+   * datang SETELAH pengguna menekan "Pindai dokumen lain" atau memindai ulang —
+   * tanpa penjaga ini, hasil koreksi lama akan menulis ulang layar yang sudah
+   * dibersihkan. Hanya jawaban dari pindaian terakhir yang boleh dipakai.
+   */
+  const scanGeneration = useRef(0);
+
   const correctTypoInBackground = async (text: string) => {
+    const generation = scanGeneration.current;
+
     try {
       setIsCorrectingTypo(true);
-      setDetected(await correctTypo(text));
+      const corrected = await correctTypo(text);
+
+      if (generation !== scanGeneration.current) return;
+
+      setDetected(corrected);
     } catch (e) {
       console.warn(t.scanner.typoWarning, e);
     } finally {
-      setIsCorrectingTypo(false);
+      if (generation === scanGeneration.current) setIsCorrectingTypo(false);
     }
   };
 
@@ -202,6 +216,7 @@ export default function ScannerScreen() {
         return;
       }
 
+      scanGeneration.current += 1;
       setDetected(rawText);
       setStepsDone(0);
       setPhase('done');
@@ -231,6 +246,7 @@ export default function ScannerScreen() {
         return;
       }
 
+      scanGeneration.current += 1;
       setDetected(rawText);
       setStepsDone(0);
       setPhase('done');
@@ -474,6 +490,10 @@ export default function ScannerScreen() {
 
               <PressableScale
                 onPress={() => {
+                  // Membatalkan koreksi yang masih berjalan: penandanya dinaikkan
+                  // supaya jawaban yang menyusul diabaikan.
+                  scanGeneration.current += 1;
+                  setIsCorrectingTypo(false);
                   setPhase('idle');
                   setDetected('');
                   setStepsDone(0);
@@ -531,10 +551,18 @@ export default function ScannerScreen() {
                   borderColor: 'rgba(124,58,237,0.45)',
                 }}>
                 {/*
-                  ratio 4:3 mengunci bentuk gambar sensor supaya sama dengan kotak
-                  3:4 di atas. Begitu keduanya sebangun, tidak ada lagi bagian foto
-                  yang terekam tanpa pernah terlihat — pemetaan di `cropRectForGuide`
-                  jadi nyaris satu banding satu.
+                  TANPA prop `ratio`, dan itu disengaja.
+
+                  Di Android, mengisi `ratio` mengubah cara pratinjau memuat
+                  gambar dari FILL (memangkas) menjadi FIT (menyisakan bilah
+                  kosong). `cropRectForGuide` menghitung kotak potong dengan
+                  asumsi FILL — pratinjau memenuhi kotaknya lalu memangkas tepi.
+                  Dengan FIT, yang dihitung tidak lagi sama dengan yang dilihat
+                  pengguna, dan itu justru cacat yang ingin dihilangkan berkas
+                  itu. Di iOS prop ini memang tidak dipakai sama sekali.
+
+                  Membiarkannya kosong membuat kedua platform memakai FILL,
+                  sejalan dengan perhitungan kotak potongnya.
 
                   autofocus dibiarkan bawaan ('off'), dan namanya memang menyesatkan:
                   yang berarti fokus otomatis TERUS-MENERUS justru 'off', sedangkan
@@ -542,7 +570,7 @@ export default function ScannerScreen() {
                   diinginkan saat HP digerak-gerakkan di atas buku.
                 */}
                 {tab === 'camera' && isFocused ? (
-                  <CameraView ref={cameraRef} style={{ flex: 1 }} facing="back" ratio="4:3" />
+                  <CameraView ref={cameraRef} style={{ flex: 1 }} facing="back" />
                 ) : null}
 
                 <View

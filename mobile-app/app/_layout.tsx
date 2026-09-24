@@ -66,6 +66,35 @@ function RootNavigator({ intro, onAdvance }: { intro: Intro; onAdvance: (next: I
   const token = useAuthStore((s) => s.token);
   const preferencesRestored = usePreferencesRestored();
   const authPromptDismissed = useOCRStore((s) => s.authPromptDismissed);
+  const onboardingSeen = useOCRStore((s) => s.onboardingSeen);
+  const completeOnboarding = useOCRStore((s) => s.completeOnboarding);
+
+  /*
+   * Apakah slide pembuka sudah selesai (dilewati atau habis waktunya). Baru
+   * setelah itu—dan setelah preferensi tersimpan terbaca—diputuskan apakah
+   * onboarding perlu tampil, supaya pengguna lama tidak sempat melihatnya lagi
+   * sebelum `onboardingSeen`-nya selesai dibaca dari penyimpanan.
+   */
+  const [splashDone, setSplashDone] = useState(false);
+
+  useEffect(() => {
+    if (!splashDone || !preferencesRestored) return;
+
+    onAdvance(onboardingSeen ? 'done' : 'onboarding');
+  }, [splashDone, preferencesRestored, onboardingSeen, onAdvance]);
+
+  /*
+   * Kedua handler ini stabil. Kalau dibuat di dalam render, `BrandSplash`
+   * menganggap `onDone`-nya berubah dan me-restart penghitung 2,3 detiknya
+   * setiap RootNavigator dirender ulang — mis. tepat saat pemulihan
+   * penyimpanan selesai, sehingga splash bisa tertahan lebih lama.
+   */
+  const finishSplash = useCallback(() => setSplashDone(true), []);
+
+  const finishOnboarding = useCallback(() => {
+    completeOnboarding();
+    onAdvance('done');
+  }, [completeOnboarding, onAdvance]);
 
   /*
    * Gerbang masuk sudah menentukan tujuannya, jadi pembukaan boleh dibuka.
@@ -134,13 +163,18 @@ function RootNavigator({ intro, onAdvance }: { intro: Intro; onAdvance: (next: I
 
       {intro === 'splash' ? (
         <View style={StyleSheet.absoluteFill}>
-          <BrandSplash onDone={() => onAdvance('onboarding')} />
+          {/*
+            Setelah slide pembuka, tujuan berikutnya BELUM diputuskan di sini:
+            efek di atas menunggu preferensi tersimpan terbaca dulu, baru
+            memilih antara onboarding atau langsung masuk aplikasi.
+          */}
+          <BrandSplash onDone={finishSplash} />
         </View>
       ) : null}
 
-      {intro !== 'splash' && introVisible ? (
+      {intro === 'onboarding' && introVisible ? (
         <View style={StyleSheet.absoluteFill}>
-          <Onboarding onDone={() => onAdvance('done')} />
+          <Onboarding onDone={finishOnboarding} />
         </View>
       ) : null}
     </>

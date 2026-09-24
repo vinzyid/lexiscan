@@ -302,6 +302,8 @@ export const en: Translation = {
     dailyTipOff: 'Off',
     dailyTipDenied: 'Allow notifications in your phone settings first',
     rowVoice: 'Voice & Feedback',
+    voiceOn: 'On',
+    voiceOff: 'Off',
     rowLanguage: 'Language',
     rowReading: 'Reading Ability',
     rowFootprint: 'Carbon Footprint',

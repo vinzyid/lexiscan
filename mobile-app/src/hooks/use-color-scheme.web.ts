@@ -8,6 +8,9 @@ export function useColorScheme() {
   const [hasHydrated, setHasHydrated] = useState(false);
 
   useEffect(() => {
+    // Satu render tambahan memang yang diperlukan untuk berpindah dari nilai
+    // render statis ke nilai klien; lihat komentar di atas.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHasHydrated(true);
   }, []);
 

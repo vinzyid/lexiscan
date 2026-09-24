@@ -36,6 +36,15 @@ const MAX_CONTEXT_CHARS = 2000;
 const REQUEST_TIMEOUT_MS = 70_000;
 
 /**
+ * Penyedia yang diminta lebih dulu untuk fitur Tanya Lexi. Backend mencobanya
+ * berurutan lalu berpindah ke penyedia lain yang terpasang begitu jatahnya
+ * habis — nilai ini hanya mengatur urutan, bukan satu-satunya jalur.
+ *
+ * Harus salah satu dari `ProviderSelector::SUPPORTED` di backend.
+ */
+const PREFERRED_EXPLAIN_PROVIDER = 'griphub';
+
+/**
  * Jauh lebih pendek dari permintaan AI: pemanggilnya berjalan saat aplikasi
  * dibuka, dan menunggu lama demi preferensi awal tidak sepadan.
  */
@@ -165,42 +174,26 @@ export async function explainTerm(
   style: ExplainStyleId,
   context?: string,
 ): Promise<string[]> {
-  const t = strings();
-  
-  // Urutan fallback: griphub → gemini → openrouter
-  const providers = ['griphub', 'gemini', 'openrouter'];
-  let lastError: AiApiError | null = null;
-  
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const provider = providers[attempt];
-      
-      const json = await postJson('/api/explain-word', {
-        term: term.slice(0, MAX_TERM_CHARS),
-        style,
-        context: context ? context.slice(0, MAX_CONTEXT_CHARS) : undefined,
-        provider, // Request pakai provider spesifik
-      });
+  const json = await postJson('/api/explain-word', {
+    term: term.slice(0, MAX_TERM_CHARS),
+    style,
+    context: context ? context.slice(0, MAX_CONTEXT_CHARS) : undefined,
+    /*
+     * Penyedia yang dicoba lebih dulu. Backup dan coba-ulangnya ada di
+     * backend: server menyusun rantai dari kunci yang benar-benar terpasang,
+     * jadi aplikasi tidak perlu tahu kunci mana yang ada maupun mengirim
+     * ulang permintaan yang sama berkali-kali. Mengulang di sini justru
+     * berbahaya — permintaan yang ditolak 422 (salah input) atau 401 (kunci
+     * aplikasi salah) tidak akan membaik kalau dikirim lagi.
+     */
+    provider: PREFERRED_EXPLAIN_PROVIDER,
+  });
 
-      if (!Array.isArray(json?.paragraphs) || json.paragraphs.length === 0) {
-        throw new AiApiError(t.api.noExplainResult);
-      }
-
-      return json.paragraphs;
-    } catch (error) {
-      lastError = error instanceof AiApiError ? error : new AiApiError(t.api.unreachable);
-      
-      // Jika ini adalah request terakhir, lempar error
-      if (attempt === 2) {
-        break;
-      }
-      
-      // Delay sedikit sebelum retry (1 detik)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+  if (!Array.isArray(json?.paragraphs) || json.paragraphs.length === 0) {
+    throw new AiApiError(strings().api.noExplainResult);
   }
-  
-  throw lastError!;
+
+  return json.paragraphs;
 }
 
 /** POST /api/correct-typo — perbaiki typo hasil OCR dari kamera. */

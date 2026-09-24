@@ -358,6 +358,9 @@ export const id = {
     /** Muncul kalau izin notifikasi ditolak permanen — sakelarnya kembali mati. */
     dailyTipDenied: 'Izinkan notifikasi dulu lewat setelan HP',
     rowVoice: 'Suara & Umpan Balik',
+    /** Status ringkas baris Suara; beda dari dailyTipOn yang menyebut jadwalnya. */
+    voiceOn: 'Aktif',
+    voiceOff: 'Nonaktif',
     rowLanguage: 'Bahasa',
     rowReading: 'Kemampuan Membaca',
     rowFootprint: 'Jejak Karbon',

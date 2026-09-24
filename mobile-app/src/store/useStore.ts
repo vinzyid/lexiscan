@@ -139,6 +139,15 @@ interface OCRState {
   authPromptDismissed: boolean;
   dismissAuthPrompt: () => void;
 
+  /**
+   * Pengguna sudah pernah melewati onboarding — baik diselesaikan maupun
+   * dilewati. Disimpan supaya tiga slide itu tidak muncul lagi setiap kali
+   * aplikasi dibuka; menagih terus-menerus kepada orang yang sudah pernah
+   * melihatnya adalah cara tercepat membuat aplikasinya ditinggalkan.
+   */
+  onboardingSeen: boolean;
+  completeOnboarding: () => void;
+
   /** Suara */
   ttsEnabled: boolean;
   setTtsEnabled: (value: boolean) => void;
@@ -269,6 +278,9 @@ export const useOCRStore = create<OCRState>()(
       authPromptDismissed: false,
       dismissAuthPrompt: () => set({ authPromptDismissed: true }),
 
+      onboardingSeen: false,
+      completeOnboarding: () => set({ onboardingSeen: true }),
+
       ttsEnabled: getReadingLevel(DEFAULT_READING_LEVEL).ttsEnabled,
       setTtsEnabled: (value) =>
         // Mematikan suara ikut mematikan pembacaan otomatis, kalau tidak
@@ -353,6 +365,13 @@ export const useOCRStore = create<OCRState>()(
        */
       partialize: (s) => ({
         footprintTotals: s.footprintTotals,
+        /*
+         * Bahasa disimpan supaya pilihan pengguna tidak kembali ke Indonesia
+         * setiap aplikasi dibuka. Tanpa ini, yang memilih English harus
+         * memilihnya lagi tiap kali — padahal ia juga menentukan bahasa
+         * jawaban AI, bukan sekadar label antarmuka.
+         */
+        language: s.language,
         themeId: s.themeId,
         typeLevelId: s.typeLevelId,
         preferencesTouched: s.preferencesTouched,
@@ -374,6 +393,7 @@ export const useOCRStore = create<OCRState>()(
         voiceIds: s.voiceIds,
         bicolorMode: s.bicolorMode,
         authPromptDismissed: s.authPromptDismissed,
+        onboardingSeen: s.onboardingSeen,
       }),
     },
   ),

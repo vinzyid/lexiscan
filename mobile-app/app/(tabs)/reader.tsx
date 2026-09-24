@@ -90,7 +90,19 @@ export default function ReaderScreen() {
   const [simplifyError, setSimplifyError] = useState<string | null>(null);
 
   const scrollViewRef = useRef<ScrollView>(null);
+  /*
+   * Koordinat tiap paragraf relatif terhadap wadahnya, bukan terhadap isi
+   * gulungan. `paragraphsTop` adalah jarak wadah itu dari awal isi — bedanya
+   * adalah spanduk contoh dan judul bagian yang duduk di atasnya.
+   */
   const paragraphPositions = useRef<{ [key: number]: number }>({});
+  const paragraphsTop = useRef(0);
+  /*
+   * Jarak blok teks dari puncak paragrafnya (di bawah nama paragraf dan tombol
+   * suara). `onTextLayout` memberi posisi baris relatif ke teks, jadi ini yang
+   * menjembatani keduanya agar penggaris menggulir ke baris yang benar.
+   */
+  const paragraphBodyOffsets = useRef<{ [key: number]: number }>({});
 
   // Shared value, bukan state React: seretan jari dijawab di UI thread.
   const lineMetrics = useSharedValue<LineMetric[]>([]);
@@ -136,6 +148,12 @@ export default function ReaderScreen() {
   }, [textToSimplify, simplifyLevel, setAiParagraphs, t]);
 
   useEffect(() => {
+    /*
+     * Pemuatan hasil AI adalah efek samping jaringan yang dipicu oleh data
+     * yang belum ada, bukan render berantai. Peringatan set-state-in-effect di
+     * sini keliru sasaran: `fetchSimplified` memang menandai status memuat.
+     */
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (needsAi && !aiResult) fetchSimplified();
   }, [needsAi, aiResult, fetchSimplified]);
 
@@ -175,48 +193,67 @@ export default function ReaderScreen() {
       setLineCount(0);
       rulerIndex.value = 0;
       lineMetrics.value = [];
-
-      setTimeout(() => {
-        const yPosition = paragraphPositions.current[next];
-        if (yPosition !== undefined && scrollViewRef.current) {
-          scrollViewRef.current.scrollTo({ y: Math.max(0, yPosition - 30), animated: true });
-        }
-      }, 100);
     },
     [activeIndex, paragraphs.length, setActiveParagraphIndex, rulerIndex, lineMetrics],
   );
 
-  // Auto-scroll to active paragraph when it changes in Focus Mode
-  useEffect(() => {
-    const yPosition = paragraphPositions.current[activeIndex];
-    if (yPosition !== undefined && scrollViewRef.current && focusMode) {
-      setTimeout(() => {
-        scrollViewRef.current?.scrollTo({ 
-          y: Math.max(0, yPosition - 30), 
-          animated: true 
-        });
-      }, 150);
+  /*
+   * Satu-satunya tempat halaman digulir mengikuti posisi baca. Dipanggil dari
+   * JS thread saja — baik oleh efek di bawah maupun lewat `scheduleOnRN` dari
+   * penggaris, yang berjalan di UI thread.
+   */
+  const scrollToParagraph = useCallback((index: number) => {
+    const yPosition = paragraphPositions.current[index];
+    if (yPosition !== undefined && scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({
+        y: Math.max(0, paragraphsTop.current + yPosition - 30),
+        animated: true,
+      });
     }
-  }, [activeIndex, focusMode]);
+  }, []);
 
+  /*
+   * Baris penggaris hidup di dalam paragraf aktif, jadi koordinatnya harus
+   * dijumlahkan berlapis: posisi wadah paragraf, jarak blok teks dari puncak
+   * paragraf, baru posisi baris di dalam teksnya sendiri.
+   */
+  const scrollToLine = useCallback(
+    (lineIndex: number) => {
+      const line = lineMetrics.value[lineIndex];
+      const bodyOffset = paragraphBodyOffsets.current[activeIndex] ?? 0;
+      const paragraphOffset = paragraphPositions.current[activeIndex] ?? 0;
+
+      if (line && scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({
+          y: Math.max(0, paragraphsTop.current + paragraphOffset + bodyOffset + line.y - 30),
+          animated: true,
+        });
+      }
+    },
+    [activeIndex, lineMetrics],
+  );
+
+  /*
+   * Paragraf aktif digulir ke atas layar setiap kali berganti — lewat efek
+   * React, bukan di dalam `moveParagraph`, supaya tetap berlaku juga saat
+   * indeksnya berganti dari geseran jari. Di Mode Fokus ini yang menjaga
+   * paragraf aktif tetap terlihat di antara paragraf yang diredupkan.
+   */
+  useEffect(() => {
+    scrollToParagraph(activeIndex);
+  }, [activeIndex, scrollToParagraph]);
+
+  /*
+   * Guliran ke baris penggaris TIDAK dilakukan di sini: mengubah
+   * `rulerIndex.value` sudah memicu `useAnimatedReaction` di bawah, dan dari
+   * sanalah gulirannya dijalankan. Menambah `scrollToLine` di sini juga akan
+   * membuat halaman digulir dua kali untuk satu ketukan.
+   */
   const moveRuler = (delta: number) => {
     const maxLine = Math.max(0, lineCount - 1);
     const next = Math.min(maxLine, Math.max(0, rulerIndex.value + delta));
     rulerIndex.value = next;
     setRulerLine(next);
-    
-    // Auto-scroll when ruler moves to follow reading in focus mode
-    if (focusMode && lineMetrics.value.length > 0) {
-      const currentLine = lineMetrics.value[next];
-      if (currentLine) {
-        setTimeout(() => {
-          scrollViewRef.current?.scrollTo({ 
-            y: currentLine.y - 30, 
-            animated: true 
-          });
-        }, 50);
-      }
-    }
   };
 
   /**
@@ -237,24 +274,20 @@ export default function ReaderScreen() {
     [lineMetrics],
   );
 
+  /*
+   * Penggaris digerakkan di UI thread, jadi pergantian barisnya baru terlihat
+   * di JS lewat reaksi ini. `scrollToLine` dipanggil dengan `scheduleOnRN`,
+   * bukan dijalankan di dalam worklet: `setTimeout` dan `scrollViewRef` tidak
+   * ada di UI thread, dan memanggilnya dari sana menjatuhkan aplikasi.
+   */
   useAnimatedReaction(
     () => rulerIndex.value,
     (current, previous) => {
-      if (current !== previous) scheduleOnRN(setRulerLine, current);
-      
-      // Auto-scroll in focus mode when ruler moves
-      if (focusMode && lineMetrics.value.length > 0) {
-        const clamped = Math.min(Math.max(current, 0), lineMetrics.value.length - 1);
-        const line = lineMetrics.value[clamped];
-        if (line) {
-          setTimeout(() => {
-            scrollViewRef.current?.scrollTo({ 
-              y: line.y - 30, 
-              animated: true 
-            });
-          }, 50);
-        }
-      }
+      if (current === previous) return;
+
+      scheduleOnRN(setRulerLine, current);
+
+      if (focusMode) scheduleOnRN(scrollToLine, current);
     },
   );
 
@@ -527,7 +560,11 @@ export default function ReaderScreen() {
                 <TextSkeleton />
               </>
             ) : (
-              <Animated.View style={pageStyle}>
+              <Animated.View
+                style={pageStyle}
+                onLayout={(event) => {
+                  paragraphsTop.current = event.nativeEvent.layout.y;
+                }}>
                 {shownParagraphs.map((paragraph, index) => (
                   <ParagraphBlock
                     key={`${simplifyLevel}-${index}`}
@@ -542,6 +579,9 @@ export default function ReaderScreen() {
                     rulerIndex={rulerIndex}
                     onLayoutY={(y) => {
                       paragraphPositions.current[index] = y;
+                    }}
+                    onBodyLayoutY={(y) => {
+                      paragraphBodyOffsets.current[index] = y;
                     }}
                     onWordPress={setSelectedWord}
                     onSyncLines={syncLines}
@@ -701,6 +741,7 @@ function ParagraphBlock({
   lineMetrics,
   rulerIndex,
   onLayoutY,
+  onBodyLayoutY,
   onWordPress,
   onSyncLines,
 }: {
@@ -714,6 +755,8 @@ function ParagraphBlock({
   lineMetrics: SharedValue<LineMetric[]>;
   rulerIndex: SharedValue<number>;
   onLayoutY: (y: number) => void;
+  /** Jarak blok teks dari puncak paragraf; dipakai menghitung guliran penggaris. */
+  onBodyLayoutY: (y: number) => void;
   onWordPress: (word: string) => void;
   onSyncLines: (lines: TextLayoutLine[]) => void;
 }) {
@@ -767,7 +810,7 @@ function ParagraphBlock({
   );
 
   const body = (
-    <View className="relative">
+    <View className="relative" onLayout={(event) => onBodyLayoutY(event.nativeEvent.layout.y)}>
       {showRuler ? (
         <Animated.View
           pointerEvents="none"

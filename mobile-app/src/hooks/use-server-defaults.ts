@@ -28,16 +28,23 @@ export function useServerDefaults() {
      * Kalau bawaan server diterapkan lebih dulu, proses baca yang selesai
      * belakangan akan menimpanya kembali — dan pilihan admin tidak pernah
      * benar-benar terlihat.
+     *
+     * Pemulihan bisa selesai tepat di sela pemeriksaan dan pemasangan
+     * pendengar, sehingga panggilan baliknya tidak pernah datang. Karena itu
+     * keadaannya diperiksa ULANG sesudah mendaftar; `apply` sendiri idempoten,
+     * jadi terpanggil dua kali pun tidak apa-apa.
      */
-    if (useOCRStore.persist.hasHydrated()) {
+    const start = () => {
+      if (cancelled) return;
+
       void apply();
+    };
 
-      return () => {
-        cancelled = true;
-      };
+    const unsubscribe = useOCRStore.persist.onFinishHydration(start);
+
+    if (useOCRStore.persist.hasHydrated()) {
+      start();
     }
-
-    const unsubscribe = useOCRStore.persist.onFinishHydration(() => void apply());
 
     return () => {
       cancelled = true;

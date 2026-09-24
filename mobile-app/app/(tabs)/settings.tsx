@@ -74,6 +74,9 @@ export default function SettingsScreen() {
     applyReadingLevelPreset,
     dailyTipEnabled,
     setDailyTipEnabled,
+    // Dibaca reaktif, bukan lewat getState(): baris Suara harus ikut berubah
+    // begitu sakelarnya di dalam lembar itu disentuh.
+    ttsEnabled,
   } = useOCRStore();
 
   const reader = useAuthStore((s) => s.reader);
@@ -285,7 +288,7 @@ export default function SettingsScreen() {
             <SettingsRow
               Icon={Volume2}
               title={t.settings.rowVoice}
-              value={useOCRStore.getState().ttsEnabled ? t.settings.dailyTipOn.split(' · ')[0] : t.settings.dailyTipOff}
+              value={ttsEnabled ? t.settings.voiceOn : t.settings.voiceOff}
               onPress={() => setSheet('voice')}
             />
             <SettingsRow
