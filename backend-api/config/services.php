@@ -137,14 +137,15 @@ return [
      * GriphubProvider, supaya tidak perlu diulang di .env (dan tidak terjadi
      * dobel kalau suatu saat nilainya diubah).
      *
-     * Modelnya TIDAK diberi bawaan di sini: daftarnya bisa berubah kapan saja,
-     * dan salah tebak berarti permintaan gagal dengan 404. Isi lewat
-     * GRIPHUB_MODEL di .env. Pilih model yang mendukung mode JSON.
+     * Modelnya diberi bawaan gemini-3.8-flash supaya .env yang belum
+     * menyebutkannya tetap jalan. Nilai di .env tetap menang kalau diisi, jadi
+     * model bisa diganti tanpa deploy ulang. Pilih model yang mendukung mode
+     * JSON — kalau tidak, jaminan format paragraf hilang.
      */
     'griphub' => [
         'key' => env('GRIPHUB_API_KEY'),
         'base_url' => env('GRIPHUB_BASE_URL', 'https://griphubrouter.web.id/v1'),
-        'model' => env('GRIPHUB_MODEL'),
+        'model' => env('GRIPHUB_MODEL', 'gemini-3.8-flash'),
     ],
 
 ];
