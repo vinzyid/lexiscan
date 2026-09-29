@@ -137,10 +137,10 @@ return [
      * GriphubProvider, supaya tidak perlu diulang di .env (dan tidak terjadi
      * dobel kalau suatu saat nilainya diubah).
      *
-     * Modelnya diberi bawaan gemini-3.8-flash supaya .env yang belum
-     * menyebutkannya tetap jalan. Nilai di .env tetap menang kalau diisi, jadi
-     * model bisa diganti tanpa deploy ulang. Pilih model yang mendukung mode
-     * JSON — kalau tidak, jaminan format paragraf hilang.
+     * model boleh berisi beberapa nama dipisah koma, misalnya
+     * "gemini-3.8-flash,deepseek-v4.1-flash". Modelnya dicoba berurutan: begitu
+     * yang pertama gagal, yang berikutnya mengambil alih — semuanya masih lewat
+     * satu kunci. Kalau kosong, dipakai gemini-3.8-flash sebagai bawaan.
      */
     'griphub' => [
         'key' => env('GRIPHUB_API_KEY'),

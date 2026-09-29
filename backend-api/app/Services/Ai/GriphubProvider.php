@@ -16,6 +16,14 @@ use RuntimeException;
  * tanpa pemberitahuan, jadi menuliskan nama model di dalam kode berarti setiap
  * pergantian model menuntut deploy ulang.
  *
+ * BEBERAPA MODEL BOLEH DITULIS DIPISAH KOMA, misalnya:
+ *   GRIPHUB_MODEL=gemini-3.8-flash,deepseek-v4.1-flash
+ *
+ * Modelnya lalu dicoba berurutan: begitu yang pertama gagal — kuota habis,
+ * server hulunya goyah, atau jawabannya tidak bisa dibaca — yang berikutnya
+ * mengambil alih. Semuanya masih lewat satu kunci dan satu endpoint, jadi ini
+ * cadangan di dalam Griphub sendiri, bukan penyedia lain.
+ *
  * SYARAT MODEL: harus mendukung structured outputs / JSON mode. Kalau tidak,
  * jawabannya berupa teks bebas dan jaminan format paragraf hilang — aplikasi
  * mobile mengharapkan `{"paragraphs": [...]}`. Model yang mendukung biasanya
@@ -52,9 +60,33 @@ class GriphubProvider implements AiProvider
         return filled(config('services.griphub.key'));
     }
 
+    /**
+     * Model pertama pada daftar. Dipakai untuk log, kunci cache, dan laporan
+     * pemakaian — sama seperti penyedia lain yang hanya punya satu model.
+     */
     public function model(): string
     {
-        return (string) config('services.griphub.model');
+        return $this->models()[0];
+    }
+
+    /**
+     * Semua model yang terdaftar, terurut sesuai urutan di .env.
+     *
+     * Nilai kosong dibuang, dan kalau .env tidak mengisi apa pun, dipakai
+     * gemini-3.8-flash sebagai bawaan supaya konfigurasi lama tetap jalan.
+     *
+     * @return array<int, string>
+     */
+    private function models(): array
+    {
+        $configured = (string) config('services.griphub.model');
+
+        $models = array_values(array_filter(
+            array_map('trim', explode(',', $configured)),
+            static fn (string $model): bool => $model !== '',
+        ));
+
+        return $models !== [] ? $models : ['gemini-3.8-flash'];
     }
 
     /**
@@ -79,10 +111,46 @@ class GriphubProvider implements AiProvider
             throw new RuntimeException('GRIPHUB_API_KEY belum diisi di file .env backend.');
         }
 
+        $models = $this->models();
+        $last = null;
+
+        foreach ($models as $index => $model) {
+            try {
+                return $this->ask($prompt, $model);
+            } catch (RuntimeException $e) {
+                $last = $e;
+
+                $isLast = $index === count($models) - 1;
+
+                /*
+                 * Kunci salah dan masalah izin berlaku untuk semua model di
+                 * bawah kunci yang sama, jadi mencoba model berikutnya hanya
+                 * membuang waktu. Yang layak dicoba ulang adalah kegagalan yang
+                 * melekat pada satu model: kuota, server hulunya, atau bentuk
+                 * jawabannya.
+                 */
+                if ($this->isAccountWide($e)) {
+                    throw $e;
+                }
+
+                Log::warning('Model Griphub gagal, mencoba berikutnya', [
+                    'model' => $model,
+                    'error' => $e->getMessage(),
+                    'next' => $isLast ? null : $models[$index + 1],
+                ]);
+            }
+        }
+
+        throw $last;
+    }
+
+    /** Satu panggilan HTTP untuk satu model. */
+    private function ask(string $prompt, string $model): LlmResult
+    {
         $response = LlmHttp::client($this->name())
             ->withToken((string) config('services.griphub.key'))
             ->post($this->endpoint(), [
-                'model' => $this->model(),
+                'model' => $model,
                 'temperature' => 0.3,
                 'messages' => [
                     [
@@ -99,11 +167,12 @@ class GriphubProvider implements AiProvider
         if ($response->failed()) {
             // Pesan asli dicatat supaya kuota habis vs kunci salah bisa dibedakan.
             Log::warning('Permintaan Griphub gagal', [
+                'model' => $model,
                 'status' => $response->status(),
                 'body' => $response->json('error.message') ?? $response->body(),
             ]);
 
-            throw $this->failure($response->status(), $response->json('error.message'));
+            throw $this->failure($response->status(), $response->json('error.message'), $model);
         }
 
         /*
@@ -113,9 +182,11 @@ class GriphubProvider implements AiProvider
          * sebab sebenarnya tertutup.
          */
         if (filled($upstream = $response->json('error.message'))) {
-            Log::warning('Griphub membalas 200 dengan error', ['body' => $upstream]);
+            Log::warning('Griphub membalas 200 dengan error', ['model' => $model, 'body' => $upstream]);
 
-            throw new RuntimeException("Model menolak permintaan: {$upstream}");
+            // Galat hulu biasanya melekat pada satu model, jadi layak dicoba
+            // model berikutnya alih-alih menyerah.
+            throw new ProviderResponseException("Model {$model} menolak permintaan: {$upstream}");
         }
 
         $raw = $response->json('choices.0.message.content');
@@ -123,9 +194,8 @@ class GriphubProvider implements AiProvider
         if (blank($raw)) {
             // Model yang hanya mengembalikan penalaran tidak meninggalkan `content`
             // sama sekali; pengguna perlu tahu itu bukan sekadar "coba lagi".
-            throw new RuntimeException(
-                'Griphub tidak mengembalikan teks. Periksa apakah model "'
-                . $this->model() . '" mendukung mode JSON.'
+            throw new ProviderResponseException(
+                "Griphub tidak mengembalikan teks dari model \"{$model}\". Periksa apakah model itu mendukung mode JSON."
             );
         }
 
@@ -136,26 +206,42 @@ class GriphubProvider implements AiProvider
     }
 
     /**
-     * Hanya kehabisan jatah yang layak dipindahkan ke penyedia cadangan.
-     * 402 ikut karena saldo habis berarti permintaan berikutnya pun ditolak;
-     * kunci salah dan model tidak ada tetap dilempar apa adanya supaya salah
-     * konfigurasi ketahuan, bukan tertutupi.
+     * Kegagalan yang berlaku untuk seluruh akun, bukan cuma satu model: kunci
+     * salah, kunci ditolak, atau saldo habis. Model berikutnya akan gagal
+     * dengan cara yang sama, jadi tidak dicoba.
      */
-    private function failure(int $status, ?string $detail): RuntimeException
+    private function isAccountWide(RuntimeException $e): bool
     {
-        $message = $this->humanError($status, $detail);
+        if ($e instanceof ProviderExhaustedException || $e instanceof ProviderResponseException) {
+            return false;
+        }
+
+        return str_contains($e->getMessage(), 'GRIPHUB_API_KEY tidak valid')
+            || str_contains($e->getMessage(), 'Kunci Griphub ditolak')
+            || str_contains($e->getMessage(), 'Saldo Griphub tidak cukup');
+    }
+
+    /**
+     * Kehabisan jatah dan kegagalan bentuk jawaban sama-sama layak dicoba ke
+     * model berikutnya, jadi keduanya dilempar sebagai penanda yang dikenali
+     * pemanggil. Kunci salah dan model tidak ada tetap dilempar apa adanya
+     * supaya salah konfigurasi ketahuan, bukan tertutupi.
+     */
+    private function failure(int $status, ?string $detail, string $model): RuntimeException
+    {
+        $message = $this->humanError($status, $detail, $model);
 
         return in_array($status, [402, 429], true) || $status >= 500
             ? new ProviderExhaustedException($message)
             : new RuntimeException($message);
     }
 
-    private function humanError(int $status, ?string $detail): string
+    private function humanError(int $status, ?string $detail, string $model): string
     {
         return match (true) {
             $status === 401 => 'GRIPHUB_API_KEY tidak valid. Periksa kembali kunci dari griphubrouter.web.id.',
             $status === 402 => 'Saldo Griphub tidak cukup untuk model ini. Periksa saldo akun Anda.',
-            $status === 404 => 'Model "' . $this->model() . '" tidak ditemukan di Griphub. Periksa ejaan namanya.',
+            $status === 404 => 'Model "' . $model . '" tidak ditemukan di Griphub. Periksa ejaan namanya.',
             $status === 429 => 'Jatah Griphub sedang habis. Tunggu sebentar lalu coba lagi.',
             $status >= 500 => 'Server Griphub sedang bermasalah. Coba beberapa saat lagi.',
             default => $detail ?? 'Permintaan ke Griphub gagal.',
