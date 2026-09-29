@@ -56,13 +56,51 @@ class ParagraphPayloadTest extends TestCase
         $this->assertSame(['Teks sah.'], ParagraphPayload::extract($raw, 'Uji'));
     }
 
-    public function test_it_names_the_provider_when_the_response_is_not_json(): void
+    public function test_it_uses_plain_text_when_the_model_ignores_the_json_format(): void
+    {
+        // Model kadang membalas teks biasa padahal isinya sudah benar. Dulu ini
+        // dibuang dan pengguna melihat galat untuk jawaban yang sebenarnya bagus.
+        $this->assertSame(
+            ['Fotosintesis adalah cara tumbuhan membuat makanan.'],
+            ParagraphPayload::extract('Fotosintesis adalah cara tumbuhan membuat makanan.', 'Gemini'),
+        );
+    }
+
+    public function test_it_splits_plain_text_into_paragraphs_on_blank_lines(): void
+    {
+        $raw = "Paragraf pertama.\n\nParagraf kedua.\n\n\nParagraf ketiga.";
+
+        $this->assertSame(
+            ['Paragraf pertama.', 'Paragraf kedua.', 'Paragraf ketiga.'],
+            ParagraphPayload::extract($raw, 'Gemini'),
+        );
+    }
+
+    public function test_it_keeps_a_multiline_paragraph_together(): void
+    {
+        // Satu paragraf yang terpotong newline tunggal tidak boleh dipecah.
+        $raw = "Satu kalimat.\nMasih kalimat yang sama.";
+
+        $this->assertSame(
+            ["Satu kalimat.\nMasih kalimat yang sama."],
+            ParagraphPayload::extract($raw, 'Gemini'),
+        );
+    }
+
+    public function test_it_still_rejects_a_plain_text_refusal(): void
     {
         $this->expectException(RuntimeException::class);
-        // Nama penyedia masuk ke pesan supaya jelas siapa yang bermasalah.
         $this->expectExceptionMessage('Respons Gemini bukan JSON yang bisa dibaca.');
 
-        ParagraphPayload::extract('maaf, saya tidak bisa membantu', 'Gemini');
+        ParagraphPayload::extract('Maaf, saya tidak bisa membantu permintaan itu.', 'Gemini');
+    }
+
+    public function test_it_still_rejects_an_empty_plain_text_response(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Respons Gemini bukan JSON yang bisa dibaca.');
+
+        ParagraphPayload::extract('   ', 'Gemini');
     }
 
     public function test_it_fails_when_every_paragraph_is_empty(): void

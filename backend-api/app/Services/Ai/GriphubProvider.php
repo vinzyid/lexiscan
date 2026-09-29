@@ -23,6 +23,25 @@ use RuntimeException;
  */
 class GriphubProvider implements AiProvider
 {
+    /**
+     * Diperkuat dengan contoh konkret: model kecil jauh lebih patuh pada format
+     * JSON kalau bentuk yang diminta diperlihatkan, bukan sekadar dijelaskan.
+     * Griphub tidak punya responseSchema seperti Gemini, jadi prompt inilah
+     * satu-satunya penjaga bentuk jawaban.
+     */
+    private const SYSTEM_PROMPT = <<<'PROMPT'
+    Kamu membantu pembaca disleksia. Jawab SELALU dengan satu objek JSON saja,
+    tanpa kalimat pembuka, tanpa penjelasan, dan tanpa blok markdown.
+
+    Bentuk wajib:
+    {"paragraphs": ["teks paragraf 1", "teks paragraf 2"]}
+
+    Aturan:
+    - Kunci harus "paragraphs" dan isinya array berisi string.
+    - Setiap paragraf berupa teks biasa, bukan objek atau angka.
+    - Jangan membungkus jawaban dengan ```json atau tanda kutip tambahan.
+    PROMPT;
+
     public function name(): string
     {
         return 'griphub';
@@ -68,7 +87,7 @@ class GriphubProvider implements AiProvider
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => 'Kamu membantu pembaca disleksia. Jawab hanya dengan JSON dalam format {"paragraphs": ["teks paragraf 1", "teks paragraf 2"]}, tanpa penjelasan tambahan.',
+                        'content' => self::SYSTEM_PROMPT,
                     ],
                     ['role' => 'user', 'content' => $prompt],
                 ],

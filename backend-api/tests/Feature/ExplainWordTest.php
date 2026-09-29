@@ -106,11 +106,37 @@ class ExplainWordTest extends TestCase
         Http::assertSentCount(3);
     }
 
-    public function test_an_unreadable_provider_response_is_reported_as_503(): void
+    public function test_a_plain_text_response_is_used_instead_of_failing(): void
     {
+        /*
+         * Gemini kadang membalas teks biasa padahal isinya sudah benar. Dulu
+         * pengguna melihat galat untuk jawaban yang sebenarnya bagus; sekarang
+         * teksnya diterima dan dipecah jadi paragraf.
+         */
         Http::fake([
             'generativelanguage.googleapis.com/*' => Http::response([
-                'candidates' => [['content' => ['parts' => [['text' => 'ini bukan JSON']]], 'finishReason' => 'STOP']],
+                'candidates' => [[
+                    'content' => ['parts' => [['text' => 'Anabolisme adalah proses menyusun zat.']]],
+                    'finishReason' => 'STOP',
+                ]],
+            ]),
+        ]);
+
+        $this->postJson('/api/explain-word', ['term' => 'anabolisme', 'style' => 'sederhana'])
+            ->assertOk()
+            ->assertJsonPath('paragraphs', ['Anabolisme adalah proses menyusun zat.']);
+    }
+
+    public function test_a_plain_text_refusal_is_reported_as_503(): void
+    {
+        // Penolakan bukan jawaban: lebih baik gagal daripada menyajikannya
+        // seolah-olah itu penjelasannya.
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [[
+                    'content' => ['parts' => [['text' => 'Maaf, saya tidak bisa membantu.']]],
+                    'finishReason' => 'STOP',
+                ]],
             ]),
         ]);
 

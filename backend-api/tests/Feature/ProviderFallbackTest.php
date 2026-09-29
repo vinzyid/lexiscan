@@ -61,6 +61,31 @@ class ProviderFallbackTest extends TestCase
             ->assertJsonPath('paragraphs', ['Tetap terjawab.']);
     }
 
+    public function test_it_switches_when_the_primary_returns_an_unreadable_response(): void
+    {
+        /*
+         * Utama menjawab 200 tapi isinya tidak bisa dipakai (penolakan, bukan
+         * jawaban). Dulu ini tidak pindah ke cadangan, jadi pengguna melihat
+         * galat untuk permintaan yang cadangannya bisa jawab.
+         */
+        Http::fake([
+            self::GEMINI_URL => Http::response([
+                'candidates' => [[
+                    'content' => ['parts' => [['text' => 'Maaf, saya tidak bisa membantu.']]],
+                    'finishReason' => 'STOP',
+                ]],
+            ]),
+            self::OPENROUTER_URL => Http::response($this->openRouterBody(['Dijawab cadangan.'])),
+        ]);
+
+        $this->postJson('/api/simplify-text', [
+            'text' => 'Fotosintesis merupakan proses anabolisme pada tumbuhan hijau.',
+            'level' => 'L3',
+        ])
+            ->assertOk()
+            ->assertJsonPath('paragraphs', ['Dijawab cadangan.']);
+    }
+
     public function test_a_rejected_key_is_not_papered_over_by_the_fallback(): void
     {
         Http::fake([

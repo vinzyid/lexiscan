@@ -13,10 +13,12 @@ use Illuminate\Support\Facades\Log;
  * aplikasinya. Perpindahannya tidak terlihat oleh aplikasi mobile — bentuk
  * responsnya sama persis, hanya kalimatnya yang mungkin sedikit berbeda gaya.
  *
- * Yang memicu perpindahan hanya ProviderExhaustedException. Kunci salah, model
- * tidak ada, atau teks yang ditolak filter keamanan tetap dilempar apa adanya:
- * cadangannya akan gagal dengan cara yang sama, dan menyembunyikan sebabnya
- * hanya memperlambat perbaikan.
+ * Yang memicu perpindahan hanya ProviderExhaustedException (kuota habis, rate
+ * limit, saldo kurang, server hulu goyah) dan ProviderResponseException
+ * (jawaban tidak bisa dibaca). Kunci salah, model tidak ada, atau teks yang
+ * ditolak filter keamanan tetap dilempar apa adanya: cadangannya akan gagal
+ * dengan cara yang sama, dan menyembunyikan sebabnya hanya memperlambat
+ * perbaikan.
  */
 class FallbackProvider implements AiProvider
 {
@@ -60,12 +62,12 @@ class FallbackProvider implements AiProvider
     {
         try {
             return $this->primary->paragraphsFor($prompt);
-        } catch (ProviderExhaustedException $e) {
+        } catch (ProviderExhaustedException | ProviderResponseException $e) {
             if (! $this->fallback->isConfigured()) {
                 throw $e;
             }
 
-            Log::warning('Penyedia AI utama kehabisan jatah, berpindah ke cadangan', [
+            Log::warning('Penyedia AI utama gagal, berpindah ke cadangan', [
                 'primary' => $this->primary->name(),
                 'fallback' => $this->fallback->name(),
                 'reason' => $e->getMessage(),

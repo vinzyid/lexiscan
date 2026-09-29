@@ -2,8 +2,6 @@
 
 namespace App\Services\Ai;
 
-use RuntimeException;
-
 /**
  * Membaca JSON `{"paragraphs": [...]}` hasil structured output. Dipakai semua
  * provider supaya aturan pembersihannya sama.
@@ -13,10 +11,18 @@ final class ParagraphPayload
     /** @return array<int, string> */
     public static function extract(string $raw, string $providerLabel): array
     {
-        $decoded = json_decode(self::unwrap($raw), true);
+        $text = self::unwrap($raw);
+        $decoded = json_decode($text, true);
 
+        /*
+         * Sebagian model mengabaikan permintaan format JSON dan membalas teks
+         * biasa — padahal isinya sudah benar. Dulu teks seperti itu dibuang dan
+         * pengguna melihat galat "bukan JSON" untuk jawaban yang sebenarnya
+         * bagus. Sekarang isinya tetap dipakai: baris kosong jadi pemisah
+         * paragraf.
+         */
         if (! is_array($decoded)) {
-            throw new RuntimeException("Respons {$providerLabel} bukan JSON yang bisa dibaca.");
+            return self::fromPlainText($text, $providerLabel);
         }
 
         $paragraphs = array_values(array_filter(
@@ -28,10 +34,57 @@ final class ParagraphPayload
         ));
 
         if ($paragraphs === []) {
-            throw new RuntimeException("Hasil dari {$providerLabel} kosong setelah diproses.");
+            throw new ProviderResponseException("Hasil dari {$providerLabel} kosong setelah diproses.");
         }
 
         return $paragraphs;
+    }
+
+    /**
+     * Teks bebas yang tidak berbentuk JSON. Baris kosong memisahkan paragraf;
+     * kalau tidak ada baris kosong sama sekali, seluruh teks jadi satu paragraf.
+     *
+     * Penolakan model tetap ditolak: "maaf, saya tidak bisa membantu" bukan
+     * jawaban, dan menerimanya berarti menyajikan kalimat kosong kepada pembaca
+     * seolah-olah itu penjelasannya.
+     *
+     * @return array<int, string>
+     */
+    private static function fromPlainText(string $text, string $providerLabel): array
+    {
+        $trimmed = trim($text);
+
+        if ($trimmed === '' || self::looksLikeRefusal($trimmed)) {
+            throw new ProviderResponseException("Respons {$providerLabel} bukan JSON yang bisa dibaca.");
+        }
+
+        $paragraphs = array_values(array_filter(
+            array_map('trim', preg_split('/\n\s*\n/', $trimmed) ?: []),
+            static fn (string $paragraph): bool => $paragraph !== '',
+        ));
+
+        if ($paragraphs === []) {
+            throw new ProviderResponseException("Respons {$providerLabel} tidak berisi teks yang bisa dipakai.");
+        }
+
+        return $paragraphs;
+    }
+
+    /**
+     * Pola balasan yang isinya cuma pembukaan atau penolakan, bukan jawaban.
+     * Yang ini lebih baik memicu penyedia berikutnya daripada diteruskan ke
+     * pembaca.
+     */
+    private static function looksLikeRefusal(string $text): bool
+    {
+        if (mb_strlen($text) > 400) {
+            return false;
+        }
+
+        return (bool) preg_match(
+            '/^(maaf|sorry|mohon maaf|tidak bisa|sayangnya|aku tidak|saya tidak|i (?:can\'?t|cannot|am unable))/i',
+            $text,
+        );
     }
 
     /**
