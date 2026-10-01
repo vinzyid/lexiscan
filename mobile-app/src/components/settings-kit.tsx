@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Modal, ScrollView, Switch, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, Switch, Text, View } from 'react-native';
 import { ChevronRight, X, type LucideIcon } from 'lucide-react-native';
 
 import { useT } from '../i18n';
@@ -150,7 +150,15 @@ export function SettingsSheet({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-black/40">
+      {/*
+       * Lembar ini bisa berisi kolom isian (Bantuan & Dukungan, Ubah Nama), dan
+       * di Android papan tik muncul menutupi separuh layar bawah. Tanpa
+       * KeyboardAvoidingView, tombol Kirim dan ketikan di baris terakhir
+       * tertimbun papan tik dan tidak bisa dijangkau sama sekali.
+       */}
+      <KeyboardAvoidingView
+        className="flex-1 justify-end bg-black/40"
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         {/* Area gelap di atas lembar: mengetuknya menutup, seperti lembar lain
             di aplikasi ini. */}
         <PressableScale
@@ -179,11 +187,15 @@ export function SettingsSheet({
             </PressableScale>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            contentContainerStyle={{ paddingBottom: 8 }}>
             {children}
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

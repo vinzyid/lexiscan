@@ -15,7 +15,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.lexiscan.app"
+      "package": "com.lexiscan.app",
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "output": "static",

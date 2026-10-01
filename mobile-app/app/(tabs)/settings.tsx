@@ -129,13 +129,32 @@ export default function SettingsScreen() {
       return;
     }
 
+    /*
+     * Sakelar dinyalakan LEBIH DULU, sebelum penjadwalan yang butuh izin dan
+     * jaringan selesai. Kalau menunggu, sakelar terlihat macet mati sesaat
+     * setelah disentuh — padahal sentuhannya sudah diterima. Kalau ternyata
+     * gagal (izin ditolak, layanan notifikasi dipangkas ROM), sakelarnya
+     * dikembalikan ke posisi mati disertai penjelasan.
+     */
+    setDailyTipEnabled(true);
+
+    /*
+     * Isi notifikasi adalah SALAH SATU kalimat dari `dailyTips`, bukan
+     * `dashboard.tipOfDay` — yang terakhir itu label "Tip hari ini" dan kalau
+     * dipakai sebagai isi, notifikasinya tiba tanpa pesan yang berarti.
+     */
+    const tips = t.dailyTips;
+    const body = tips[Math.floor(Math.random() * tips.length)] ?? t.dashboard.tipOfDay;
+
     const scheduled = await enableDailyTip({
       title: t.settings.rowDailyTip,
-      body: t.dashboard.tipOfDay,
+      body,
     });
 
-    setDailyTipEnabled(scheduled);
-    if (!scheduled) Alert.alert(t.settings.rowDailyTip, t.settings.dailyTipDenied);
+    if (!scheduled) {
+      setDailyTipEnabled(false);
+      Alert.alert(t.settings.rowDailyTip, t.settings.dailyTipDenied);
+    }
   };
 
   const saveName = () => {
