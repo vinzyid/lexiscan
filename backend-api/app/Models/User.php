@@ -29,6 +29,8 @@ use Laravel\Sanctum\HasApiTokens;
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
+    protected $attributes = ['is_active' => true];
+
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
@@ -40,6 +42,7 @@ class User extends Authenticatable implements FilamentUser
     protected function casts(): array
     {
         return [
+            'is_active' => 'boolean',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
@@ -53,6 +56,6 @@ class User extends Authenticatable implements FilamentUser
      */
     public function canAccessPanel(Panel $panel): bool
     {
-        return true;
+        return (bool) $this->is_active;
     }
 }

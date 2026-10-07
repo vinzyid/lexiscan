@@ -30,6 +30,8 @@ use Laravel\Sanctum\HasApiTokens;
 #[Hidden(['password', 'remember_token'])]
 class Reader extends Authenticatable
 {
+    protected $attributes = ['is_active' => true];
+
     use HasApiTokens;
 
     /**
@@ -115,6 +117,7 @@ class Reader extends Authenticatable
     protected function casts(): array
     {
         return [
+            'is_active' => 'boolean',
             'password' => 'hashed',
             'tts_enabled' => 'boolean',
             'tts_auto_play' => 'boolean',

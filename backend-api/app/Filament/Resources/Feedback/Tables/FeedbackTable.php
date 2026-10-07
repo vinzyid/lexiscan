@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Feedback\Tables;
 use App\Models\Feedback;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
@@ -21,8 +22,8 @@ class FeedbackTable
     public static function configure(Table $table): Table
     {
         return $table
-            // Yang belum ditangani naik ke atas: itu yang perlu dikerjakan.
-            ->defaultSort('created_at', 'desc')
+            ->defaultSort(fn (Builder $query): Builder => $query->orderByRaw('CASE WHEN handled_at IS NULL THEN 0 ELSE 1 END')->orderByDesc('created_at')->orderByDesc('id'))
+            ->recordAction('detail')
             ->columns([
                 TextColumn::make('created_at')
                     ->label('Masuk')
@@ -68,9 +69,8 @@ class FeedbackTable
                 TextColumn::make('handled_at')
                     ->label('Status')
                     ->badge()
-                    ->formatStateUsing(fn (?string $state): string => $state === null ? 'Belum ditangani' : 'Selesai')
-                    ->color(fn (?string $state): string => $state === null ? 'warning' : 'success')
-                    ->default(null),
+                    ->state(fn (Feedback $record): string => $record->isHandled() ? 'Selesai' : 'Belum ditangani')
+                    ->color(fn (Feedback $record): string => $record->isHandled() ? 'success' : 'warning'),
             ])
             ->filters([
                 SelectFilter::make('type')
@@ -89,6 +89,25 @@ class FeedbackTable
                     ),
             ])
             ->recordActions([
+                Action::make('detail')
+                    ->label('Lihat laporan')
+                    ->icon('heroicon-o-eye')
+                    ->modalHeading('Detail laporan pengguna')
+                    ->action(fn () => null)
+                    ->fillForm(fn (Feedback $record): array => $record->toArray())
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup')
+                    ->schema([
+                        TextEntry::make('type')->label('Jenis')->formatStateUsing(fn (string $state): string => self::TYPES[$state] ?? $state),
+                        TextEntry::make('created_at')->label('Masuk')->dateTime('d M Y H:i'),
+                        TextEntry::make('message')->label('Laporan lengkap')->columnSpanFull(),
+                        TextEntry::make('sample')->label('Contoh teks OCR')->placeholder('Tidak disertakan')->columnSpanFull(),
+                        TextEntry::make('platform')->label('Platform')->placeholder('Tidak disertakan'),
+                        TextEntry::make('app_version')->label('Versi aplikasi')->placeholder('Tidak disertakan'),
+                        TextEntry::make('device_id')->label('Penanda perangkat')->placeholder('Tanpa penanda'),
+                        TextEntry::make('handled_at')->label('Diselesaikan')->dateTime('d M Y H:i')->placeholder('Belum ditangani'),
+                        TextEntry::make('handled_note')->label('Catatan tindak lanjut')->placeholder('Belum ada catatan')->columnSpanFull(),
+                    ]),
                 self::handleAction(),
                 self::reopenAction(),
             ]);

@@ -3,6 +3,7 @@
 use App\Http\Controllers\AiController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FeedbackController;
+use App\Http\Middleware\RequireActiveReader;
 use Illuminate\Support\Facades\Route;
 
 // Terbuka tanpa kunci: gunanya memang memeriksa kesehatan server dari luar
@@ -28,7 +29,7 @@ Route::middleware(['throttle:10,1', 'api.key'])->group(function (): void {
  * Yang menuntut token Sanctum. Tidak perlu 'api.key' lagi — token pribadi
  * penggunanya sudah jauh lebih kuat daripada kunci bersama yang ditanam di APK.
  */
-Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function (): void {
+Route::middleware(['auth:sanctum', RequireActiveReader::class, 'throttle:60,1'])->group(function (): void {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::patch('/auth/preferences', [AuthController::class, 'preferences']);

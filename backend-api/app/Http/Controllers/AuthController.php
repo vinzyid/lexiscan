@@ -97,7 +97,7 @@ class AuthController extends Controller
          * jawabannya tidak membocorkan apakah nama penggunanya ada. Pesannya
          * pun satu untuk kedua sebab.
          */
-        if ($reader === null || ! Hash::check($data['password'], $reader->password)) {
+        if ($reader === null || ! Hash::check($data['password'], $reader->password) || ! $reader->is_active) {
             return response()->json([
                 'message' => 'Nama pengguna atau kata sandi belum cocok. Coba periksa lagi ya.',
             ], 401);
