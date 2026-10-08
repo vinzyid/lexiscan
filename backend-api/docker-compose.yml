@@ -1,0 +1,45 @@
+# Docker Compose backend LexiScan.
+#
+# Dijalankan di VPS: container backend mendengarkan 127.0.0.1:8080, lalu Caddy di
+# host (bukan di dalam compose ini) bertindak sebagai reverse proxy + HTTPS.
+#
+# Pakai:
+#   cp deploy/.env.production.example .env.production   # lalu isi nilainya
+#   docker compose up -d --build
+#
+# Data riil ada di Supabase, jadi container ini boleh dibuat ulang kapan saja.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: lexiscan-backend:latest
+    container_name: lexiscan-backend
+    restart: unless-stopped
+
+    # Kredensial disuntik saat runtime, bukan ditanam ke image.
+    env_file:
+      - .env.production
+
+    environment:
+      # Entrypoint membaca PORT lalu memetakannya ke SERVER_NAME FrankenPHP.
+      PORT: "8080"
+
+    # Hanya diekspos ke localhost; Caddy di host yang meneruskan dari luar.
+    ports:
+      - "127.0.0.1:8080:8080"
+
+    # Endpoint AI tidak butuh database, jadi health check cukup menyentuhnya.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/api/ai/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

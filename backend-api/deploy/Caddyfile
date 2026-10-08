@@ -1,0 +1,39 @@
+# Caddyfile — reverse proxy + HTTPS otomatis untuk LexiScan.
+#
+# Salin/pasang di /etc/caddy/Caddyfile pada VPS, lalu:
+#   sudo systemctl reload caddy
+#
+# Caddy otomatis meminta sertifikat Let's Encrypt begitu domain sudah mengarah
+# ke IP VPS dan port 80 serta 443 terbuka di Security Group Tencent.
+#
+# Ganti DOMAIN_BACKEND_ANDA dengan domain Anda. Kalau memasang lewat
+# deploy/setup-vps.sh, domain diisi otomatis dan baris ini tidak perlu disentuh.
+
+DOMAIN_BACKEND_ANDA {
+	# Teruskan ke container backend yang hanya mendengarkan di localhost.
+	reverse_proxy 127.0.0.1:8080 {
+		header_up X-Real-IP {remote_host}
+	}
+
+	# Batasi ukuran request; endpoint hanya menerima JSON pendek.
+	request_body {
+		max_size 2MB
+	}
+
+	# Header keamanan dasar.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		-Server
+	}
+
+	encode gzip zstd
+
+	log {
+		output file /var/log/caddy/lexiscan.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}
