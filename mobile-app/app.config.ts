@@ -9,17 +9,29 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
  * lewat tanpa enkripsi.
  *
  * Diturunkan dari alamat backend, bukan flag terpisah, supaya build yang
- * menunjuk https:// otomatis mengunci cleartext. `undefined` berarti build
- * pengembangan yang mengikuti host Metro (selalu http); string kosong berarti
- * profil build yang alamatnya belum diisi, jadi perbandingannya eksplisit.
+ * menunjuk https:// otomatis mengunci cleartext.
+ *
+ * Dibaca DI DALAM fungsi, bukan di tingkat modul: Expo memuat berkas .env
+ * sebelum memanggil fungsi ini, sedangkan evaluasi tingkat modul bisa berjalan
+ * lebih dulu dan melihat process.env yang masih kosong. Itu sebabnya salah
+ * profil pernah tercetak "(host Metro) padahal .env sudah diisi.
+ *
+ * `EXPO_PUBLIC_API_URL` yang kosong di profil non-development sengaja TIDAK
+ * membuka cleartext: build yang lupa mengisi alamat backend harus tetap
+ * terkunci, bukan diam-diam mengizinkan HTTP polos.
  */
-const apiUrl = process.env.EXPO_PUBLIC_API_URL;
-const usesCleartextTraffic = apiUrl === undefined || apiUrl.startsWith('http://');
-
 export default ({ config }: ConfigContext): ExpoConfig => {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+  const profile = process.env.EAS_BUILD_PROFILE ?? process.env.EXPO_PUBLIC_BUILD_PROFILE;
+  const isDevBuild = profile === 'development';
+
+  // Selama pengembangan, host Metro selalu http, jadi cleartext wajib menyala.
+  // Di luar itu, hanya alamat http:// eksplisit yang membukanya.
+  const usesCleartextTraffic = isDevBuild || (apiUrl?.startsWith('http://') ?? false);
+
   // Dicetak supaya salah profil ketahuan dari log build. Kuncinya tidak dicetak.
   console.log(
-    `[lexiscan] backend=${apiUrl ?? '(host Metro)'} cleartext=${usesCleartextTraffic ? 'DIIZINKAN' : 'diblokir'}`,
+    `[lexiscan] backend=${apiUrl ?? '(host Metro)'} profil=${profile ?? '-'} cleartext=${usesCleartextTraffic ? 'DIIZINKAN' : 'diblokir'}`,
   );
 
   return {
