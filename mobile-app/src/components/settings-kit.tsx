@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, Switch, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, ScrollView, Switch, Text, View } from 'react-native';
 import { ChevronRight, X, type LucideIcon } from 'lucide-react-native';
 
 import { useT } from '../i18n';
@@ -155,10 +155,16 @@ export function SettingsSheet({
        * di Android papan tik muncul menutupi separuh layar bawah. Tanpa
        * KeyboardAvoidingView, tombol Kirim dan ketikan di baris terakhir
        * tertimbun papan tik dan tidak bisa dijangkau sama sekali.
+       *
+       * `padding` dipakai di kedua platform, bukan `height` di Android: lembar
+       * ini menempel di bawah (`justify-end`) dan tingginya dibatasi persen,
+       * jadi menyusutkan tinggi wadah membuat isinya justru tetap di tempat
+       * yang sama. Menambah padding di bawah mendorong seluruh lembar naik,
+       * sehingga kolom pesan dan tombol Kirim tetap terlihat di atas papan tik.
        */}
       <KeyboardAvoidingView
         className="flex-1 justify-end bg-black/40"
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        behavior="padding">
         {/* Area gelap di atas lembar: mengetuknya menutup, seperti lembar lain
             di aplikasi ini. */}
         <PressableScale
@@ -191,6 +197,7 @@ export function SettingsSheet({
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
+            automaticallyAdjustKeyboardInsets
             contentContainerStyle={{ paddingBottom: 8 }}>
             {children}
           </ScrollView>
