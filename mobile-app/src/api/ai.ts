@@ -75,7 +75,7 @@ const requestReadingLevel = () => useOCRStore.getState().readingLevel;
 export async function postJson(
   path: string,
   body: Record<string, unknown>,
-  options: { method?: 'POST' | 'PATCH' } = {},
+  options: { method?: 'GET' | 'POST' | 'PATCH' | 'DELETE' } = {},
 ): Promise<any> {
   const t = strings();
 
@@ -96,8 +96,11 @@ export async function postJson(
 
   let response: Response;
   try {
+    const method = options.method ?? 'POST';
+    const isBodyAllowed = method !== 'GET';
+
     response = await fetch(`${API_BASE_URL}${path}`, {
-      method: options.method ?? 'POST',
+      method,
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
@@ -116,11 +119,13 @@ export async function postJson(
        * baru saja dipilih di formulir belum masuk store, dan menimpanya dengan
        * nilai store berarti menyimpan jawaban yang salah ke akunnya.
        */
-      body: JSON.stringify({
-        language: requestLanguage(),
-        reading_level: requestReadingLevel(),
-        ...body,
-      }),
+      body: isBodyAllowed
+        ? JSON.stringify({
+            language: requestLanguage(),
+            reading_level: requestReadingLevel(),
+            ...body,
+          })
+        : undefined,
       signal: controller.signal,
     });
   } catch {

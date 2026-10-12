@@ -22,5 +22,16 @@ berapa persen sudah progress lexiscan.png
 *.docx
 COMMIT_MSG.txt
 
+# Spesifikasi, audit & diagram lokal
+LexiProgress_Spesifikasi_Fitur.md
+audit.md
+diagram-sistem.md
+error-app/
+
+# Environment files
+.env
+.env.*
+*.backup
+
 # Metadata Finder macOS
 .DS_Store

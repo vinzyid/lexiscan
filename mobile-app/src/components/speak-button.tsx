@@ -14,6 +14,8 @@ type Props = {
   /** Untuk latar gelap (header, kartu gradien): ikonnya jadi putih. */
   onDark?: boolean;
   size?: number;
+  onBoundary?: (charIndex: number) => void;
+  onDone?: () => void;
 };
 
 /**
@@ -24,7 +26,7 @@ type Props = {
  * lancar membaca, tombol yang tidak pernah dipakai hanya menambah keramaian di
  * layar yang justru harus tenang.
  */
-export function SpeakButton({ text, speechKey, onDark, size = 18 }: Props) {
+export function SpeakButton({ text, speechKey, onDark, size = 18, onBoundary, onDone }: Props) {
   const colors = useThemeColors();
   const t = useT();
   const { enabled, toggle, speakingKey } = useSpeech();
@@ -37,7 +39,7 @@ export function SpeakButton({ text, speechKey, onDark, size = 18 }: Props) {
   return (
     <PressableScale
       silent
-      onPress={() => toggle(text, speechKey)}
+      onPress={() => toggle(text, speechKey, { onBoundary, onDone })}
       accessibilityRole="button"
       accessibilityLabel={speaking ? t.speech.stopLabel : t.speech.playLabel}
       accessibilityState={{ selected: speaking }}

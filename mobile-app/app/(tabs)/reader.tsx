@@ -47,6 +47,7 @@ import { ExplainSheet, type ExplainTarget } from '../../src/components/explain-s
 import { WordSheet } from '../../src/components/word-sheet';
 import { SpeakButton } from '../../src/components/speak-button';
 import { useAutoSpeak, useSpeech, useStopSpeechOnBlur } from '../../src/speech/use-speech';
+import { normalizeSpeechText } from '../../src/speech/speech-service';
 import { Blob, Ring, Sparkle } from '../../src/components/figma-decor';
 
 type LineMetric = { y: number; height: number };
@@ -139,8 +140,81 @@ export default function ReaderScreen() {
   // Shared value, bukan state React: seretan jari dijawab di UI thread.
   const lineMetrics = useSharedValue<LineMetric[]>([]);
   const rulerIndex = useSharedValue(0);
+  const rulerFollowingSpeech = useSharedValue(false);
   const swipeX = useSharedValue(0);
 
+  /*
+   * Baris-baris terakhir paragraf aktif, buat memetakan `onBoundary` dari mesin
+   * TTS ke nomor baris. Diisi `syncLines` di bawah.
+   */
+  const lineTexts = useRef<string[]>([]);
+
+  /**
+   * Cari nomor baris yang memuat karakter ke-`charIndex` dari teks yang
+   * dibacakan. Dipanggil saat mesin TTS mengabarkan kata baru (`onBoundary`),
+   * supaya penggaris ikut turun mengikuti suara.
+   *
+   * `charIndex` relatif ke teks yang benar-benar dibunyikan, dan teks itu sudah
+   * dinormalisasi (emoji/markdown dibuang, spasi beruntun dirapatkan). Karena
+   * itu perbandingannya memakai panjang tiap baris SETELAH normalisasi juga,
+   * bukan panjang teks mentahnya.
+   */
+  /*
+   * `scrollToRulerLine` baru didefinisikan di bawah, tapi `handleSpeechBoundary`
+   * sudah butuh. Ref ini memutus ketergantungan urutannya tanpa memindahkan
+   * definisi — dan nilainya selalu yang terbaru.
+   */
+  const scrollToRulerLineRef = useRef<((lineIndex: number) => void) | null>(null);
+
+  const handleSpeechBoundary = useCallback(
+    (charIndex: number) => {
+      if (!rulerMode) return;
+
+      const lines = lineTexts.current;
+      if (lines.length === 0) return;
+
+      let accumulated = 0;
+      let targetLine = lines.length - 1;
+
+      for (let i = 0; i < lines.length; i += 1) {
+        accumulated += lines[i].length;
+        if (charIndex < accumulated) {
+          targetLine = i;
+          break;
+        }
+      }
+
+      /*
+       * `onBoundary` datang untuk SETIAP kata. Menggeser penggaris saat baris
+       * belum berubah hanya mengulang kerja yang sama — dan justru scroll
+       * `scrollTo` yang berlebihan itulah yang menambah jeda. Jadi pindah baris
+       * saja yang dikerjakan.
+       */
+      if (rulerIndex.value === targetLine) return;
+
+      rulerFollowingSpeech.value = true;
+      rulerIndex.value = targetLine;
+      setRulerLine(targetLine);
+      scrollToRulerLineRef.current?.(targetLine);
+    },
+    [rulerMode, rulerIndex, rulerFollowingSpeech],
+  );
+
+  /**
+   * Setelah bacaan tamat, penggaris ditempatkan ke baris terakhir. `onBoundary`
+   * untuk kata terakhir datang sebelum baris terakhir terbaca penuh, jadi
+   * tanpa ini penggaris berhenti di baris sebelum akhir.
+   */
+  const handleSpeechDone = useCallback(() => {
+    if (!rulerMode) return;
+
+    const lastLine = lineTexts.current.length - 1;
+    if (lastLine < 0) return;
+
+    rulerIndex.value = lastLine;
+    setRulerLine(lastLine);
+    scrollToRulerLineRef.current?.(lastLine);
+  }, [rulerMode, rulerIndex]);
   const typeLevelName = t.typeLevels[typeLevelId].name;
   const activeLevel = t.simplifyLevels[simplifyLevel];
 
@@ -212,7 +286,13 @@ export default function ReaderScreen() {
    * Dijeda selama kerangka pemuatan masih tampil, kalau tidak yang terbacakan
    * adalah teks level sebelumnya yang sebentar lagi diganti.
    */
-  useAutoSpeak(shownParagraphs[activeIndex] ?? null, `paragraph:${activeIndex}`, !showSkeleton);
+  useAutoSpeak(
+    shownParagraphs[activeIndex] ?? null,
+    `paragraph:${activeIndex}`,
+    !showSkeleton,
+    handleSpeechBoundary,
+    handleSpeechDone,
+  );
 
   const moveParagraph = useCallback(
     (delta: number) => {
@@ -269,13 +349,13 @@ export default function ReaderScreen() {
    * dan pembaca harus menggulir sendiri.
    */
   const scrollToLine = useCallback(
-    (lineIndex: number) => {
+    (lineIndex: number, animated = true) => {
       const contentY = contentYOfLine(lineIndex);
       if (contentY === null || !scrollViewRef.current) return;
 
       scrollViewRef.current.scrollTo({
         y: Math.max(0, contentY - RULER_ANCHOR),
-        animated: true,
+        animated,
       });
     },
     [contentYOfLine],
@@ -287,6 +367,15 @@ export default function ReaderScreen() {
     },
     [scrollToLine],
   );
+
+  /*
+   * Dipakai `handleSpeechBoundary`/`handleSpeechDone` untuk menggulir INSTAN
+   * saat suara berjalan. Animasi `scrollTo` mendahulukan kehalusan, dan untuk
+   * penggaris yang mengikuti suara itu justru terasa lambat.
+   */
+  useEffect(() => {
+    scrollToRulerLineRef.current = (lineIndex: number) => scrollToLine(lineIndex, false);
+  }, [scrollToLine]);
 
   /*
    * Paragraf aktif digulir ke atas layar setiap kali berganti — lewat efek
@@ -386,6 +475,14 @@ export default function ReaderScreen() {
       if (unchanged) return;
 
       lineMetrics.value = next.map((line) => ({ y: line.y, height: line.height }));
+
+      /*
+       * Disimpan sudah dinormalisasi + satu spasi penyambung antar baris.
+       * Teks yang dibunyikan merapatkan seluruh spasi jadi satu, jadi baris
+       * pertama menyumbang `len + 1` karakter — angka itulah yang membuat
+       * pemetaan `charIndex` tetap sejajar dengan teks ucapan.
+       */
+      lineTexts.current = next.map((line) => `${normalizeSpeechText(line.text)} `);
       setLineCount(next.length);
       setLineMetricsVersion((version) => version + 1);
     },
@@ -405,7 +502,14 @@ export default function ReaderScreen() {
 
       scheduleOnRN(setRulerLine, current);
 
-      if (focusMode) scheduleOnRN(scrollToRulerLine, current);
+      /*
+       * Saat penggaris sedang MENGIKUTI SUARA, gulirannya sudah dilakukan
+       * langsung dari `handleSpeechBoundary` secara instan. Menggulir lagi di
+       * sini (animasi) akan menimpanya dan membuat penggaris memburu suara.
+       * Reaksi ini tinggal jadi cadangan untuk perpindahan non-suara —
+       * seret jari, tombol naik/turun, dan pengaturan ulang setelah gulir.
+       */
+      if (focusMode && !rulerFollowingSpeech.value) scheduleOnRN(scrollToRulerLine, current);
     },
   );
 
@@ -697,6 +801,7 @@ export default function ReaderScreen() {
                     bicolor={bicolorMode}
                     lineMetrics={lineMetrics}
                     rulerIndex={rulerIndex}
+                    rulerFollowingSpeech={rulerFollowingSpeech}
                     onLayoutY={(y) => {
                       paragraphPositions.current[index] = y;
                     }}
@@ -705,6 +810,8 @@ export default function ReaderScreen() {
                     }}
                     onWordPress={setSelectedWord}
                     onSyncLines={syncLines}
+                    onSpeechBoundary={handleSpeechBoundary}
+                    onSpeechDone={handleSpeechDone}
                   />
                 ))}
               </Animated.View>
@@ -761,7 +868,10 @@ export default function ReaderScreen() {
             {ttsEnabled ? (
               <PressableScale
                 onPress={() =>
-                  toggleSpeech(shownParagraphs[activeIndex], `paragraph:${activeIndex}`)
+                  toggleSpeech(shownParagraphs[activeIndex], `paragraph:${activeIndex}`, {
+                    onBoundary: handleSpeechBoundary,
+                    onDone: handleSpeechDone,
+                  })
                 }
                 accessibilityRole="button"
                 accessibilityLabel={t.speech.readParagraph(activeIndex + 1)}
@@ -860,10 +970,13 @@ function ParagraphBlock({
   bicolor,
   lineMetrics,
   rulerIndex,
+  rulerFollowingSpeech,
   onLayoutY,
   onBodyLayoutY,
   onWordPress,
   onSyncLines,
+  onSpeechBoundary,
+  onSpeechDone,
 }: {
   paragraph: string;
   index: number;
@@ -874,11 +987,14 @@ function ParagraphBlock({
   bicolor: boolean;
   lineMetrics: SharedValue<LineMetric[]>;
   rulerIndex: SharedValue<number>;
+  rulerFollowingSpeech: SharedValue<boolean>;
   onLayoutY: (y: number) => void;
   /** Jarak blok teks dari puncak paragraf; dipakai menghitung guliran penggaris. */
   onBodyLayoutY: (y: number) => void;
   onWordPress: (word: string) => void;
   onSyncLines: (index: number, lines: TextLayoutLine[]) => void;
+  onSpeechBoundary: (charIndex: number) => void;
+  onSpeechDone: () => void;
 }) {
   const t = useT();
   const dimmed = focusMode && !isActive;
@@ -897,7 +1013,7 @@ function ParagraphBlock({
 
     return {
       opacity: 1,
-      top: withSpring(line.y, SPRING),
+      top: rulerFollowingSpeech.value ? line.y : withSpring(line.y, SPRING),
       height: line.height,
     };
   });
@@ -909,6 +1025,13 @@ function ParagraphBlock({
         .onBegin((event) => {
           const metrics = lineMetrics.value;
           if (metrics.length === 0) return;
+
+          /*
+           * Seret jari = kendali pengguna, bukan suara. Spring halus (SPRING)
+           * yang berlaku lagi, supaya penggarisnya tidak terasa kaku saat
+           * digeser.
+           */
+          rulerFollowingSpeech.value = false;
 
           let found = 0;
           for (let i = 0; i < metrics.length; i += 1) {
@@ -926,7 +1049,7 @@ function ParagraphBlock({
           }
           rulerIndex.value = found;
         }),
-    [lineMetrics, rulerIndex],
+    [lineMetrics, rulerIndex, rulerFollowingSpeech],
   );
 
   const body = (
@@ -975,6 +1098,8 @@ function ParagraphBlock({
             text={paragraph}
             speechKey={`paragraph:${index}`}
             size={16}
+            onBoundary={onSpeechBoundary}
+            onDone={onSpeechDone}
           />
         </View>
       ) : null}

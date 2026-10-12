@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { create } from 'zustand';
 
@@ -54,7 +54,11 @@ export function useSpeech() {
   }, [setSpeakingKey]);
 
   const speak = useCallback(
-    (text: string, key: string) => {
+    (
+      text: string,
+      key: string,
+      options?: { onBoundary?: (charIndex: number) => void; onDone?: () => void },
+    ) => {
       if (!enabled) return;
 
       setSpeakingKey(key);
@@ -63,6 +67,8 @@ export function useSpeech() {
         language,
         rate,
         voice,
+        onBoundary: options?.onBoundary,
+        onDone: options?.onDone,
         /*
          * Dibandingkan dengan key-nya sendiri: saat ucapan lama dihentikan
          * karena ada yang baru, callback-nya masih ikut berbunyi. Tanpa
@@ -81,14 +87,18 @@ export function useSpeech() {
 
   /** Tekan untuk membacakan, tekan lagi untuk berhenti. */
   const toggle = useCallback(
-    (text: string, key: string) => {
+    (
+      text: string,
+      key: string,
+      options?: { onBoundary?: (charIndex: number) => void; onDone?: () => void },
+    ) => {
       if (speakingKey === key) {
         stop();
 
         return;
       }
 
-      speak(text, key);
+      speak(text, key, options);
     },
     [speakingKey, speak, stop],
   );
@@ -187,14 +197,35 @@ export function useStopSpeechOnBlur(): void {
  * pemanggil bisa menambahkan syaratnya sendiri (mis. jawaban sudah selesai
  * dimuat, bukan sedang memuat).
  */
-export function useAutoSpeak(text: string | null, key: string, active: boolean): void {
+export function useAutoSpeak(
+  text: string | null,
+  key: string,
+  active: boolean,
+  onBoundary?: (charIndex: number) => void,
+  onDone?: () => void,
+): void {
   const autoPlay = useOCRStore((s) => s.ttsAutoPlay);
   const { enabled, speak } = useSpeech();
+
+  /*
+   * Disimpan di ref supaya identitas callback yang berubah tiap render tidak
+   * ikut memicu efek di bawah dan mengulang bacaan dari awal.
+   */
+  const boundaryRef = useRef(onBoundary);
+  const doneRef = useRef(onDone);
+
+  useEffect(() => {
+    boundaryRef.current = onBoundary;
+    doneRef.current = onDone;
+  }, [onBoundary, onDone]);
 
   useEffect(() => {
     if (!active || !autoPlay || !enabled || !text) return;
 
-    speak(text, key);
+    speak(text, key, {
+      onBoundary: (charIndex) => boundaryRef.current?.(charIndex),
+      onDone: () => doneRef.current?.(),
+    });
     // `speak` sengaja tidak masuk daftar: identitasnya berubah setiap kali
     // preferensi suara berganti, dan itu akan mengulang bacaan dari awal.
     // eslint-disable-next-line react-hooks/exhaustive-deps

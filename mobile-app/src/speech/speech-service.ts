@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import * as Speech from 'expo-speech';
+import type { NativeBoundaryEvent } from 'expo-speech/build/Speech.types';
 
 import type { LanguageId } from '../store/useStore';
 import { resolveVoice } from './voices';
@@ -61,6 +62,19 @@ export type SpeakOptions = {
    */
   voice?: string | null;
   onStart?: () => void;
+  /**
+   * Dipanggil tiap mesin TTS mencapai awal sebuah kata, membawa indeks
+   * karakternya DI DALAM teks yang sudah dinormalisasi — sama dengan yang
+   * benar-benar dibunyikan. Dipakai Reading Ruler untuk mengikuti suara.
+   */
+  onBoundary?: (charIndex: number) => void;
+  /**
+   * Dipanggil HANYA saat bacaan benar-benar tamat (bukan saat dihentikan atau
+   * gagal). Dipakai Reading Ruler untuk menempatkan penggaris di baris terakhir
+   * setelah suara selesai — `onBoundary` untuk kata terakhir bisa datang
+   * sebelum baris terakhir terbaca penuh.
+   */
+  onDone?: () => void;
   /** Dipanggil saat selesai, dihentikan, MAUPUN gagal — tepatnya sekali. */
   onSettled?: () => void;
 };
@@ -74,7 +88,7 @@ export type SpeakOptions = {
  * ditekan itulah yang berbunyi.
  */
 export async function speak(text: string, options: SpeakOptions): Promise<void> {
-  const clean = normalize(text);
+  const clean = normalizeSpeechText(text);
 
   if (clean.length === 0) {
     options.onSettled?.();
@@ -109,7 +123,21 @@ export async function speak(text: string, options: SpeakOptions): Promise<void> 
     rate: options.rate,
     pitch: PITCH,
     onStart: options.onStart,
-    onDone: settle,
+    onBoundary: options.onBoundary
+      ? (event: NativeBoundaryEvent) => {
+          /*
+           * Android dan iOS sama-sama memberi `charIndex` relatif ke teks yang
+           * dikirim — `clean`, bukan teks mentah pemanggil. Berbeda sedikit pun
+           * (emoji yang dibuang, spasi beruntun yang dirapatkan) posisinya
+           * bergeser, jadi pemanggil harus memetakan dari `clean` yang sama.
+           */
+          if (typeof event?.charIndex === 'number') options.onBoundary?.(event.charIndex);
+        }
+      : undefined,
+    onDone: () => {
+      options.onDone?.();
+      settle();
+    },
     onStopped: settle,
     onError: settle,
   });
@@ -144,7 +172,7 @@ export async function isSpeaking(): Promise<boolean> {
  * Prompt di backend sudah melarang model memakainya, tapi teks hasil OCR bisa
  * memuat apa saja.
  */
-function normalize(text: string): string {
+export function normalizeSpeechText(text: string): string {
   return (
     text
       .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, ' ')

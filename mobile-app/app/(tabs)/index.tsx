@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BookOpen, Camera, ChevronRight, Sparkles } from 'lucide-react-native';
+import { BookOpen, Camera, ChevronRight, Sparkles, TrendingUp } from 'lucide-react-native';
 
+import * as progressApi from '../../src/api/lexiprogress';
 import { useOCRStore } from '../../src/store/useStore';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { useThemeColors } from '../../src/theme/theme-provider';
@@ -41,6 +42,34 @@ export default function DashboardScreen() {
 
   const { focusMode, toggleFocusMode, typeLevelId, simplifyLevel } = useOCRStore();
   const reader = useAuthStore((s) => s.reader);
+
+  /*
+   * Ringkasan LexiProgress. Hanya diambil kalau sudah masuk: endpointnya
+   * menuntut token, dan kartu ini memang milik data pribadi pembaca.
+   * `null` di sini berarti "belum ada data" — dibedakan dari 0 sesi.
+   */
+  const [progress, setProgress] = useState<progressApi.ProgressOverview | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!reader) {
+        setProgress(null);
+        return;
+      }
+      let active = true;
+      progressApi
+        .fetchOverview()
+        .then((data) => {
+          if (active) setProgress(data);
+        })
+        .catch(() => {
+          // Diam: ringkasan yang gagal dimuat tidak boleh mengganggu Beranda.
+        });
+      return () => {
+        active = false;
+      };
+    }, [reader]),
+  );
 
   /** Lebar kartu sesungguhnya (Figma: 358 pada layar 390). */
   const cardWidth = width - PAGE_PADDING * 2;
@@ -231,6 +260,9 @@ export default function DashboardScreen() {
             </LinearGradient>
           </View>
 
+          {/* ── Ringkasan Progres Membaca ───────────────────────────────── */}
+          {reader ? <ProgressCard overview={progress} /> : null}
+
           {/* ── 5 fitur utama ───────────────────────────────────────────── */}
           <View className="flex-row items-end justify-between px-4 pb-3 pt-5">
             <View>
@@ -356,6 +388,40 @@ export default function DashboardScreen() {
         onClose={() => setExplainOpen(false)}
       />
     </>
+  );
+}
+
+function ProgressCard({ overview }: { overview: progressApi.ProgressOverview | null }) {
+  const router = useRouter();
+  const t = useT();
+  const colors = useThemeColors();
+  const latest = overview?.latest_session;
+  const activeGoal = overview?.goals.find((goal) => goal.status === 'active' || goal.status === 'not_started');
+
+  return (
+    <View className="mx-4 mt-4 rounded-3xl border border-border/10 bg-surface p-4">
+      <View className="flex-row items-center" style={{ gap: 10 }}>
+        <View className="h-10 w-10 items-center justify-center rounded-2xl bg-primary/10">
+          <TrendingUp size={19} color={colors.primary} />
+        </View>
+        <View className="flex-1">
+          <Text className="font-ui-bold text-[16px] text-text-main">{t.lexiprogress.title}</Text>
+          <Text className="font-ui-medium text-[12px] text-text-muted">{t.lexiprogress.feedback}</Text>
+        </View>
+      </View>
+      {!overview || overview.sessions_completed === 0 ? (
+        <Text className="mt-3 font-ui-medium text-[13px] leading-5 text-text-muted">{t.lexiprogress.empty}</Text>
+      ) : (
+        <View className="mt-3 flex-row" style={{ gap: 10 }}>
+          <View className="flex-1 rounded-2xl bg-background p-3"><Text className="font-ui-bold text-[20px] text-text-main">{overview.sessions_completed}</Text><Text className="font-ui-medium text-[11px] text-text-muted">{t.lexiprogress.completedSessions}</Text></View>
+          <View className="flex-1 rounded-2xl bg-background p-3"><Text className="font-ui-bold text-[20px] text-text-main">{activeGoal?.percent == null ? '—' : `${activeGoal.percent}%`}</Text><Text className="font-ui-medium text-[11px] text-text-muted">{activeGoal?.title ?? t.lexiprogress.activeGoals}</Text></View>
+          <View className="flex-1 rounded-2xl bg-background p-3"><Text className="font-ui-bold text-[20px] text-text-main">{latest?.comprehension_percent == null ? '—' : `${latest.comprehension_percent}%`}</Text><Text className="font-ui-medium text-[11px] text-text-muted">{t.lexiprogress.comprehension}</Text></View>
+        </View>
+      )}
+      <PressableScale onPress={() => router.push('/progress' as never)} accessibilityRole="button" accessibilityLabel={t.lexiprogress.viewProgress} className="mt-3 flex-row items-center justify-center rounded-2xl bg-primary py-3" style={{ gap: 6 }}>
+        <Text className="font-ui-bold text-[13px] text-white">{t.lexiprogress.viewProgress}</Text><ChevronRight size={16} color="#fff" />
+      </PressableScale>
+    </View>
   );
 }
 

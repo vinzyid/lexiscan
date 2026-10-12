@@ -16,6 +16,7 @@ import {
   LogOut,
   Palette,
   SquarePen,
+  TrendingUp,
   Type,
   UserRound,
   Volume2,
@@ -338,6 +339,20 @@ export default function SettingsScreen() {
                   setDraftName(reader.name);
                   setSheet('name');
                 }}
+              />
+            ) : null}
+            {/*
+             * Pintasan ke halaman progres lengkap. Ditaruh di sini, bukan sebagai
+             * tab baru: Atur memang tempat menelusuri data pribadi pembaca, dan
+             * menambah tab akan mengubah pola navigasi yang sudah ada demi satu
+             * halaman. Isi ringkasnya ada di Beranda.
+             */}
+            {reader ? (
+              <SettingsRow
+                Icon={TrendingUp}
+                title={t.lexiprogress.historyShortcut}
+                value={t.lexiprogress.historyShortcutDesc}
+                onPress={() => router.push('/progress' as never)}
               />
             ) : null}
             <SettingsRow

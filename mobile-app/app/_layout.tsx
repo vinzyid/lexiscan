@@ -159,6 +159,7 @@ function RootNavigator({ intro, onAdvance }: { intro: Intro; onAdvance: (next: I
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(auth)" />
+        <Stack.Screen name="progress" />
       </Stack>
 
       {intro === 'splash' ? (

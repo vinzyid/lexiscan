@@ -114,6 +114,24 @@ class Reader extends Authenticatable
         ];
     }
 
+    /** @return \Illuminate\Database\Eloquent\Relations\HasMany<ReadingDocument, $this> */
+    public function readingDocuments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ReadingDocument::class);
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Relations\HasMany<ReadingSession, $this> */
+    public function readingSessions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ReadingSession::class);
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Relations\HasMany<ReadingGoal, $this> */
+    public function readingGoals(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ReadingGoal::class);
+    }
+
     protected function casts(): array
     {
         return [
