@@ -24,6 +24,16 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         /*
+         * API-only: tidak ada route bernama `login`, jadi permintaan tanpa
+         * token yang mencoba dialihkan ke sana berakhir sebagai 500
+         * "Route [login] not defined". Mengembalikan null membuat middleware
+         * melempar AuthenticationException biasa, yang lalu dirender sebagai
+         * 401 JSON — termasuk untuk klien yang lupa mengirim
+         * Accept: application/json.
+         */
+        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('api/*') ? null : '/');
+
+        /*
          * Di belakang proxy hosting (Docker, reverse proxy), alamat IP asli
          * hanya ada di header X-Forwarded-For. Tanpa ini seluruh permintaan
          * terlihat berasal dari satu IP dan berbagi jatah throttle:20,1 yang

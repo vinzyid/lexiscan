@@ -49,6 +49,17 @@ class LexiProgressTest extends TestCase
         $this->postJson('/api/lexiprogress/sessions', [])->assertStatus(401);
     }
 
+    /**
+     * Klien tanpa header Accept (mis. curl polos) tetap harus menerima 401,
+     * bukan 500 "Route [login] not defined". Tanpa ini, middleware mengira
+     * ini permintaan browser dan mencoba mengalihkannya ke halaman login.
+     */
+    public function test_it_returns_401_not_500_when_the_accept_header_is_missing(): void
+    {
+        $this->get('/api/lexiprogress/overview', ['Accept' => 'text/html'])
+            ->assertStatus(401);
+    }
+
     public function test_it_stores_a_reading_document_snapshot_with_content_hash(): void
     {
         $text = 'Matahari bersinar sangat terang di pagi hari.';
