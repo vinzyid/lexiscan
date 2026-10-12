@@ -418,9 +418,16 @@ function ProgressCard({ overview }: { overview: progressApi.ProgressOverview | n
           <View className="flex-1 rounded-2xl bg-background p-3"><Text className="font-ui-bold text-[20px] text-text-main">{latest?.comprehension_percent == null ? '—' : `${latest.comprehension_percent}%`}</Text><Text className="font-ui-medium text-[11px] text-text-muted">{t.lexiprogress.comprehension}</Text></View>
         </View>
       )}
-      <PressableScale onPress={() => router.push('/progress' as never)} accessibilityRole="button" accessibilityLabel={t.lexiprogress.viewProgress} className="mt-3 flex-row items-center justify-center rounded-2xl bg-primary py-3" style={{ gap: 6 }}>
-        <Text className="font-ui-bold text-[13px] text-white">{t.lexiprogress.viewProgress}</Text><ChevronRight size={16} color="#fff" />
-      </PressableScale>
+      <View className="mt-3 flex-row" style={{ gap: 8 }}>
+        <View style={{ flex: 1 }}>
+          <PressableScale onPress={() => router.push('/progress/setup' as never)} accessibilityRole="button" accessibilityLabel={t.lexiprogress.startEvaluation} className="flex-row items-center justify-center rounded-2xl bg-primary py-3" style={{ gap: 6 }}>
+            <Text className="font-ui-bold text-[13px] text-white">{t.lexiprogress.startEvaluation}</Text>
+          </PressableScale>
+        </View>
+        <PressableScale onPress={() => router.push('/progress' as never)} accessibilityRole="button" accessibilityLabel={t.lexiprogress.viewProgress} className="flex-row items-center justify-center rounded-2xl bg-primary/[0.08] px-4 py-3" style={{ gap: 6 }}>
+          <Text className="font-ui-bold text-[13px] text-primary">{t.lexiprogress.viewProgress}</Text><ChevronRight size={16} color={colors.primary} />
+        </PressableScale>
+      </View>
     </View>
   );
 }

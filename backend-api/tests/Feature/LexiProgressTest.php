@@ -110,6 +110,98 @@ class LexiProgressTest extends TestCase
         $this->assertEquals(75.0, $completed->json('session.comprehension_percent'));
     }
 
+    /**
+     * Skor pemahaman yang dikirim lewat kuis harus DIHITUNG dari soal, bukan
+     * dipercaya dari angka yang dikirim aplikasi. Pemetaan ini yang membuat
+     * persentase tidak bisa dikarang dan tiap soal tetap bisa ditinjau.
+     */
+    public function test_it_scores_comprehension_from_the_quiz_not_the_client(): void
+    {
+        $doc = $this->readerA->readingDocuments()->create([
+            'title' => 'Teks Kuis',
+            'text_snapshot' => 'Satu dua tiga empat lima enam tujuh delapan',
+            'source_type' => 'text',
+        ]);
+
+        $session = $this->readerA->readingSessions()->create([
+            'reading_document_id' => $doc->id,
+            'condition' => ReadingSession::BASELINE,
+            'session_group_id' => (string) Str::uuid(),
+            'started_at' => now(),
+        ]);
+
+        $res = $this->withToken($this->tokenA)
+            ->postJson("/api/lexiprogress/sessions/{$session->id}/complete", [
+                'duration_seconds' => 90,
+                // Sengaja mengirim skor palsu; server harus mengabaikannya.
+                'comprehension_correct' => 3,
+                'comprehension_total' => 3,
+                'quiz' => [
+                    [
+                        'question' => 'Berapa jumlah angka pada teks?',
+                        'options' => ['6', '7', '8'],
+                        'correct_option' => 2,
+                        'chosen_option' => 2, // benar
+                    ],
+                    [
+                        'question' => 'Apa angka pertama?',
+                        'options' => ['Satu', 'Dua'],
+                        'correct_option' => 0,
+                        'chosen_option' => 1, // salah
+                    ],
+                    [
+                        'question' => 'Apa angka terakhir?',
+                        'options' => ['Delapan', 'Tujuh'],
+                        'correct_option' => 0,
+                        'chosen_option' => null, // dilewati
+                    ],
+                ],
+            ])
+            ->assertOk();
+
+        // 1 benar dari 3 soal yang diajukan = 33.33%
+        $this->assertEquals(1, $res->json('session.comprehension_correct'));
+        $this->assertEquals(3, $res->json('session.comprehension_total'));
+        $this->assertEquals(33.33, $res->json('session.comprehension_percent'));
+        $this->assertSame('quiz', $res->json('session.assessment_method'));
+        $this->assertCount(3, $res->json('session.quiz_items'));
+        $this->assertTrue($res->json('session.quiz_items.0.is_correct'));
+        $this->assertFalse($res->json('session.quiz_items.1.is_correct'));
+        $this->assertNull($res->json('session.quiz_items.2.is_correct'));
+    }
+
+    /**
+     * Kuis boleh dilewati. Saat itu, skor pemahaman tidak boleh diam-diam
+     * dianggap 0 — harus tetap null supaya terbaca "Belum diukur".
+     */
+    public function test_it_leaves_comprehension_unmeasured_when_the_quiz_is_skipped(): void
+    {
+        $doc = $this->readerA->readingDocuments()->create([
+            'title' => 'Tanpa Kuis',
+            'text_snapshot' => 'Sepuluh kata yang cukup untuk sebuah sesi baca singkat',
+            'source_type' => 'text',
+        ]);
+
+        $session = $this->readerA->readingSessions()->create([
+            'reading_document_id' => $doc->id,
+            'condition' => ReadingSession::ASSISTED,
+            'session_group_id' => (string) Str::uuid(),
+            'started_at' => now(),
+        ]);
+
+        $res = $this->withToken($this->tokenA)
+            ->postJson("/api/lexiprogress/sessions/{$session->id}/complete", [
+                'duration_seconds' => 45,
+                'assessment_method' => 'self_report',
+            ])
+            ->assertOk();
+
+        $this->assertNull($res->json('session.comprehension_correct'));
+        $this->assertNull($res->json('session.comprehension_total'));
+        $this->assertNull($res->json('session.comprehension_percent'));
+        $this->assertSame('self_report', $res->json('session.assessment_method'));
+    }
+
     public function test_it_handles_division_by_zero_and_missing_metrics_safely(): void
     {
         $doc = $this->readerA->readingDocuments()->create([

@@ -49,6 +49,11 @@ class ReadingSession extends Model
         return $this->hasMany(SessionFeature::class);
     }
 
+    public function quizItems(): HasMany
+    {
+        return $this->hasMany(SessionQuizItem::class);
+    }
+
     public function getWpmAttribute(): ?float
     {
         return self::rate($this->words_total, $this->duration_seconds);
@@ -114,6 +119,9 @@ class ReadingSession extends Model
             'assessment_method' => $this->assessment_method,
             'notes' => $this->notes,
             'features' => $this->relationLoaded('features') ? $this->features->pluck('feature_key')->values() : [],
+            'quiz_items' => $this->relationLoaded('quizItems')
+                ? $this->quizItems->map->toSummary()->values()
+                : [],
         ];
     }
 }

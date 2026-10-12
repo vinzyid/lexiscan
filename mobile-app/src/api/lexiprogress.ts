@@ -19,6 +19,16 @@ export type ProgressDocument = {
   created_at: string | null;
 };
 
+export type QuizItem = {
+  id?: number;
+  order_index?: number;
+  question: string;
+  options: string[];
+  correct_option: number;
+  chosen_option: number | null;
+  is_correct?: boolean | null;
+};
+
 export type ProgressSession = {
   id: number;
   condition: ProgressCondition;
@@ -40,6 +50,7 @@ export type ProgressSession = {
   assessment_method: string | null;
   notes: string | null;
   features: string[];
+  quiz_items: QuizItem[];
 };
 
 export type GoalMetricKey =
@@ -138,6 +149,9 @@ export async function completeSession(
     comprehensionTotal?: number | null;
     difficultyRating?: number | null;
     notes?: string | null;
+    assessmentMethod?: string | null;
+    /** Kalau dikirim, server menghitung skor pemahaman dari soal ini sendiri. */
+    quiz?: QuizItem[];
   },
 ): Promise<{ session: ProgressSession }> {
   return postJson(`/api/lexiprogress/sessions/${id}/complete`, {
@@ -148,6 +162,13 @@ export async function completeSession(
     comprehension_total: input.comprehensionTotal ?? null,
     difficulty_rating: input.difficultyRating ?? null,
     notes: input.notes ?? null,
+    assessment_method: input.assessmentMethod ?? null,
+    quiz: input.quiz?.map((item) => ({
+      question: item.question,
+      options: item.options,
+      correct_option: item.correct_option,
+      chosen_option: item.chosen_option,
+    })),
   });
 }
 

@@ -17,7 +17,7 @@ class LexiProgressController extends Controller
     {
         $reader = $request->user();
         $sessions = ReadingSession::where('reader_id', $reader->id)
-            ->whereNotNull('completed_at')->latest('completed_at')->with(['document', 'features'])->get();
+            ->whereNotNull('completed_at')->latest('completed_at')->with(['document', 'features', 'quizItems'])->get();
         $goals = ReadingGoal::where('reader_id', $reader->id)->latest()->get();
 
         return response()->json([
@@ -80,7 +80,7 @@ class LexiProgressController extends Controller
 
     public function sessions(Request $request): JsonResponse
     {
-        $sessions = ReadingSession::where('reader_id', $request->user()->id)->with(['document', 'features'])->latest()->paginate(20);
+        $sessions = ReadingSession::where('reader_id', $request->user()->id)->with(['document', 'features', 'quizItems'])->latest()->paginate(20);
         $sessions->getCollection()->transform(fn (ReadingSession $session) => $session->toSummary());
 
         return response()->json($sessions);
@@ -90,7 +90,7 @@ class LexiProgressController extends Controller
     {
         abort_unless($session->reader_id === $request->user()->id, 404);
 
-        return response()->json(['session' => $session->load(['document', 'features'])->toSummary()]);
+        return response()->json(['session' => $session->load(['document', 'features', 'quizItems'])->toSummary()]);
     }
 
     public function completeSession(Request $request, ReadingSession $session): JsonResponse
@@ -100,18 +100,76 @@ class LexiProgressController extends Controller
             'duration_seconds' => ['required', 'integer', 'min:1', 'max:86400'],
             'words_total' => ['nullable', 'integer', 'min:0'],
             'words_correct' => ['nullable', 'integer', 'min:0', 'lte:words_total'],
+            /*
+             * Skor pemahaman manual dikirim hanya kalau TIDAK ada blok `quiz`.
+             * Kalau kuis dikirim, kedua kolom ini diabaikan dan dihitung dari
+             * soal — jadi angka yang ditolak validasinya di sini pun tidak
+             * akan berpengaruh, dan mengabaikannya lebih ramah daripada gagal.
+             */
             'comprehension_correct' => ['nullable', 'integer', 'min:0', 'lte:comprehension_total'],
-            'comprehension_total' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'comprehension_total' => ['nullable', 'integer', 'min:1', 'max:100'],
             'difficulty_rating' => ['nullable', 'numeric', 'min:1', 'max:5'],
             'assessment_method' => ['nullable', 'string', 'max:40'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            /*
+             * Kuis pemahaman, opsional. Kalau dikirim, skornya DIHITUNG dari
+             * soal-soal ini — bukan dari angka yang dikirim aplikasi — supaya
+             * persentase tidak bisa dikarang dan selalu bisa ditelusuri.
+             */
+            'quiz' => ['nullable', 'array', 'max:20'],
+            'quiz.*.question' => ['required', 'string', 'min:3', 'max:500'],
+            'quiz.*.options' => ['required', 'array', 'min:2', 'max:6'],
+            'quiz.*.options.*' => ['required', 'string', 'max:300'],
+            'quiz.*.correct_option' => ['required', 'integer', 'min:0'],
+            'quiz.*.chosen_option' => ['nullable', 'integer', 'min:0'],
         ]);
         if (isset($data['words_total']) && $data['words_correct'] !== null && $data['words_correct'] > $data['words_total']) {
             abort(422, 'Jumlah kata benar tidak boleh melebihi total kata.');
         }
-        $session->fill($data + ['completed_at' => now()])->save();
 
-        return response()->json(['session' => $session->load(['document', 'features'])->toSummary()]);
+        $quiz = $data['quiz'] ?? null;
+        unset($data['quiz']);
+
+        DB::transaction(function () use ($session, $data, $quiz): void {
+            if ($quiz !== null) {
+                $session->quizItems()->delete();
+
+                $correctCount = 0;
+
+                foreach (array_values($quiz) as $index => $item) {
+                    $chosen = $item['chosen_option'] ?? null;
+                    // Belum dijawab (null) berbeda dari dijawab salah: yang
+                    // pertama tidak punya penilaian sama sekali.
+                    $isCorrect = $chosen === null ? null : (int) $chosen === (int) $item['correct_option'];
+                    if ($isCorrect === true) {
+                        $correctCount += 1;
+                    }
+
+                    $session->quizItems()->create([
+                        'order_index' => $index + 1,
+                        'question' => $item['question'],
+                        'options' => $item['options'],
+                        'correct_option' => (int) $item['correct_option'],
+                        'chosen_option' => $chosen,
+                        'is_correct' => $isCorrect,
+                    ]);
+                }
+
+                /*
+                 * Skor = jawaban benar / jumlah soal yang benar-benar dinilai.
+                 * Soal yang dilewati (chosen_option null) tetap dihitung sebagai
+                 * bagian dari total pertanyaan yang DIAJUKAN, karena ditampilkan
+                 * ke pembaca sebagai bagian kuis ini.
+                 */
+                $data['comprehension_correct'] = $correctCount;
+                $data['comprehension_total'] = count($quiz);
+                $data['assessment_method'] = $data['assessment_method'] ?? 'quiz';
+            }
+
+            $session->fill($data + ['completed_at' => now()])->save();
+        });
+
+        return response()->json(['session' => $session->load(['document', 'features', 'quizItems'])->toSummary()]);
     }
 
     public function goals(Request $request): JsonResponse
@@ -155,7 +213,7 @@ class LexiProgressController extends Controller
 
     public function comparison(Request $request, string $sessionGroupId): JsonResponse
     {
-        $sessions = ReadingSession::where('reader_id', $request->user()->id)->where('session_group_id', $sessionGroupId)->with(['document', 'features'])->get();
+        $sessions = ReadingSession::where('reader_id', $request->user()->id)->where('session_group_id', $sessionGroupId)->with(['document', 'features', 'quizItems'])->get();
         abort_if($sessions->isEmpty(), 404);
         $baseline = $sessions->firstWhere('condition', ReadingSession::BASELINE);
         $assisted = $sessions->firstWhere('condition', ReadingSession::ASSISTED);
@@ -180,7 +238,7 @@ class LexiProgressController extends Controller
             return [];
         }
         $result = [];
-        foreach (['duration_seconds', 'wpm', 'cwpm', 'accuracy_percent', 'comprehension_percent'] as $metric) {
+        foreach (['duration_seconds', 'wpm', 'cwpm', 'accuracy_percent', 'comprehension_percent', 'difficulty_rating'] as $metric) {
             $from = $baseline->{$metric};
             $to = $assisted->{$metric};
             $result[$metric] = ['baseline' => $from, 'assisted' => $to, 'percentage_points' => $metric === 'accuracy_percent' || $metric === 'comprehension_percent' ? ($from !== null && $to !== null ? round($to - $from, 2) : null) : null, 'relative_percent' => $from !== null && $to !== null && $from != 0 ? round(($to - $from) / abs($from) * 100, 2) : null];
