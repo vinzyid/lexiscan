@@ -8,6 +8,7 @@ import {
   type ReadingLevelId,
 } from '../theme/reading-levels';
 import type { SimplifyLevelId } from '../data/sample-document';
+import { randomUuid } from '../utils/uuid';
 
 /** Didefinisikan di sini, bukan di `src/i18n`, supaya tidak saling mengimpor. */
 export type LanguageId = 'id' | 'en';
@@ -56,6 +57,45 @@ export interface ServerDefaults {
   type_level?: string | null;
 }
 
+/**
+ * Satu dokumen hasil pindaian yang disimpan di perangkat.
+ *
+ * Dulu hasil scan hanya hidup di `rawText` selama aplikasi terbuka: begitu
+ * ditutup, teksnya hilang tanpa cara apa pun untuk membukanya lagi. Riwayat ini
+ * yang membuat dokumen tetap ada — disimpan ke AsyncStorage bersama
+ * preferensi lain, bukan ke server, supaya tetap bisa dicek walau tanpa akun.
+ */
+export interface SavedDocument {
+  /** Dibuat di perangkat (UUID), bukan id server — dokumen ini tidak pernah dikirim ke backend. */
+  id: string;
+  /** Nama dokumen; pengguna bisa menamainya, kalau tidak ada dipakai cuplikan teks. */
+  title: string;
+  /** Teks hasil OCR lengkap; inilah isi yang dibuka ulang di layar Baca. */
+  text: string;
+  /** Waktu disimpan (epoch ms), untuk mengurutkan daftar dari yang terbaru. */
+  savedAt: number;
+}
+
+/** Diberi pagar supaya riwayat tidak tumbuh tanpa batas di penyimpanan HP. */
+const MAX_SAVED_DOCUMENTS = 50;
+
+/**
+ * Judul bawaan sebuah dokumen: baris pertama yang tidak kosong, dipotong.
+ *
+ * Baris pertama biasanya judul atau kalimat pembuka halaman yang dipindai, jadi
+ * ia lebih berguna sebagai nama di daftar daripada "Hasil Pindaian" yang
+ * semuanya sama dan tidak bisa dibedakan satu dengan yang lain.
+ */
+export function defaultDocumentTitle(text: string): string {
+  const firstLine = text
+    .split(/\n/)
+    .map((line) => line.trim())
+    .find((line) => line.length > 0);
+
+  if (!firstLine) return 'Dokumen Pindaian';
+  return firstLine.length > 60 ? `${firstLine.slice(0, 57)}…` : firstLine;
+}
+
 const isThemeId = (value: unknown): value is ThemeId =>
   THEMES.some((theme) => theme.id === value);
 
@@ -80,6 +120,20 @@ interface OCRState {
   rawText: string;
   setRawText: (text: string) => void;
   clearRawText: () => void;
+
+  /**
+   * Riwayat dokumen hasil pindaian yang bertahan setelah aplikasi ditutup.
+   *
+   * Terpisah dari `rawText` dengan sengaja: `rawText` adalah "apa yang sedang
+   * dibaca sekarang" dan boleh hilang saat aplikasi ditutup, sedangkan ini
+   * adalah arsip yang justru harus bertahan — itulah seluruh gunanya.
+   */
+  savedDocuments: SavedDocument[];
+  /** Menyimpan dokumen baru dan mengembalikan id-nya. */
+  saveDocument: (input: { title?: string; text: string }) => string;
+  /** Mengganti nama dokumen tersimpan; judul kosong diabaikan. */
+  renameDocument: (id: string, title: string) => void;
+  removeDocument: (id: string) => void;
 
   /**
    * Hasil penyederhanaan AI per level. Dikosongkan setiap rawText berganti
@@ -224,6 +278,40 @@ export const useOCRStore = create<OCRState>()(
         set({ rawText: text, simplifyLevel: 'L1', activeParagraphIndex: 0, aiParagraphs: {} }),
       clearRawText: () => set({ rawText: '', activeParagraphIndex: 0, aiParagraphs: {} }),
 
+      savedDocuments: [],
+      saveDocument: (input) => {
+        const id = randomUuid();
+        const title = input.title?.trim() || defaultDocumentTitle(input.text);
+        const document: SavedDocument = {
+          id,
+          title,
+          text: input.text,
+          savedAt: Date.now(),
+        };
+
+        /*
+         * Yang terbaru di depan, dan yang lama dibuang begitu lewat batas.
+         * Tanpa pemangkasan ini, tiap pindaian menambah entri selamanya sampai
+         * AsyncStorage penuh — dan menyimpan seluruh teks satu halaman buku per
+         * entri memang tidak murah.
+         */
+        set((s) => ({ savedDocuments: [document, ...s.savedDocuments].slice(0, MAX_SAVED_DOCUMENTS) }));
+
+        return id;
+      },
+      renameDocument: (id, title) =>
+        set((s) => {
+          const trimmed = title.trim();
+          if (!trimmed) return {};
+          return {
+            savedDocuments: s.savedDocuments.map((doc) =>
+              doc.id === id ? { ...doc, title: trimmed } : doc,
+            ),
+          };
+        }),
+      removeDocument: (id) =>
+        set((s) => ({ savedDocuments: s.savedDocuments.filter((doc) => doc.id !== id) })),
+
       aiParagraphs: {},
       setAiParagraphs: (level, paragraphs) =>
         set((s) => ({ aiParagraphs: { ...s.aiParagraphs, [level]: paragraphs } })),
@@ -365,6 +453,12 @@ export const useOCRStore = create<OCRState>()(
        */
       partialize: (s) => ({
         footprintTotals: s.footprintTotals,
+        /*
+         * Riwayat dokumen hasil pindaian ikut disimpan, dan memang itu intinya:
+         * dulu teks scan hanya hidup selama aplikasi terbuka, sehingga begitu
+         * ditutup dokumennya tidak bisa dicek lagi. Lihat `SavedDocument`.
+         */
+        savedDocuments: s.savedDocuments,
         /*
          * Bahasa disimpan supaya pilihan pengguna tidak kembali ke Indonesia
          * setiap aplikasi dibuka. Tanpa ini, yang memilih English harus

@@ -1,6 +1,6 @@
 import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Home, Camera, BookOpen, Settings } from 'lucide-react-native';
+import { Home, Camera, BookOpen, FileText, Settings } from 'lucide-react-native';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 
 import { useThemeColors } from '../theme/theme-provider';
@@ -12,6 +12,7 @@ const TABS = {
   index: { Icon: Home, key: 'home' },
   scanner: { Icon: Camera, key: 'scan' },
   reader: { Icon: BookOpen, key: 'read' },
+  documents: { Icon: FileText, key: 'documents' },
   settings: { Icon: Settings, key: 'settings' },
 } as const;
 
@@ -64,7 +65,8 @@ export function PillTabBar({ state, navigation, insets }: BottomTabBarProps) {
             accessibilityState={isFocused ? { selected: true } : {}}
             accessibilityLabel={label}
             onPress={onPress}
-            scaleTo={0.92}>
+            scaleTo={0.92}
+            wrapperStyle={{ flex: 1 }}>
             {isFocused ? (
               <LinearGradient
                 colors={[...GRADIENTS.navPill.colors]}
@@ -76,7 +78,7 @@ export function PillTabBar({ state, navigation, insets }: BottomTabBarProps) {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 6,
-                  paddingHorizontal: 14,
+                  paddingHorizontal: 10,
                   borderRadius: 24,
                 }}>
                 <Icon size={19} color="#ffffff" strokeWidth={1.8} />
@@ -84,9 +86,11 @@ export function PillTabBar({ state, navigation, insets }: BottomTabBarProps) {
               </LinearGradient>
             ) : (
               /* Tab tidak aktif tetap menampilkan namanya: ikon sendirian memaksa menebak. */
-              <View className="h-12 w-[70px] items-center justify-center rounded-3xl">
+              <View className="h-12 items-center justify-center rounded-3xl px-1">
                 <Icon size={19} color={colors.textMuted} strokeWidth={1.8} />
-                <Text className="mt-0.5 font-ui-medium text-[11px] text-text-muted">{label}</Text>
+                <Text className="mt-0.5 font-ui-medium text-[11px] text-text-muted" numberOfLines={1}>
+                  {label}
+                </Text>
               </View>
             )}
           </PressableScale>

@@ -112,6 +112,8 @@ export default function ScannerScreen() {
   const [isFocused, setIsFocused] = useState(true);
 
   const setRawText = useOCRStore((s) => s.setRawText);
+  const saveDocument = useOCRStore((s) => s.saveDocument);
+  const removeDocument = useOCRStore((s) => s.removeDocument);
   const typeLevel = getTypeLevel(useOCRStore((s) => s.typeLevelId));
 
   const [isCorrectingTypo, setIsCorrectingTypo] = useState(false);
@@ -155,6 +157,14 @@ export default function ScannerScreen() {
    */
   const scanGeneration = useRef(0);
 
+  /*
+   * Id dokumen yang baru saja disimpan ke riwayat untuk pindaian yang sedang
+   * tampil. Dipakai supaya hasil koreksi typo yang menyusul di latar bisa
+   * memperbarui teks dokumen tersimpan itu juga — kalau tidak, yang tersimpan
+   * adalah teks mentah sebelum dirapikan.
+   */
+  const savedDocumentIdRef = useRef<string | null>(null);
+
   const correctTypoInBackground = async (text: string) => {
     const generation = scanGeneration.current;
 
@@ -165,6 +175,17 @@ export default function ScannerScreen() {
       if (generation !== scanGeneration.current) return;
 
       setDetected(corrected);
+
+      /*
+       * Dokumen tersimpan ikut diperbarui. Rantai pemikirannya: yang tersimpan
+       * adalah teks MENTAH, sedangkan yang seharusnya dibaca pengguna adalah
+       * yang sudah dirapikan. Mengganti isinya lewat simpan-ulang (id lama
+       * dibuang) lebih sederhana daripada menambah aksi "update" tersendiri,
+       * dan batas 50 dokumen membuat biayanya tidak terasa.
+       */
+      const previousId = savedDocumentIdRef.current;
+      savedDocumentIdRef.current = saveDocument({ text: corrected });
+      if (previousId) removeDocument(previousId);
     } catch (e) {
       console.warn(t.scanner.typoWarning, e);
     } finally {
@@ -220,6 +241,10 @@ export default function ScannerScreen() {
       setDetected(rawText);
       setStepsDone(0);
       setPhase('done');
+      // Disimpan di sini, bukan saat tombol "Buka dan Baca" ditekan: pengguna
+      // yang langsung menutup aplikasi setelah melihat hasil tetap harus
+      // menemukan dokumennya di riwayat.
+      savedDocumentIdRef.current = saveDocument({ text: rawText });
       correctTypoInBackground(rawText);
     } catch (error) {
       setPhase('idle');
@@ -250,6 +275,7 @@ export default function ScannerScreen() {
       setDetected(rawText);
       setStepsDone(0);
       setPhase('done');
+      savedDocumentIdRef.current = saveDocument({ text: rawText });
       correctTypoInBackground(rawText);
     } catch (error) {
       setPhase('idle');
@@ -493,6 +519,7 @@ export default function ScannerScreen() {
                   // Membatalkan koreksi yang masih berjalan: penandanya dinaikkan
                   // supaya jawaban yang menyusul diabaikan.
                   scanGeneration.current += 1;
+                  savedDocumentIdRef.current = null;
                   setIsCorrectingTypo(false);
                   setPhase('idle');
                   setDetected('');

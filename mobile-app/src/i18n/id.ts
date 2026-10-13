@@ -44,6 +44,7 @@ export const id = {
     home: 'Beranda',
     scan: 'Pindai',
     read: 'Baca',
+    documents: 'Dokumen',
     settings: 'Atur',
   },
 
@@ -333,6 +334,27 @@ export const id = {
     genericError: 'Terjadi kesalahan.',
     cameraNoImage: 'Kamera tidak mengembalikan gambar.',
     typoWarning: 'Gagal memperbaiki typo via AI, memakai teks asli dari OCR.',
+  },
+
+  documents: {
+    title: 'Dokumen Saya',
+    subtitle: 'Hasil pindaian tersimpan di perangkat ini',
+    emptyTitle: 'Belum ada dokumen',
+    emptyDesc: 'Dokumen yang kamu pindai akan tersimpan di sini, jadi bisa dibuka dan dibaca lagi kapan saja.',
+    emptyButton: 'Pindai Sekarang',
+    open: 'Buka',
+    openLabel: (title: string) => `Buka dan baca ${title}`,
+    rename: 'Ubah Nama',
+    renameTitle: 'Ubah Nama Dokumen',
+    renameLabel: 'Nama dokumen',
+    delete: 'Hapus',
+    deleteTitle: 'Hapus dokumen?',
+    deleteMessage: (title: string) => `"${title}" akan dihapus dari perangkat ini.`,
+    cancel: 'Batal',
+    wordCount: (count: number) => `${count} kata`,
+    savedAt: (when: string) => `Disimpan ${when}`,
+    today: 'hari ini',
+    yesterday: 'kemarin',
   },
 
   settings: {

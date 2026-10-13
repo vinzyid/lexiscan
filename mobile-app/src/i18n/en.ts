@@ -43,6 +43,7 @@ export const en: Translation = {
     home: 'Home',
     scan: 'Scan',
     read: 'Read',
+    documents: 'Documents',
     settings: 'Settings',
   },
 
@@ -284,6 +285,27 @@ export const en: Translation = {
     genericError: 'Something went wrong.',
     cameraNoImage: 'The camera did not return an image.',
     typoWarning: 'AI typo correction failed, using the raw OCR text instead.',
+  },
+
+  documents: {
+    title: 'My Documents',
+    subtitle: 'Scans saved on this device',
+    emptyTitle: 'No documents yet',
+    emptyDesc: 'Documents you scan will be saved here, so you can open and read them again anytime.',
+    emptyButton: 'Scan Now',
+    open: 'Open',
+    openLabel: (title: string) => `Open and read ${title}`,
+    rename: 'Rename',
+    renameTitle: 'Rename Document',
+    renameLabel: 'Document name',
+    delete: 'Delete',
+    deleteTitle: 'Delete document?',
+    deleteMessage: (title: string) => `"${title}" will be removed from this device.`,
+    cancel: 'Cancel',
+    wordCount: (count: number) => `${count} words`,
+    savedAt: (when: string) => `Saved ${when}`,
+    today: 'today',
+    yesterday: 'yesterday',
   },
 
   settings: {
