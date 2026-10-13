@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, Text, View, type TextLayoutLine } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -48,6 +48,7 @@ import { WordSheet } from '../../src/components/word-sheet';
 import { SpeakButton } from '../../src/components/speak-button';
 import { useAutoSpeak, useSpeech, useStopSpeechOnBlur } from '../../src/speech/use-speech';
 import { normalizeSpeechText } from '../../src/speech/speech-service';
+import { alignWordIndex, speechWordCount, wordIndexAtChar } from '../../src/utils/word-highlight';
 import { Blob, Ring, Sparkle } from '../../src/components/figma-decor';
 
 type LineMetric = { y: number; height: number };
@@ -104,6 +105,13 @@ export default function ReaderScreen() {
    */
   const [lineMetricsVersion, setLineMetricsVersion] = useState(0);
   const [rulerLine, setRulerLine] = useState(0);
+  /*
+   * Nomor kata yang sedang dibacakan, untuk menyorotnya mengikuti suara seperti
+   * karaoke. `null` berarti tidak ada yang disorot (belum berbunyi / sudah
+   * selesai). Terpisah dari penggaris: sorotan kata hidup sendiri meski
+   * penggaris mati, dan sebaliknya.
+   */
+  const [activeWordIndex, setActiveWordIndex] = useState<number | null>(null);
   const [simplifyLoading, setSimplifyLoading] = useState(false);
   const [simplifyError, setSimplifyError] = useState<string | null>(null);
 
@@ -166,8 +174,29 @@ export default function ReaderScreen() {
    */
   const scrollToRulerLineRef = useRef<((lineIndex: number) => void) | null>(null);
 
+  /*
+   * Teks paragraf yang sedang dibunyikan, dalam bentuk mentah. Diisi di dekat
+   * akhir komponen (tempat `shownParagraphs` sudah tersedia), tapi dibaca oleh
+   * `handleSpeechBoundary` yang didefinisikan lebih dulu — karena itu ref, bukan
+   * variabel biasa.
+   */
+  const activeParagraphRef = useRef<string>('');
+
   const handleSpeechBoundary = useCallback(
     (charIndex: number) => {
+      /*
+       * Sorot kata yang sedang diucapkan — hidup sendiri, tanpa menunggu
+       * penggaris. Teksnya dinormalisasi dengan fungsi yang SAMA seperti yang
+       * dipakai mesin TTS, karena `charIndex` relatif terhadap teks itu,
+       * bukan terhadap teks mentah di layar.
+       */
+      const spoken = normalizeSpeechText(activeParagraphRef.current);
+      const wordIndex = alignWordIndex(
+        wordIndexAtChar(spoken, charIndex),
+        speechWordCount(activeParagraphRef.current),
+      );
+      setActiveWordIndex(wordIndex);
+
       if (!rulerMode) return;
 
       const lines = lineTexts.current;
@@ -206,6 +235,10 @@ export default function ReaderScreen() {
    * tanpa ini penggaris berhenti di baris sebelum akhir.
    */
   const handleSpeechDone = useCallback(() => {
+    // Sorotan kata dilepas di akhir ucapan; membiarkannya menyala setelah suara
+    // berhenti menandai posisi yang tidak lagi benar-benar dibacakan.
+    setActiveWordIndex(null);
+
     if (!rulerMode) return;
 
     const lastLine = lineTexts.current.length - 1;
@@ -269,13 +302,38 @@ export default function ReaderScreen() {
   }, [simplifyLevel, aiResult, scannedParagraphs]);
 
   const activeIndex = Math.min(activeParagraphIndex, Math.max(0, paragraphs.length - 1));
-  const shownParagraphs = paragraphs.length > 0 ? paragraphs : [t.reader.emptyText];
+  /*
+   * Dibungkus useMemo supaya referensinya stabil antar render. Dipakai sebagai
+   * dependency efek yang menyimpan teks paragraf aktif; tanpa ini efeknya
+   * dianggap berubah tiap render dan peringatan dependency menyala.
+   */
+  const shownParagraphs = useMemo(
+    () => (paragraphs.length > 0 ? paragraphs : [t.reader.emptyText]),
+    [paragraphs, t.reader.emptyText],
+  );
 
   const showSkeleton = needsAi && simplifyLoading && !aiResult;
 
   const { enabled: ttsEnabled, toggle: toggleSpeech, speakingKey } = useSpeech();
 
   useStopSpeechOnBlur();
+
+  /*
+   * Sorotan kata hanya berlaku selama suara paragraf AKTIF yang berbunyi.
+   * Diturunkan saat render, bukan direset lewat efek: begitu suara berhenti
+   * atau paragraf berganti, `speakingKey` tidak lagi cocok dan sorotannya hilang
+   * dengan sendirinya — tanpa setState di efek yang memicu render berantai.
+   */
+  const visibleActiveWordIndex =
+    speakingKey === `paragraph:${activeIndex}` ? activeWordIndex : null;
+
+  /*
+   * Jejak teks paragraf aktif untuk `handleSpeechBoundary`. Ditulis di efek,
+   * bukan saat render, karena menulis ref saat render melanggar aturan React.
+   */
+  useEffect(() => {
+    activeParagraphRef.current = shownParagraphs[activeIndex] ?? '';
+  }, [shownParagraphs, activeIndex]);
 
   /*
    * Paragraf aktif dibacakan sendiri bagi yang presetnya memang meminta
@@ -799,15 +857,12 @@ export default function ReaderScreen() {
                     focusMode={focusMode}
                     rulerMode={rulerMode}
                     bicolor={bicolorMode}
+                    activeWordIndex={index === activeIndex ? visibleActiveWordIndex : null}
                     lineMetrics={lineMetrics}
                     rulerIndex={rulerIndex}
                     rulerFollowingSpeech={rulerFollowingSpeech}
-                    onLayoutY={(y) => {
-                      paragraphPositions.current[index] = y;
-                    }}
-                    onBodyLayoutY={(y) => {
-                      paragraphBodyOffsets.current[index] = y;
-                    }}
+                    positions={paragraphPositions}
+                    bodyOffsets={paragraphBodyOffsets}
                     onWordPress={setSelectedWord}
                     onSyncLines={syncLines}
                     onSpeechBoundary={handleSpeechBoundary}
@@ -959,8 +1014,18 @@ export default function ReaderScreen() {
   );
 }
 
-/** Komponen tersendiri karena tiap paragraf butuh hook animasinya sendiri. */
-function ParagraphBlock({
+/**
+ * Komponen tersendiri karena tiap paragraf butuh hook animasinya sendiri.
+ *
+ * DIBUNGKUS memo, dan itu bukan hiasan. Sorotan per-kata mengubah state pembaca
+ * pada SETIAP kata yang diucapkan mesin TTS; tanpa memo, seluruh paragraf ikut
+ * dirender ulang puluhan kali per kalimat — di HP kelas bawah itu terasa sebagai
+ * sorotan yang tersendat. Dengan memo, hanya paragraf aktif yang benar-benar
+ * berubah (`activeWordIndex`-nya), dan paragraf lain dilewati. Syaratnya semua
+ * prop non-primitif harus stabil: itu sebabnya `positions`/`bodyOffsets`
+ * dioper sebagai ref utuh, bukan callback per indeks.
+ */
+const ParagraphBlock = memo(function ParagraphBlock({
   paragraph,
   index,
   total,
@@ -968,11 +1033,12 @@ function ParagraphBlock({
   focusMode,
   rulerMode,
   bicolor,
+  activeWordIndex,
   lineMetrics,
   rulerIndex,
   rulerFollowingSpeech,
-  onLayoutY,
-  onBodyLayoutY,
+  positions,
+  bodyOffsets,
   onWordPress,
   onSyncLines,
   onSpeechBoundary,
@@ -985,12 +1051,19 @@ function ParagraphBlock({
   focusMode: boolean;
   rulerMode: boolean;
   bicolor: boolean;
+  /** Nomor kata yang sedang dibacakan; hanya diisi untuk paragraf aktif. */
+  activeWordIndex: number | null;
   lineMetrics: SharedValue<LineMetric[]>;
   rulerIndex: SharedValue<number>;
   rulerFollowingSpeech: SharedValue<boolean>;
-  onLayoutY: (y: number) => void;
+  /*
+   * Peta posisi paragraf dioper sebagai ref utuh (bukan callback per indeks),
+   * supaya komponen ini bisa di-memo: callback yang dibuat di dalam `.map`
+   * selalu identitas baru tiap render dan akan membatalkan memo-nya.
+   */
+  positions: React.RefObject<{ [key: number]: number }>;
   /** Jarak blok teks dari puncak paragraf; dipakai menghitung guliran penggaris. */
-  onBodyLayoutY: (y: number) => void;
+  bodyOffsets: React.RefObject<{ [key: number]: number }>;
   onWordPress: (word: string) => void;
   onSyncLines: (index: number, lines: TextLayoutLine[]) => void;
   onSpeechBoundary: (charIndex: number) => void;
@@ -1053,7 +1126,11 @@ function ParagraphBlock({
   );
 
   const body = (
-    <View className="relative" onLayout={(event) => onBodyLayoutY(event.nativeEvent.layout.y)}>
+    <View
+      className="relative"
+      onLayout={(event) => {
+        bodyOffsets.current[index] = event.nativeEvent.layout.y;
+      }}>
       {showRuler ? (
         <Animated.View
           pointerEvents="none"
@@ -1064,6 +1141,7 @@ function ParagraphBlock({
       <DyslexicText
         bicolor={bicolor}
         dimmed={dimmed}
+        activeWordIndex={activeWordIndex}
         onWordPress={dimmed ? undefined : onWordPress}
         onTextLayout={
           rulerMode && isActive ? (event) => onSyncLines(index, event.nativeEvent.lines) : undefined
@@ -1075,7 +1153,9 @@ function ParagraphBlock({
 
   return (
     <Animated.View
-      onLayout={(event) => onLayoutY(event.nativeEvent.layout.y)}
+      onLayout={(event) => {
+        positions.current[index] = event.nativeEvent.layout.y;
+      }}
       style={focusStyle}
       className={
         isActive ? 'mt-4 rounded-2xl border border-primary/20 bg-primary/[0.05] p-4' : 'mt-6'
@@ -1107,7 +1187,7 @@ function ParagraphBlock({
       {showRuler ? <GestureDetector gesture={rulerGesture}>{body}</GestureDetector> : body}
     </Animated.View>
   );
-}
+});
 
 function FeatureChip({
   active,

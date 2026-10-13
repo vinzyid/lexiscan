@@ -18,6 +18,14 @@ type Props = {
   levelOverride?: TypeLevel;
   /** Timpa pengaturan pemenggalan suku kata — juga untuk kartu pratinjau. */
   syllableOverride?: boolean;
+  /**
+   * Nomor kata yang sedang dibacakan suara, untuk menyorotnya mengikuti TTS.
+   *
+   * Diisi hanya saat paragraf ini sedang berbunyi; `null`/tidak diisi berarti
+   * tidak ada sorotan. Nomor katanya memakai urutan yang sama dengan
+   * `wordIndex` pada `toChunks` (spasi tidak dihitung).
+   */
+  activeWordIndex?: number | null;
   /** Posisi tiap baris hasil layout — dipakai Reading Ruler untuk menempatkan penggaris. */
   onTextLayout?: (event: NativeSyntheticEvent<TextLayoutEventData>) => void;
 };
@@ -113,6 +121,7 @@ export function DyslexicText({
   onWordPress,
   levelOverride,
   syllableOverride,
+  activeWordIndex,
   onTextLayout,
 }: Props) {
   const typeLevelId = useOCRStore((s) => s.typeLevelId);
@@ -173,10 +182,33 @@ export function DyslexicText({
               : colors.bicolorB
             : undefined;
 
+        /*
+         * Kata yang sedang dibacakan diberi latar sorot. Warnanya diambil dari
+         * `colors.highlight` yang sama dengan Reading Ruler, supaya kedua
+         * penanda posisi memakai "warna sorot" yang konsisten dan pengguna
+         * tidak perlu belajar dua arti warna berbeda.
+         *
+         * Warna teksnya dikunci ke `textMain`, bukan diwarisi warna Bicolor:
+         * belum ada token teks khusus-di-atas-sorotan, dan `textMain` sudah
+         * dijamin kontras dengan `highlight` di setiap tema — hampir hitam di
+         * atas kuning muda (tema terang), hampir putih di atas cokelat gelap
+         * (tema gelap).
+         */
+        const isActive = !dimmed && activeWordIndex === chunk.wordIndex;
+
         const press = onWordPress ? () => onWordPress(stripPunctuation(chunk.text)) : undefined;
 
         return (
-          <Text key={index} style={color ? { color } : undefined} onPress={press}>
+          <Text
+            key={index}
+            style={
+              isActive
+                ? { color: colors.textMain, backgroundColor: colors.highlight }
+                : color
+                  ? { color }
+                  : undefined
+            }
+            onPress={press}>
             {chunk.syllables.length > 0
               ? renderSyllables(chunk, level.bodyBold)
               : renderWhole(chunk.text, level.bodyBold)}
