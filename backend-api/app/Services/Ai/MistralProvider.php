@@ -29,13 +29,13 @@ class MistralProvider implements AiProvider
         return (string) config('services.mistral.model');
     }
 
-    public function paragraphsFor(string $prompt): LlmResult
+    public function paragraphsFor(string $prompt, ?float $timeoutSeconds = null): LlmResult
     {
         if (! $this->isConfigured()) {
             throw new RuntimeException('MISTRAL_API_KEY belum diisi di file .env backend.');
         }
 
-        $response = LlmHttp::client($this->name())
+        $response = LlmHttp::client($this->name(), $timeoutSeconds)
             ->withToken((string) config('services.mistral.key'))
             ->post(self::ENDPOINT, [
                 'model' => $this->model(),

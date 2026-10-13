@@ -22,6 +22,17 @@ use Illuminate\Support\Facades\Log;
  */
 class FallbackProvider implements AiProvider
 {
+    /**
+     * Porsi anggaran waktu untuk provider utama; sisanya untuk cadangan.
+     *
+     * 0,65 dipilih dari perilaku nyata: provider utama yang sehat menjawab
+     * dalam hitungan detik sampai belasan detik untuk satu halaman penuh,
+     * sedangkan yang sedang bermasalah (kuota habis, server goyah) gagal cepat.
+     * Porsi ini memberi cadangan ~35% — cukup untuk satu panggilan penuh, tapi
+     * tidak membiarkan permintaan menggantung mendekati batas waktu klien.
+     */
+    private const PRIMARY_SHARE = 0.65;
+
     public function __construct(
         private readonly AiProvider $primary,
         private readonly AiProvider $fallback,
@@ -58,10 +69,31 @@ class FallbackProvider implements AiProvider
         return $this->primary->isConfigured();
     }
 
-    public function paragraphsFor(string $prompt): LlmResult
+    public function paragraphsFor(string $prompt, ?float $timeoutSeconds = null): LlmResult
     {
+        /*
+         * Seluruh rantai — utama lalu cadangan — harus muat dalam satu batas
+         * waktu yang dipahami klien mobile (REQUEST_TIMEOUT_MS) DAN batas
+         * eksekusi PHP server (max_execution_time, sering 30 detik). Kalau tiap
+         * penyedia memakai timeout penuh sendiri, provider utama yang lambat
+         * menghabiskan jatahnya, lalu cadangan menghabiskan jatah keduanya, dan
+         * PHP membunuh permintaan sebelum server selesai — itulah yang membuat
+         * permintaan "kebanyakan gagal" sebagai 500.
+         *
+         * Anggarannya datang dari pemanggil; kalau kosong, dipakai anggaran
+         * efektif yang sudah memperhitungkan batas PHP. Lihat ExecutionBudget.
+         */
+        $budget = $timeoutSeconds ?? ExecutionBudget::seconds();
+
+        /*
+         * Provider utama diberi porsi lebih besar karena ia yang biasanya
+         * menjawab, tetapi cadangan tetap disisakan cukup untuk benar-benar
+         * dicoba — bukan sekadar formalitas yang langsung kehabisan waktu.
+         */
+        $primaryShare = $budget * self::PRIMARY_SHARE;
+
         try {
-            return $this->primary->paragraphsFor($prompt);
+            return $this->primary->paragraphsFor($prompt, $primaryShare);
         } catch (ProviderExhaustedException | ProviderResponseException $e) {
             if (! $this->fallback->isConfigured()) {
                 throw $e;
@@ -79,7 +111,7 @@ class FallbackProvider implements AiProvider
              * terakhir yang benar-benar dicoba; jejak lengkapnya sudah ada di
              * log baris atas.
              */
-            return $this->fallback->paragraphsFor($prompt);
+            return $this->fallback->paragraphsFor($prompt, $budget - $primaryShare);
         }
     }
 }

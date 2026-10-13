@@ -71,6 +71,21 @@ return [
         'timeout' => (int) env('AI_TIMEOUT', 60),
 
         /*
+         * Batas waktu untuk SELURUH rantai penyedia (utama + cadangan), bukan
+         * per penyedia. Dipegang secara terpusat karena aplikasi mobile hanya
+         * menunggu sampai REQUEST_TIMEOUT_MS (75 detik) lalu menyerah; kalau
+         * tiap penyedia memakai AI_TIMEOUT 60 detik sendiri-sendiri, totalnya
+         * bisa melewati batas itu dan permintaan "kebanyakan gagal" padahal
+         * server masih bekerja.
+         *
+         * Bawaannya 60 detik: cukup untuk satu halaman penuh lewat penyedia
+         * yang sehat, sekaligus menyisakan ruang perpindahan ke cadangan tanpa
+         * mendekati batas klien. Pastikan nilainya selalu di bawah
+         * REQUEST_TIMEOUT_MS di aplikasi mobile.
+         */
+        'total_timeout' => (int) env('AI_TOTAL_TIMEOUT', 60),
+
+        /*
          * Kunci bersama backend <-> aplikasi mobile, bukan autentikasi per
          * pengguna. Nilainya ditanam ke APK saat build sehingga bisa diekstrak
          * dari APK — penghalang pemakaian kuota, bukan jaminan keamanan.

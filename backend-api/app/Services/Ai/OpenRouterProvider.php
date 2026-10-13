@@ -30,13 +30,13 @@ class OpenRouterProvider implements AiProvider
         return (string) config('services.openrouter.model');
     }
 
-    public function paragraphsFor(string $prompt): LlmResult
+    public function paragraphsFor(string $prompt, ?float $timeoutSeconds = null): LlmResult
     {
         if (! $this->isConfigured()) {
             throw new RuntimeException('OPENROUTER_API_KEY belum diisi di file .env backend.');
         }
 
-        $response = LlmHttp::client($this->name())
+        $response = LlmHttp::client($this->name(), $timeoutSeconds)
             ->withToken((string) config('services.openrouter.key'))
             ->withHeaders([
                 // Dipakai OpenRouter untuk atribusi; tidak wajib, tapi disarankan.

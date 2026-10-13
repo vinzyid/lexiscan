@@ -19,6 +19,11 @@ RUN install-php-extensions \
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+# Timpa batas PHP untuk endpoint AI yang lambat. Tanpa ini, max_execution_time
+# bawaan server (30 detik) mematikan panggilan LLM di tengah jalan dan pengguna
+# melihat "server error" padahal providernya cuma belum selesai menjawab.
+COPY docker/php.ini /usr/local/etc/php/conf.d/99-lexiscan.ini
+
 WORKDIR /app
 
 # Dependensi dipasang lebih dulu supaya lapisan ini dipakai ulang selama

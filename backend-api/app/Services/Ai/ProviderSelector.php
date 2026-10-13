@@ -97,7 +97,7 @@ class ProviderSelector implements AiProvider
      * supaya yang dilihat pengguna adalah keadaan penyedia terakhir yang
      * benar-benar dicoba — bukan tumpukan galat yang menyesatkan.
      */
-    public function paragraphsFor(string $prompt): LlmResult
+    public function paragraphsFor(string $prompt, ?float $timeoutSeconds = null): LlmResult
     {
         if ($this->providers === []) {
             throw new RuntimeException(
@@ -105,11 +105,20 @@ class ProviderSelector implements AiProvider
             );
         }
 
+        $budget = $timeoutSeconds ?? ExecutionBudget::seconds();
+
+        /*
+         * Anggaran dibagi rata antar penyedia, sama seperti Griphub membaginya
+         * antar model: tanpa ini, penyedia pertama bisa memakai seluruh sisa
+         * waktu sampai timeout dan tidak menyisakan apa pun untuk cadangan.
+         */
+        $perProvider = $budget / count($this->providers);
+
         $last = null;
 
         foreach ($this->providers as $provider) {
             try {
-                return $provider->paragraphsFor($prompt);
+                return $provider->paragraphsFor($prompt, $perProvider);
             } catch (Throwable $e) {
                 $last = $e;
 

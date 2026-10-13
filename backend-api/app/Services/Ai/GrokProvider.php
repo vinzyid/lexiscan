@@ -28,13 +28,13 @@ class GrokProvider implements AiProvider
         return (string) config('services.grok.model');
     }
 
-    public function paragraphsFor(string $prompt): LlmResult
+    public function paragraphsFor(string $prompt, ?float $timeoutSeconds = null): LlmResult
     {
         if (! $this->isConfigured()) {
             throw new RuntimeException('XAI_API_KEY belum diisi di file .env backend.');
         }
 
-        $response = LlmHttp::client($this->name())
+        $response = LlmHttp::client($this->name(), $timeoutSeconds)
             ->withToken((string) config('services.grok.key'))
             ->post(self::ENDPOINT, [
                 'model' => $this->model(),

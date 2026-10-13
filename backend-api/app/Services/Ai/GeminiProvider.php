@@ -28,13 +28,13 @@ class GeminiProvider implements AiProvider
         return (string) config('services.gemini.model');
     }
 
-    public function paragraphsFor(string $prompt): LlmResult
+    public function paragraphsFor(string $prompt, ?float $timeoutSeconds = null): LlmResult
     {
         if (! $this->isConfigured()) {
             throw new RuntimeException('GEMINI_API_KEY belum diisi di file .env backend.');
         }
 
-        $response = LlmHttp::client($this->name())
+        $response = LlmHttp::client($this->name(), $timeoutSeconds)
             ->withHeaders(['x-goog-api-key' => (string) config('services.gemini.key')])
             ->post(self::ENDPOINT . '/' . $this->model() . ':generateContent', [
                 'contents' => [

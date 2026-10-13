@@ -32,6 +32,15 @@ use RuntimeException;
 class GriphubProvider implements AiProvider
 {
     /**
+     * Porsi anggaran untuk model pertama; sisanya dibagi ke model berikutnya.
+     *
+     * 0,7 berarti dengan dua model, model pertama dapat 70% dan cadangannya 30%
+     * — cukup untuk satu jawaban normal di model utama, tapi tetap menyisakan
+     * waktu nyata bagi model cadangan kalau yang pertama gagal.
+     */
+    private const FIRST_MODEL_SHARE = 0.7;
+
+    /**
      * Diperkuat dengan contoh konkret: model kecil jauh lebih patuh pada format
      * JSON kalau bentuk yang diminta diperlihatkan, bukan sekadar dijelaskan.
      * Griphub tidak punya responseSchema seperti Gemini, jadi prompt inilah
@@ -105,7 +114,7 @@ class GriphubProvider implements AiProvider
             : $base . '/chat/completions';
     }
 
-    public function paragraphsFor(string $prompt): LlmResult
+    public function paragraphsFor(string $prompt, ?float $timeoutSeconds = null): LlmResult
     {
         if (! $this->isConfigured()) {
             throw new RuntimeException('GRIPHUB_API_KEY belum diisi di file .env backend.');
@@ -114,9 +123,35 @@ class GriphubProvider implements AiProvider
         $models = $this->models();
         $last = null;
 
+        /*
+         * Anggaran TIDAK dibagi rata. Model pertama yang biasanya menjawab, dan
+         * ia butuh waktu penuh untuk halaman panjang; membaginya rata (mis. 8
+         * detik masing-masing kalau ada dua model dalam anggaran 16 detik)
+         * membuat model yang sehat pun kehabisan waktu sebelum selesai. Jadi
+         * model pertama diberi porsi besar, dan sisanya baru dibagi ke model
+         * berikutnya — sama seperti FallbackProvider memperlakukan cadangannya.
+         */
+        $timeoutForModel = function (int $index) use ($timeoutSeconds, $models): ?float {
+            if ($timeoutSeconds === null) {
+                return null;
+            }
+
+            $rest = count($models) - 1;
+
+            if ($rest === 0) {
+                return $timeoutSeconds;
+            }
+
+            $reserved = $timeoutSeconds * (1 - self::FIRST_MODEL_SHARE);
+
+            return $index === 0
+                ? $timeoutSeconds * self::FIRST_MODEL_SHARE
+                : $reserved / $rest;
+        };
+
         foreach ($models as $index => $model) {
             try {
-                return $this->ask($prompt, $model);
+                return $this->ask($prompt, $model, $timeoutForModel($index));
             } catch (RuntimeException $e) {
                 $last = $e;
 
@@ -145,9 +180,9 @@ class GriphubProvider implements AiProvider
     }
 
     /** Satu panggilan HTTP untuk satu model. */
-    private function ask(string $prompt, string $model): LlmResult
+    private function ask(string $prompt, string $model, ?float $timeoutSeconds = null): LlmResult
     {
-        $response = LlmHttp::client($this->name())
+        $response = LlmHttp::client($this->name(), $timeoutSeconds)
             ->withToken((string) config('services.griphub.key'))
             ->post($this->endpoint(), [
                 'model' => $model,

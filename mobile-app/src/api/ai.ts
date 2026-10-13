@@ -32,8 +32,14 @@ const MAX_SIMPLIFY_CHARS = 8000;
 const MAX_TERM_CHARS = 200;
 const MAX_CONTEXT_CHARS = 2000;
 
-/** Timeout 60 detik di sisi server + jeda jaringan. */
-const REQUEST_TIMEOUT_MS = 70_000;
+/**
+ * Harus SELALU lebih longgar dari AI_TOTAL_TIMEOUT di backend (default 45
+ * detik). Backend sudah membatasi seluruh rantai penyedia — utama lalu cadangan
+ * — agar muat dalam batas itu, jadi menunggu 75 detik di sini berarti
+ * kegagalannya benar-benar kegagalan, bukan sekadar server masih bekerja saat
+ * aplikasi keburu menyerah.
+ */
+const REQUEST_TIMEOUT_MS = 75_000;
 
 /**
  * Penyedia yang diminta lebih dulu untuk fitur Tanya Lexi. Backend mencobanya

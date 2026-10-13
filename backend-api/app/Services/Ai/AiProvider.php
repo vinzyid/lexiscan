@@ -21,7 +21,13 @@ interface AiProvider
      * Tokennya dibawa serta karena jejak karbon dihitung darinya; penyedia yang
      * tidak melaporkannya mengembalikan TokenUsage::unknown().
      *
+     * `$timeoutSeconds` adalah anggaran untuk SATU percobaan penyedia ini,
+     * dihitung oleh pemanggil (FallbackProvider/ProviderSelector) dari sisa
+     * waktu total yang sudah dijanjikan ke klien. Provider boleh mengabaikannya
+     * dan memakai AI_TIMEOUT; parameter ini opsional supaya implementasi lama
+     * tetap sah tanpa perubahan.
+     *
      * @throws \RuntimeException Saat kunci belum diisi, kuota habis, atau respons tidak terpakai.
      */
-    public function paragraphsFor(string $prompt): LlmResult;
+    public function paragraphsFor(string $prompt, ?float $timeoutSeconds = null): LlmResult;
 }

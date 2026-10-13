@@ -13,6 +13,15 @@ DOMAIN_BACKEND_ANDA {
 	# Teruskan ke container backend yang hanya mendengarkan di localhost.
 	reverse_proxy 127.0.0.1:8080 {
 		header_up X-Real-IP {remote_host}
+
+		# Endpoint AI bisa butuh puluhan detik menjawab (model LLM untuk satu
+		# halaman penuh). Timeout transport diperpanjang supaya Caddy tidak
+		# memutus koneksi lebih dulu daripada PHP-nya sendiri, yang akan terlihat
+		# sebagai 502 padahal backend masih bekerja.
+		transport http {
+			read_timeout 130s
+			write_timeout 130s
+		}
 	}
 
 	# Batasi ukuran request; endpoint hanya menerima JSON pendek.
