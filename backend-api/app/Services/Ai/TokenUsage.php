@@ -38,6 +38,17 @@ final class TokenUsage
         return $this->input + $this->output;
     }
 
+    /**
+     * Gabungkan pemakaian beberapa panggilan — dipakai saat satu permintaan
+     * panjang dipecah menjadi beberapa bagian. Dijumlahkan apa adanya, termasuk
+     * saat salah satu bagian tidak melaporkan token (bagian itu menyumbang 0,
+     * dan `isKnown()` tetap benar selama ada bagian lain yang melaporkan).
+     */
+    public function merge(self $other): self
+    {
+        return new self($this->input + $other->input, $this->output + $other->output);
+    }
+
     /** @return array{input: int, output: int, total: int} */
     public function toArray(): array
     {

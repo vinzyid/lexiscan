@@ -292,6 +292,58 @@ class AiTextServiceTest extends TestCase
         $this->assertStringContainsString('Tidak ada konteks tambahan.', $captured);
     }
 
+    /**
+     * Teks panjang dipecah menjadi beberapa panggilan penyedia.
+     *
+     * Regresi yang dijaga: satu halaman penuh (6.000+ karakter) dulu dikirim
+     * sekaligus, model butuh lebih dari semenit, dan penyedia membalas timeout
+     * — pengguna melihat "server AI tidak merespons". Sekarang teks dipecah dan
+     * hasilnya digabung, jadi tiap panggilan selesai cepat.
+     */
+    public function test_a_long_text_is_split_across_several_provider_calls(): void
+    {
+        $calls = 0;
+
+        $provider = Mockery::mock(AiProvider::class);
+        $provider->shouldReceive('name')->andReturn('gemini');
+        $provider->shouldReceive('model')->andReturn('gemini-3.6-flash');
+        $provider->shouldReceive('paragraphsFor')
+            ->andReturnUsing(function () use (&$calls): LlmResult {
+                $calls += 1;
+
+                return new LlmResult(["Bagian {$calls}."], new TokenUsage(500, 400));
+            });
+
+        Cache::swap($this->passthroughCache());
+
+        // Empat paragraf panjang yang bila digabung melewati ambang pemecahan.
+        $longText = implode("\n\n", array_fill(0, 4, str_repeat('Fotosintesis adalah proses anabolisme. ', 90)));
+
+        $answer = (new AiTextService($provider))->simplify($longText, 'L3');
+
+        $this->assertGreaterThan(1, $calls, 'Teks panjang harus dipecah menjadi beberapa panggilan.');
+        $this->assertCount($calls, $answer->paragraphs, 'Paragraf tiap potongan harus digabung.');
+
+        // Token digabung, bukan sekadar diambil dari potongan terakhir.
+        $this->assertSame(500 * $calls, $answer->footprint->tokens->input);
+    }
+
+    public function test_a_short_text_still_uses_a_single_provider_call(): void
+    {
+        $provider = Mockery::mock(AiProvider::class);
+        $provider->shouldReceive('name')->andReturn('gemini');
+        $provider->shouldReceive('model')->andReturn('gemini-3.6-flash');
+        $provider->shouldReceive('paragraphsFor')
+            ->once()
+            ->andReturn(new LlmResult(['Tetap satu panggilan.'], new TokenUsage(500, 400)));
+
+        Cache::swap($this->passthroughCache());
+
+        $answer = (new AiTextService($provider))->simplify('Teks pendek saja.', 'L3');
+
+        $this->assertSame(['Tetap satu panggilan.'], $answer->paragraphs);
+    }
+
     /** @param array<int, string> $paragraphs */
     private function providerReturning(array $paragraphs): AiProvider
     {

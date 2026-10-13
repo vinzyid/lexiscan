@@ -23,15 +23,14 @@ use Illuminate\Support\Facades\Log;
 class FallbackProvider implements AiProvider
 {
     /**
-     * Porsi anggaran waktu untuk provider utama; sisanya untuk cadangan.
+     * Waktu yang disisakan untuk penyedia cadangan, dalam detik.
      *
-     * 0,65 dipilih dari perilaku nyata: provider utama yang sehat menjawab
-     * dalam hitungan detik sampai belasan detik untuk satu halaman penuh,
-     * sedangkan yang sedang bermasalah (kuota habis, server goyah) gagal cepat.
-     * Porsi ini memberi cadangan ~35% — cukup untuk satu panggilan penuh, tapi
-     * tidak membiarkan permintaan menggantung mendekati batas waktu klien.
+     * Dipakai sebagai cadangan tetap, bukan persentase: provider utama hampir
+     * selalu yang menjawab, jadi ia yang paling butuh waktu. Angka ini hanya
+     * cukup untuk satu panggilan cadangan yang berarti, atau untuk menyerah
+     * dengan cepat bila seluruh anggaran memang sudah menipis.
      */
-    private const PRIMARY_SHARE = 0.65;
+    private const FALLBACK_RESERVE_SECONDS = 6.0;
 
     public function __construct(
         private readonly AiProvider $primary,
@@ -86,14 +85,21 @@ class FallbackProvider implements AiProvider
         $budget = $timeoutSeconds ?? ExecutionBudget::seconds();
 
         /*
-         * Provider utama diberi porsi lebih besar karena ia yang biasanya
-         * menjawab, tetapi cadangan tetap disisakan cukup untuk benar-benar
-         * dicoba — bukan sekadar formalitas yang langsung kehabisan waktu.
+         * Provider utama mendapat anggaran PENUH dikurangi cadangan tetap yang
+         * disisakan untuk penyedia cadangan — bukan persentase. Persentase
+         * terlalu memangkas utama saat anggarannya kecil: dengan anggaran 30
+         * detik, 65% hanya menyisakan 19,5 detik untuk provider yang biasanya
+         * butuh lebih, sementara cadangan tidak akan terpakai sama sekali kalau
+         * yang utama berhasil.
+         *
+         * Cadangan tetap disisakan, jadi ia tetap punya waktu nyata untuk
+         * dicoba — bukan formalitas yang langsung kehabisan waktu.
          */
-        $primaryShare = $budget * self::PRIMARY_SHARE;
+        $fallbackReserve = min(self::FALLBACK_RESERVE_SECONDS, $budget / 2);
+        $primaryBudget = max(1.0, $budget - $fallbackReserve);
 
         try {
-            return $this->primary->paragraphsFor($prompt, $primaryShare);
+            return $this->primary->paragraphsFor($prompt, $primaryBudget);
         } catch (ProviderExhaustedException | ProviderResponseException $e) {
             if (! $this->fallback->isConfigured()) {
                 throw $e;
@@ -111,7 +117,7 @@ class FallbackProvider implements AiProvider
              * terakhir yang benar-benar dicoba; jejak lengkapnya sudah ada di
              * log baris atas.
              */
-            return $this->fallback->paragraphsFor($prompt, $budget - $primaryShare);
+            return $this->fallback->paragraphsFor($prompt, $budget - $primaryBudget);
         }
     }
 }

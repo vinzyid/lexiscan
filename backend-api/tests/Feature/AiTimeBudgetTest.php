@@ -23,7 +23,7 @@ use Tests\TestCase;
  */
 class AiTimeBudgetTest extends TestCase
 {
-    public function test_the_primary_and_fallback_split_one_shared_budget(): void
+    public function test_the_primary_gets_most_of_the_budget_with_a_fixed_fallback_reserve(): void
     {
         config(['services.ai.total_timeout' => 100]);
 
@@ -37,9 +37,13 @@ class AiTimeBudgetTest extends TestCase
         $this->assertCount(1, $primary->timeouts);
         $this->assertCount(1, $fallback->timeouts);
 
-        // Porsi utama 65%, cadangan sisanya; jumlahnya tidak boleh melebihi total.
-        $this->assertEqualsWithDelta(65.0, $primary->timeouts[0], 0.01);
-        $this->assertEqualsWithDelta(35.0, $fallback->timeouts[0], 0.01);
+        /*
+         * Cadangan disisakan TETAP (6 detik), bukan persentase: provider utama
+         * perlu porsi besar, dan persentase terlalu memangkasnya saat
+         * anggarannya kecil.
+         */
+        $this->assertEqualsWithDelta(94.0, $primary->timeouts[0], 0.01);
+        $this->assertEqualsWithDelta(6.0, $fallback->timeouts[0], 0.01);
 
         $this->assertLessThanOrEqual(
             100.0,
@@ -85,7 +89,12 @@ class AiTimeBudgetTest extends TestCase
         (new FallbackProvider($primary, new RecordingProvider('cadangan')))
             ->paragraphsFor('prompt', 10.0);
 
-        $this->assertEqualsWithDelta(6.5, $primary->timeouts[0], 0.01);
+        /*
+         * Anggaran eksplisit 10 detik: cadangan tetap dibatasi separuh anggaran
+         * saat anggarannya lebih kecil dari reserve, jadi 10 − 5 = 5 detik untuk
+         * provider utama.
+         */
+        $this->assertEqualsWithDelta(5.0, $primary->timeouts[0], 0.01);
     }
 }
 

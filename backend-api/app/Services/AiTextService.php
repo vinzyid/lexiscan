@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Services\Ai\AiAnswer;
 use App\Services\Ai\AiProvider;
+use App\Services\Ai\ExecutionBudget;
 use App\Services\Ai\FallbackProvider;
 use App\Services\Ai\FootprintEstimator;
 use App\Services\Ai\LlmResult;
@@ -134,6 +135,22 @@ class AiTextService
         ],
     ];
 
+    /**
+     * Panjang maksimum satu potongan teks yang dikirim ke penyedia AI, dalam
+     * karakter.
+     *
+     * KENAPA DIPECAH. Teks sepanjang satu halaman penuh (6.000–8.000 karakter)
+     * membuat model membutuhkan lebih dari semenit untuk menjawab; penyedia
+     * membalas timeout, dan pengguna melihat "server AI tidak merespons".
+     * Percobaan nyata: 6.600 karakter gagal, sementara potongan 2.500-an
+     * karakter selesai sekitar 10 detik. Jadi teks panjang dipotong jadi
+     * beberapa bagian, dikirim berurutan, lalu hasilnya digabungkan.
+     *
+     * 2.800 dipilih supaya ada margin di bawah ambang yang terbukti aman,
+     * sekaligus tidak memecah teks pendek yang selama ini sudah lancar.
+     */
+    private const SIMPLIFY_CHUNK_CHARS = 2800;
+
     private readonly FootprintEstimator $footprint;
 
     private readonly SystemSettings $settings;
@@ -258,12 +275,76 @@ class AiTextService
         $language = $this->normalizeLanguage($language);
         $readingLevel = $this->normalizeReadingLevel($readingLevel);
 
+        // Memvalidasi level sedini mungkin, bahkan sebelum memutuskan memecah.
         $rule = $this->simplifyRules()[$language][$level]
             ?? throw new RuntimeException("Level penyederhanaan tidak dikenal: {$level}");
 
+        /*
+         * Teks pendek dikirim utuh seperti sebelumnya. Teks panjang dipecah:
+         * satu halaman penuh membuat model menjawab lebih dari semenit dan
+         * penyedia membalas timeout. Lihat SIMPLIFY_CHUNK_CHARS.
+         */
+        $chunks = $this->splitForSimplify($text);
+
+        if (count($chunks) === 1) {
+            return $this->remember(
+                "simplify:{$language}:{$level}:{$readingLevel}:" . md5($text),
+                $this->simplifyPrompt($chunks[0], $rule, $language, $readingLevel),
+            );
+        }
+
+        /*
+         * Tiap potongan disimpan di cache dengan kuncinya SENDIRI (kuncinya
+         * memuat md5 potongan itu, bukan md5 teks penuh). Dengan begitu halaman
+         * yang dipindai ulang, atau dipecah dengan cara yang sama lain kali,
+         * memakai ulang potongan yang sudah pernah dijawab — kuota tidak
+         * terbuang dua kali untuk teks yang sama.
+         *
+         * DEADLINE TOTAL, BUKAN ANGGARAN PER POTONGAN. Tiap potongan diberi
+         * sisa waktu sampai deadline bersama, jadi:
+         *   - potongan pertama memakai anggaran nyaris penuh (cukup untuk satu
+         *     panggilan Griphub yang butuh 8–14 detik), dan
+         *   - totalnya tetap tidak melewati batas eksekusi PHP.
+         * Membagi anggaran rata (dicoba sebelumnya) justru memangkas potongan
+         * pertama sampai timeout, karena pembagian berlapis di dalam penyedia
+         * memotongnya berkali-kali.
+         *
+         * Batas ini juga yang membuat kegagalan datang sebagai pesan yang jelas
+         * sebelum PHP membunuh prosesnya — lihat ExecutionBudget.
+         */
+        $deadline = microtime(true) + ExecutionBudget::seconds();
+        $answer = null;
+
+        foreach ($chunks as $index => $chunk) {
+            $remaining = $deadline - microtime(true);
+
+            if ($remaining <= 1.0) {
+                throw new RuntimeException(
+                    'Dokumennya terlalu panjang untuk disederhanakan sekaligus. Pindai bagian yang lebih pendek.'
+                );
+            }
+
+            $part = $this->remember(
+                "simplify:{$language}:{$level}:{$readingLevel}:part{$index}:" . md5($chunk),
+                $this->simplifyPrompt($chunk, $rule, $language, $readingLevel),
+                $remaining,
+            );
+
+            $answer = $answer === null ? $part : new AiAnswer(
+                array_merge($answer->paragraphs, $part->paragraphs),
+                $answer->footprint->merge($part->footprint),
+            );
+        }
+
+        return $answer;
+    }
+
+    /** Prompt penyederhanaan untuk SATU potongan teks yang sudah pasti muat. */
+    private function simplifyPrompt(string $text, string $rule, string $language, string $readingLevel): string
+    {
         $lengthRule = self::SIMPLIFY_LENGTH_RULES[$language][$readingLevel];
 
-        $prompt = $language === 'en'
+        return $language === 'en'
             ? <<<PROMPT
             You are helping a dyslexic reader understand a school text written in English.
 
@@ -294,8 +375,85 @@ class AiTextService
             Teks asli:
             {$text}
             PROMPT;
+    }
 
-        return $this->remember("simplify:{$language}:{$level}:{$readingLevel}:" . md5($text), $prompt);
+    /**
+     * Pecah teks menjadi potongan yang muat diproses satu kali panggilan.
+     *
+     * Batasnya paragraf lebih dulu: memotong di antara paragraf membuat model
+     * tetap melihat kalimat yang utuh, dan itu jauh lebih baik daripada
+     * memotong di tengah kalimat. Paragraf tunggal yang lebih panjang dari
+     * ambang dipecah lagi per kalimat, supaya satu paragraf raksasa tidak
+     * mengembalikan masalah yang sama.
+     *
+     * @return array<int, string>
+     */
+    private function splitForSimplify(string $text): array
+    {
+        if (mb_strlen($text) <= self::SIMPLIFY_CHUNK_CHARS) {
+            return [$text];
+        }
+
+        $units = $this->splitIntoUnits($text);
+
+        $chunks = [];
+        $current = '';
+
+        foreach ($units as $unit) {
+            $candidate = $current === '' ? $unit : $current . "\n\n" . $unit;
+
+            if ($current !== '' && mb_strlen($candidate) > self::SIMPLIFY_CHUNK_CHARS) {
+                $chunks[] = $current;
+                $current = $unit;
+
+                continue;
+            }
+
+            $current = $candidate;
+        }
+
+        if ($current !== '') {
+            $chunks[] = $current;
+        }
+
+        return $chunks === [] ? [$text] : $chunks;
+    }
+
+    /**
+     * Unit terkecil yang boleh berdiri sendiri: paragraf, atau kalimat bila
+     * paragrafnya sendiri sudah melebihi ambang.
+     *
+     * @return array<int, string>
+     */
+    private function splitIntoUnits(string $text): array
+    {
+        $units = [];
+
+        foreach (preg_split('/\n{2,}|\n/', $text) ?: [] as $paragraph) {
+            $paragraph = trim($paragraph);
+
+            if ($paragraph === '') {
+                continue;
+            }
+
+            if (mb_strlen($paragraph) <= self::SIMPLIFY_CHUNK_CHARS) {
+                $units[] = $paragraph;
+
+                continue;
+            }
+
+            // Paragraf raksasa: pecah per kalimat. Pemisahnya dipertahankan
+            // supaya teks yang digabung kembali tetap sama isinya.
+            foreach (preg_split('/(?<=[.!?])\s+/u', $paragraph) ?: [$paragraph] as $sentence) {
+                $sentence = trim($sentence);
+
+                if ($sentence !== '') {
+                    $units[] = $sentence;
+                }
+            }
+        }
+
+        return $units;
     }
 
     /** Paragraf penjelasan, beserta taksiran jejak karbonnya. */
@@ -424,7 +582,7 @@ class AiTextService
      * kebenaran: store yang mati tidak boleh ikut mematikan fitur AI, jadi
      * kegagalannya dicatat lalu permintaan tetap diteruskan ke penyedia.
      */
-    private function remember(string $suffix, string $prompt): AiAnswer
+    private function remember(string $suffix, string $prompt, ?float $timeoutSeconds = null): AiAnswer
     {
         /*
          * Sidik jari promptnya ikut jadi kunci.
@@ -454,7 +612,7 @@ class AiTextService
             $this->warnCacheUnavailable('baca', $e);
         }
 
-        $result = $this->ask($prompt);
+        $result = $this->ask($prompt, $timeoutSeconds);
 
         try {
             /*
@@ -520,11 +678,15 @@ class AiTextService
     /**
      * Satu-satunya tempat penyedia dipanggil, supaya kegagalan jaringan
      * diterjemahkan jadi pesan yang layak dibaca pengguna di semua fitur.
+     *
+     * `$timeoutSeconds` dioper ke penyedia supaya anggaran waktu bisa dibagi
+     * antar potongan teks panjang; null berarti penyedia memakai anggaran
+     * efektifnya sendiri (lihat ExecutionBudget).
      */
-    private function ask(string $prompt): LlmResult
+    private function ask(string $prompt, ?float $timeoutSeconds = null): LlmResult
     {
         try {
-            return $this->provider->paragraphsFor($prompt);
+            return $this->provider->paragraphsFor($prompt, $timeoutSeconds);
         } catch (ConnectionException $e) {
             // Gagal sebelum ada respons HTTP: internet mati, timeout, atau
             // sertifikat CA belum terpasang di PHP.
@@ -537,7 +699,7 @@ class AiTextService
                 match (true) {
                     str_contains($e->getMessage(), 'certificate') => 'PHP tidak punya sertifikat CA, jadi koneksi HTTPS ditolak. Atur curl.cainfo di php.ini.',
                     str_contains($e->getMessage(), 'Operation timed out'),
-                    str_contains($e->getMessage(), 'timed out') => 'Server AI tidak merespons dalam ' . config('services.ai.timeout') . ' detik. Coba teks yang lebih pendek.',
+                    str_contains($e->getMessage(), 'timed out') => 'Server AI tidak merespons tepat waktu. Coba lagi sebentar, atau pindai bagian yang lebih pendek.',
                     default => 'Tidak bisa menghubungi server AI. Periksa koneksi internet lalu coba lagi.',
                 },
                 previous: $e,

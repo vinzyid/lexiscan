@@ -56,6 +56,28 @@ final class Footprint
         return $this->tokens->isKnown();
     }
 
+    /**
+     * Gabungkan jejak beberapa panggilan menjadi satu — dipakai saat permintaan
+     * panjang dipecah menjadi beberapa bagian.
+     *
+     * Yang dijumlahkan adalah yang benar-benar keluar (energi/emisi) DAN yang
+     * terhindar (dari bagian yang kebetulan sudah ada di cache), karena kedua
+     * pasangan itu memang tidak pernah terisi bersamaan di satu panggilan.
+     * `cached` dianggap true hanya kalau SEMUA bagian dilayani cache: satu saja
+     * bagian yang benar-benar menjalankan model berarti ada emisi baru.
+     */
+    public function merge(self $other): self
+    {
+        return new self(
+            $this->energyWh + $other->energyWh,
+            $this->co2eGrams + $other->co2eGrams,
+            $this->avoidedEnergyWh + $other->avoidedEnergyWh,
+            $this->avoidedCo2eGrams + $other->avoidedCo2eGrams,
+            $this->tokens->merge($other->tokens),
+            $this->cached && $other->cached,
+        );
+    }
+
     /** @return array<string, mixed> */
     public function toArray(): array
     {

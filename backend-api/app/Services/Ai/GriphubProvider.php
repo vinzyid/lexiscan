@@ -34,11 +34,15 @@ class GriphubProvider implements AiProvider
     /**
      * Porsi anggaran untuk model pertama; sisanya dibagi ke model berikutnya.
      *
-     * 0,7 berarti dengan dua model, model pertama dapat 70% dan cadangannya 30%
-     * — cukup untuk satu jawaban normal di model utama, tapi tetap menyisakan
-     * waktu nyata bagi model cadangan kalau yang pertama gagal.
+     * 0,85 berarti dengan dua model, model pertama dapat 85% dan cadangannya
+     * 15% — cukup untuk satu jawaban normal di model utama, tapi tetap
+     * menyisakan waktu nyata bagi model cadangan kalau yang pertama gagal.
+     * Porsinya sengaja besar: pembagian berlapis (potongan → penyedia
+     * utama/cadangan → model) memangkas waktu berkali-kali, dan model pertama
+     * yang sehat jangan sampai kehabisan jatah hanya karena cadangan yang
+     * jarang terpakai menahan terlalu banyak.
      */
-    private const FIRST_MODEL_SHARE = 0.7;
+    private const FIRST_MODEL_SHARE = 0.85;
 
     /**
      * Diperkuat dengan contoh konkret: model kecil jauh lebih patuh pada format
