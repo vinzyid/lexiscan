@@ -120,7 +120,7 @@ export function WordSheet({
           <View
             className="flex-row items-center justify-between bg-surface px-5 py-4"
             style={{ gap: 8 }}>
-            <Text className="font-ui-bold text-[15px] text-text-main">
+            <Text className="font-ui-bold text-[16px] text-text-main">
               {t.wordSheet.syllableCount(syllables.length)}
             </Text>
 
@@ -139,7 +139,7 @@ export function WordSheet({
                 accessibilityRole="button"
                 accessibilityLabel={t.common.close}
                 className="h-11 items-center justify-center rounded-2xl bg-primary/10 px-5">
-                <Text className="font-ui-bold text-[15px] text-primary">{t.common.close}</Text>
+                <Text className="font-ui-bold text-[16px] text-primary">{t.common.close}</Text>
               </PressableScale>
             </View>
           </View>

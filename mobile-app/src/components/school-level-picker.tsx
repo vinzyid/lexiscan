@@ -40,7 +40,7 @@ export function SchoolLevelPicker({ value, onChange }: Props) {
             onPress={() => onChange(level.id)}
             accessibilityRole="radio"
             accessibilityState={{ selected }}
-            accessibilityLabel={`${copy.name}. ${copy.age}`}
+            accessibilityLabel={copy.name}
             scaleTo={0.97}
             /*
              * Persentase, bukan lebar tetap 181px seperti di Figma: layar
@@ -75,14 +75,10 @@ export function SchoolLevelPicker({ value, onChange }: Props) {
             <IlluSchoolLevel id={level.id} size={64} />
 
             <Text
-              className={`mt-1.5 text-center font-ui-bold text-[14px] ${
+              className={`mt-1.5 text-center font-ui-bold text-[15px] ${
                 selected ? 'text-primary' : 'text-text-main'
               }`}>
               {copy.name}
-            </Text>
-
-            <Text className="mt-0.5 text-center font-ui-medium text-[11px] text-text-muted">
-              {copy.age}
             </Text>
           </PressableScale>
         );

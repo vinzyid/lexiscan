@@ -80,11 +80,8 @@ export const en: Translation = {
   },
 
   schoolLevels: {
-    sd1: { name: 'Primary 1–3', age: 'Ages 6–9' },
-    sd2: { name: 'Primary 4–6', age: 'Ages 9–12' },
-    smp: { name: 'Junior high', age: 'Ages 12–15' },
-    sma: { name: 'Senior high', age: 'Ages 15–18' },
-    umum: { name: 'Anyone', age: 'All ages' },
+    sd: { name: 'Primary 1–3' },
+    umum: { name: 'Anyone' },
   },
 
   auth: {
@@ -553,134 +550,6 @@ export const en: Translation = {
     ],
   },
 
-  lexiprogress: {
-    title: 'Reading Progress',
-    subtitle: 'Track duration, comprehension, and goals transparently.',
-    viewProgress: 'View Progress',
-    startEvaluation: 'Start Evaluation',
-    empty: 'Complete your first session to see reading progress.',
-    completedSessions: 'Sessions completed',
-    activeGoals: 'Active goals',
-    latestSession: 'Latest session',
-    baseline: 'Baseline',
-    assisted: 'With LexiScan',
-    notMeasured: 'Not measured',
-    noData: 'No data yet',
-    duration: 'Duration',
-    comprehension: 'Comprehension',
-    difficulty: 'Subjective difficulty',
-    features: 'Active features',
-    points: 'percentage points',
-    relative: 'relative change',
-    limitation: 'A single comparison does not prove causality or clinical efficacy.',
-    historyShortcut: 'Progress History & Report',
-    historyShortcutDesc: 'Review sessions, goals, and comparisons.',
-    feedback: 'These figures come strictly from saved reading sessions.',
-    baselineNote: 'Control condition without the features being evaluated.',
-    assistedNote: 'Assistive features active during this session.',
-
-    setupTitle: 'Start Evaluation',
-    setupSubtitle: 'Set up a reading session, then compare baseline and assisted conditions.',
-    chooseText: 'Choose the text to read',
-    chooseTextPlaceholder: 'Paste the text here, or use the sample passage.',
-    useSampleText: 'Use sample passage',
-    titleLabel: 'Text title',
-    titlePlaceholder: 'e.g. Chapter 1 — Mitochondria',
-    conditionLabel: 'Session condition',
-    conditionHint:
-      'Baseline means without the assistance being evaluated. Do not switch everything off if you are testing only one feature.',
-    featureLabel: 'Assistive features active',
-    featureHint: 'Record the features actually used, not every feature in the app.',
-    sameGroupHint:
-      'For a comparison, baseline and assisted should use the same text. Repeating it can create a memory effect.',
-    startReading: 'Start reading',
-    saveDocumentFailed: 'Could not save the text. Please try again.',
-    needText: 'Fill in the text before continuing.',
-    needTitle: 'Give the text a title first.',
-
-    readingTitle: 'Reading Session',
-    readingHint: 'Read to the end, then press Finish. The timer runs automatically.',
-    tapToStart: 'Start timer & read',
-    finishReading: 'Finish reading',
-    notYet: 'Not sure yet',
-
-    assessmentTitle: 'Session Assessment',
-    comprehensionTitle: 'Comprehension quiz',
-    comprehensionHint:
-      'Write 3–5 questions whose answers are actually in the text. For formal evaluation, have a companion review the questions.',
-    addQuestion: 'Add question',
-    removeQuestion: 'Remove question',
-    questionLabel: (index: number) => `Question ${index}`,
-    optionsLabel: 'Answer options',
-    addOption: 'Add option',
-    correctAnswer: 'Answer key',
-    chooseCorrect: 'Mark the correct answer',
-    skipQuiz: 'Skip quiz',
-    skippedNote: 'Comprehension score will read as Not measured.',
-    difficultyTitle: 'How hard was this text for you?',
-    difficultyHint: 'A personal rating, not an objective measure.',
-    difficultyScale: ['Very easy', 'Easy', 'Medium', 'Hard', 'Very hard'],
-    notesTitle: 'Notes (optional)',
-    notesPlaceholder: 'e.g. the part that felt heavy.',
-    saveSession: 'Save session',
-    saveSessionFailed: 'Could not save the session. Please try again.',
-    needQuestion: 'Fill in the question first, or skip the quiz.',
-
-    resultTitle: 'Session Result',
-    resultBaseline: 'This is a baseline session.',
-    resultAssisted: 'This is an assisted LexiScan session.',
-    compareTitle: 'Baseline & assisted comparison',
-    compareEmpty:
-      'No baseline and assisted pair on this text yet. Run the other condition to see a comparison.',
-    rawValues: 'Raw values',
-    formula: 'How it is computed',
-    quizReview: 'Quiz answers',
-    answeredCorrect: 'Correct',
-    answeredWrong: 'Wrong',
-    answeredSkipped: 'Skipped',
-    viewHistory: 'View history',
-    startAnother: 'New session',
-
-    goalTitle: 'Learning Goals',
-    goalEmpty: 'No goals yet. Create one to steer practice.',
-    newGoal: 'Create goal',
-    goalFormTitle: 'New goal',
-    goalNameLabel: 'Goal title',
-    goalNamePlaceholder: 'e.g. Complete 4 sessions in 2 weeks',
-    goalMetricLabel: 'Metric',
-    goalBaselineLabel: 'Starting value',
-    goalTargetLabel: 'Target',
-    goalUnitLabel: 'Unit',
-    goalUnitPlaceholder: 'sessions / % / scale',
-    goalStartLabel: 'Start date',
-    goalDeadlineLabel: 'Target date (optional)',
-    goalSave: 'Save goal',
-    goalSaveFailed: 'Could not save the goal. Please try again.',
-    goalCreated: 'Goal saved.',
-    goalDelete: 'Delete goal',
-    goalNoValue: 'value',
-    metrics: {
-      session_count: { name: 'Completed sessions', unit: 'sessions' },
-      comprehension_percent: { name: 'Comprehension score', unit: '%' },
-      difficulty_rating: { name: 'Subjective difficulty', unit: 'scale 1-5' },
-      wpm: { name: 'Reading speed (WPM)', unit: 'words/min' },
-      cwpm: { name: 'CWPM (correct words/min)', unit: 'words/min' },
-      duration_seconds: { name: 'Reading duration', unit: 'seconds' },
-      accuracy_percent: { name: 'Word accuracy', unit: '%' },
-    },
-
-    featureNames: {
-      typography: 'Text settings',
-      simplify: 'Simplify text',
-      focus: 'Focus mode',
-      ruler: 'Reading ruler',
-      bicolor: 'Two-colour words',
-      syllables: 'Syllable split',
-      speech: 'Text to speech',
-      explain: 'Ask Lexi',
-    },
-  },
-
   dailyTips: [
     'Warm light is gentler on the eyes than a bright white screen.',
     'On the reading screen, swipe left or right to change paragraph.',
@@ -690,4 +559,85 @@ export const en: Translation = {
     'Focus Mode dims the other paragraphs so your eyes stay put.',
     'Tap a difficult word — LexiScan will break it into syllables.',
   ],
+
+  /**
+   * Early dyslexia screening.
+   *
+   * ADDRESSED TO THE COMPANION, NOT THE CHILD. The parent or teacher reads this,
+   * asks the child to speak, then marks the outcome. So the wording uses "you"
+   * meaning the adult, not the child.
+   *
+   * EVERY STRING HERE IS DELIBERATELY CAREFUL. The app does NOT diagnose and does
+   * NOT grade; it records signs and points to a professional. So there is no
+   * "detected", no "high risk", no score, no number at all — each of those would
+   * read as a claim the app has no right to make.
+   */
+  screening: {
+    title: 'Early Check',
+    cardTitle: 'Early Dyslexia Risk Check',
+    cardDesc: 'Guided by an adult, no score. Then talk to a professional.',
+    entryLabel: 'Open the early dyslexia risk check',
+
+    introTitle: 'Before you start',
+    introLead:
+      'This page helps you notice signs of reading difficulty in a child. It is not an examination and not a diagnosis.',
+    introPoints: [
+      'You guide, the child speaks. Do not type the answer — just listen.',
+      'The result is only a note of signs, not a judgement of the child.',
+      'Only a doctor or psychologist can confirm anything.',
+      'Never force it. If the child refuses, stop and try again another time.',
+    ],
+    introStart: 'Start',
+    introLater: 'Maybe later',
+
+    stepLabel: (step: number, total: number) => `Part ${step} of ${total}`,
+    listenChip: 'Ask the child to speak',
+    triggerLabel: 'Prompt word',
+    expectLabel: 'Roughly what to expect',
+    replay: 'Read the word aloud',
+    howDidItGo: 'How did it go?',
+    previous: 'Back',
+    next: 'Next',
+
+    markLancar: 'Smooth',
+    markRagu: 'Hesitant',
+    markBelum: 'Not yet',
+
+    obsTitle: 'Everyday signs',
+    obsLead:
+      'Beyond the activity, tick any you often see when the child reads at home or school. It is fine if none apply.',
+    observations: {
+      reversal: 'Often reverses letters such as b/d, p/q when writing or reading',
+      spelling: 'Spelling stays jumbled even after plenty of practice',
+      'slow-read': 'Reads far more slowly and hesitantly than peers',
+      avoid: 'Avoids reading or writing tasks',
+      tired: 'Tires quickly or complains of headaches when reading',
+      sequence: 'Often swaps order, e.g. reads "man" as "nam"',
+      'spell-aloud': 'Struggles to spell words out loud',
+      guessing: 'Often guesses words from pictures or context instead of reading them',
+    },
+    obsContinue: 'See the notes',
+
+    resultTitle: 'Notes on signs',
+    resultClearTitle: 'No strong signs noticed',
+    resultClearBody:
+      'Nothing stood out in this activity. If you still feel the child struggles with reading, it is perfectly fine to check with a professional anyway.',
+    resultFlagsTitle: 'A few signs were noted',
+    resultFlagsBody:
+      'The signs below are also common in children who have dyslexia. This means nothing on its own — many children show them and are perfectly fine.',
+    resultTaskSection: 'From the activity',
+    resultObsSection: 'From everyday observation',
+    resultConsult:
+      'A good next step is to talk it over with a paediatrician, psychologist, or support teacher. Only they can examine and confirm.',
+    resultDisclaimer:
+      'This app does not diagnose. Nothing here replaces an assessment by a professional.',
+    resultAgain: 'Do it again',
+    resultDone: 'Finish',
+
+    domainNames: {
+      syllable: 'Spotting syllables',
+      nonword: 'Blending word sounds',
+      naming: 'Naming quickly',
+    },
+  },
 };

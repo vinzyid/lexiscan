@@ -64,12 +64,12 @@ export function ReadingChoicePicker({ value, onChange }: Props) {
 
             <View className="flex-1">
               <Text
-                className={`font-ui-bold text-[16px] leading-6 ${
+                className={`font-ui-bold text-[17px] leading-6 ${
                   selected ? 'text-primary' : 'text-text-main'
                 }`}>
                 {copy.title}
               </Text>
-              <Text className="mt-0.5 font-ui-medium text-[12px] leading-[18px] text-text-muted">
+              <Text className="mt-0.5 font-ui-medium text-[13px] leading-[19px] text-text-muted">
                 {copy.desc}
               </Text>
             </View>
@@ -90,7 +90,7 @@ export function ReadingChoicePicker({ value, onChange }: Props) {
           className="flex-row items-center rounded-2xl border border-primary/20 bg-primary/[0.08] px-4 py-3"
           style={{ gap: 12 }}>
           <Sparkles size={18} color={colors.primary} />
-          <Text className="flex-1 font-ui-semibold text-[12px] leading-[18px] text-primary">
+          <Text className="flex-1 font-ui-semibold text-[13px] leading-[19px] text-primary">
             {t.auth.voiceAutoNote}
           </Text>
         </View>

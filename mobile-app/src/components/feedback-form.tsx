@@ -45,8 +45,8 @@ export function FeedbackForm() {
           style={{ backgroundColor: 'rgba(16,185,129,0.12)' }}>
           <Check size={22} color="#10b981" strokeWidth={3} />
         </View>
-        <Text className="mt-3 font-ui-bold text-[17px] text-text-main">{t.feedback.sentTitle}</Text>
-        <Text className="mt-1 text-center font-ui-medium text-[13px] text-text-muted">
+        <Text className="mt-3 font-ui-bold text-[18px] text-text-main">{t.feedback.sentTitle}</Text>
+        <Text className="mt-1 text-center font-ui-medium text-[14px] text-text-muted">
           {t.feedback.sentBody}
         </Text>
 
@@ -62,7 +62,7 @@ export function FeedbackForm() {
           accessibilityLabel={t.feedback.sendAnother}
           scaleTo={0.98}
           className="mt-4 h-10 items-center justify-center rounded-xl bg-primary/10 px-4">
-          <Text className="font-ui-bold text-[13px] text-primary">{t.feedback.sendAnother}</Text>
+          <Text className="font-ui-bold text-[14px] text-primary">{t.feedback.sendAnother}</Text>
         </PressableScale>
       </View>
     );
@@ -70,7 +70,7 @@ export function FeedbackForm() {
 
   return (
     <View className="mt-4 rounded-2xl border border-border/10 bg-surface p-4">
-      <Text className="font-ui-medium text-[13px] leading-[21px] text-text-muted">
+      <Text className="font-ui-medium text-[14px] leading-[22px] text-text-muted">
         {t.feedback.intro}
       </Text>
 
@@ -106,11 +106,11 @@ export function FeedbackForm() {
         }
         placeholderTextColor={colors.textMuted}
         accessibilityLabel={t.feedback.title}
-        className="mt-3 rounded-xl border border-border/10 p-3 font-ui text-[14px] text-text-main"
+        className="mt-3 rounded-xl border border-border/10 p-3 font-ui text-[15px] text-text-main"
         style={{ minHeight: 104, backgroundColor: colors.surfaceAlt }}
       />
 
-      <Text className="mt-1.5 text-right font-ui-medium text-[11px] text-text-muted">
+      <Text className="mt-1.5 text-right font-ui-medium text-[12px] text-text-muted">
         {t.feedback.charCount(message.length, MAX_MESSAGE_CHARS)}
       </Text>
 
@@ -130,10 +130,10 @@ export function FeedbackForm() {
           style={{ gap: 10, opacity: canAttach ? 1 : 0.55 }}>
           <Paperclip size={16} color={colors.textMuted} />
           <View className="flex-1">
-            <Text className="font-ui-bold text-[13px] text-text-main">
+            <Text className="font-ui-bold text-[14px] text-text-main">
               {t.feedback.attachTitle}
             </Text>
-            <Text className="mt-0.5 font-ui-medium text-[12px] leading-[18px] text-text-muted">
+            <Text className="mt-0.5 font-ui-medium text-[13px] leading-[19px] text-text-muted">
               {canAttach ? t.feedback.attachDesc : t.feedback.attachEmpty}
             </Text>
           </View>
@@ -152,7 +152,7 @@ export function FeedbackForm() {
       {error ? (
         <View className="mt-3 flex-row rounded-xl p-3" style={{ gap: 8, backgroundColor: 'rgba(220,122,60,0.10)' }}>
           <AlertCircle size={15} color="#dc7a3c" />
-          <Text className="flex-1 font-ui-medium text-[13px] leading-[20px]" style={{ color: '#dc7a3c' }}>
+          <Text className="flex-1 font-ui-medium text-[14px] leading-[21px]" style={{ color: '#dc7a3c' }}>
             {error}
           </Text>
         </View>
@@ -183,13 +183,13 @@ export function FeedbackForm() {
           ) : (
             <Send size={15} color="#ffffff" />
           )}
-          <Text className="font-ui-bold text-[14px] text-white">
+          <Text className="font-ui-bold text-[15px] text-white">
             {sending ? t.feedback.sending : t.feedback.submit}
           </Text>
         </LinearGradient>
       </PressableScale>
 
-      <Text className="mt-2.5 text-center font-ui-medium text-[11px] leading-[17px] text-text-muted">
+      <Text className="mt-2.5 text-center font-ui-medium text-[12px] leading-[18px] text-text-muted">
         {t.feedback.privacyNote}
       </Text>
     </View>
@@ -254,7 +254,7 @@ export function FeedbackForm() {
         style={{ gap: 7, backgroundColor: selected ? undefined : colors.surfaceAlt }}>
         <Icon size={15} color={selected ? colors.primary : colors.textMuted} />
         <Text
-          className={`font-ui-bold text-[13px] ${selected ? 'text-primary' : 'text-text-main'}`}>
+          className={`font-ui-bold text-[14px] ${selected ? 'text-primary' : 'text-text-main'}`}>
           {label}
         </Text>
       </PressableScale>

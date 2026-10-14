@@ -62,7 +62,7 @@ export function ReadingLevelPicker({ value, onChange }: Props) {
               )}
 
               <Text
-                className={`flex-1 font-ui-bold text-[15px] ${
+                className={`flex-1 font-ui-bold text-[16px] ${
                   selected ? 'text-primary' : 'text-text-main'
                 }`}>
                 {copy.name}
@@ -75,7 +75,7 @@ export function ReadingLevelPicker({ value, onChange }: Props) {
               />
             </View>
 
-            <Text className="mt-2 font-ui-medium text-[13px] leading-5 text-text-muted">
+            <Text className="mt-2 font-ui-medium text-[14px] leading-5 text-text-muted">
               {copy.desc}
             </Text>
 

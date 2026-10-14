@@ -17,7 +17,23 @@ export type ThemeTokens = {
   primary: string;
   primaryDeep: string;
   primarySoft: string;
+  /**
+   * Latar Reading Ruler — satu baris penuh, jadi warnanya muda.
+   *
+   * DULU ini juga dipakai sebagai latar kata yang sedang dibacakan TTS. Itu
+   * keliru begitu kedua fitur menyala bersamaan: kata yang dibacakan tenggelam
+   * di dalam balok penggaris karena warnanya sama persis. Sekarang sorot kata
+   * punya tokennya sendiri, lihat `wordHighlight`.
+   */
   highlight: string;
+  /**
+   * Latar kata yang sedang dibacakan TTS — HARUS lebih pekat dari `highlight`.
+   *
+   * Bedanya bukan hiasan: penggaris menandai satu baris dan sorot kata menandai
+   * satu kata di dalam baris itu, dan keduanya sering menyala bersamaan. Tanpa
+   * beda warna, penanda kata tidak lagi menambah apa pun di atas penanda baris.
+   */
+  wordHighlight: string;
   warm: string;
   success: string;
   /** Bicolor Words: kata ganjil memakai bicolorA, kata genap bicolorB. */
@@ -46,6 +62,24 @@ const ACCENTS = {
   success: '16 185 129', // #10b981
 } as const;
 
+/**
+ * Warna kedua "Kata Dua Warna" DIKUNCI, tidak ikut berganti tema.
+ *
+ * Dulu tiap tema menyimpan `bicolorB`-nya sendiri, dan akibatnya warna kata
+ * berganti-ganti — biru di tema biru, hijau di tema hijau. Itu justru merusak
+ * gunanya: mata kehilangan manfaat warna yang sudah dikenali, dan "dua warna"
+ * jadi dua nuansa dari satu warna yang sama. Sekarang warnanya sama di semua
+ * tema terang, jadi sekali pengguna cocok dengan warnanya, ia tetap begitu di
+ * tema apa pun.
+ *
+ * Tema GELAP tetap punya versi sendiri, dan itu bukan pengecualian yang
+ * menggugurkan aturan: kuning pekat di latar gelap tidak terbaca, jadi yang
+ * dipakai versi yang lebih terang. Aturannya "warnanya tetap kuning yang sama",
+ * bukan "kode RGB-nya persis sama".
+ */
+const BICOLOR_GOLD_DARK = '179 125 20'; // #b37d14 — emas yang jelas di latar terang
+const BICOLOR_GOLD_LIGHT = '245 200 92'; // #f5c85c — versi terang untuk latar gelap
+
 export const THEMES: ThemeDef[] = [
   {
     id: 'krem',
@@ -62,8 +96,9 @@ export const THEMES: ThemeDef[] = [
       border: '36 25 8',
       primarySoft: '243 237 254',
       highlight: '254 243 199',
+      wordHighlight: '252 211 77', // #fcd34d — emas lebih pekat dari penggaris
       bicolorA: '36 25 8',
-      bicolorB: '124 90 40', // #7c5a28
+      bicolorB: BICOLOR_GOLD_DARK,
 
       ...ACCENTS,
     },
@@ -83,8 +118,9 @@ export const THEMES: ThemeDef[] = [
       border: '46 36 0',
       primarySoft: '243 237 254',
       highlight: '253 230 138',
+      wordHighlight: '251 191 36', // #fbbf24
       bicolorA: '46 36 0',
-      bicolorB: '119 85 19',
+      bicolorB: BICOLOR_GOLD_DARK,
       ...ACCENTS,
     },
   },
@@ -103,8 +139,9 @@ export const THEMES: ThemeDef[] = [
       border: '12 30 48',
       primarySoft: '237 237 254',
       highlight: '219 234 254',
+      wordHighlight: '147 197 253', // #93c5fd
       bicolorA: '12 30 48',
-      bicolorB: '40 69 92',
+      bicolorB: BICOLOR_GOLD_DARK,
       ...ACCENTS,
     },
   },
@@ -123,8 +160,9 @@ export const THEMES: ThemeDef[] = [
       border: '11 37 24',
       primarySoft: '238 237 254',
       highlight: '217 240 224',
+      wordHighlight: '134 239 172', // #86efac
       bicolorA: '11 37 24',
-      bicolorB: '34 79 50',
+      bicolorB: BICOLOR_GOLD_DARK,
       ...ACCENTS,
     },
   },
@@ -143,8 +181,9 @@ export const THEMES: ThemeDef[] = [
       border: '255 255 255',
       primarySoft: '46 38 82',
       highlight: '74 62 31',
+      wordHighlight: '120 96 40', // versi pekat dari highlight tema gelap
       bicolorA: '232 232 248',
-      bicolorB: '176 176 212', // #b0b0d4
+      bicolorB: BICOLOR_GOLD_LIGHT,
       ...ACCENTS,
     },
   },

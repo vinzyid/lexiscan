@@ -77,18 +77,35 @@ export function PillTabBar({ state, navigation, insets }: BottomTabBarProps) {
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 6,
-                  paddingHorizontal: 10,
+                  gap: 5,
+                  /*
+                   * Padding dikecilkan dari 10. Pada baris flex, padding kiri
+                   * dan kanan ikut memakan lebar 1/5 layar; pada tab seperti
+                   * "Beranda" sisanya jadi terlalu sempit untuk ikon + label,
+                   * sehingga teksnya pecah per huruf dan tampak tegak seperti
+                   * ditulis menyamping.
+                   */
+                  paddingHorizontal: 6,
                   borderRadius: 24,
                 }}>
-                <Icon size={19} color="#ffffff" strokeWidth={1.8} />
-                <Text className="font-ui-bold text-[13px] text-white">{label}</Text>
+                <Icon size={17} color="#ffffff" strokeWidth={1.8} />
+                {/*
+                 * `numberOfLines={1}` + `flexShrink` WAJIB: tanpa keduanya,
+                 * label yang tidak muat akan dipotong per karakter alih-alih
+                 * mengecil, dan pilnya jadi setinggi beberapa baris.
+                 */}
+                <Text
+                  numberOfLines={1}
+                  style={{ flexShrink: 1 }}
+                  className="font-ui-bold text-[13px] text-white">
+                  {label}
+                </Text>
               </LinearGradient>
             ) : (
               /* Tab tidak aktif tetap menampilkan namanya: ikon sendirian memaksa menebak. */
               <View className="h-12 items-center justify-center rounded-3xl px-1">
                 <Icon size={19} color={colors.textMuted} strokeWidth={1.8} />
-                <Text className="mt-0.5 font-ui-medium text-[11px] text-text-muted" numberOfLines={1}>
+                <Text className="mt-0.5 font-ui-medium text-[12px] text-text-muted" numberOfLines={1}>
                   {label}
                 </Text>
               </View>

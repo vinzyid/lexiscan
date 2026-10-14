@@ -224,7 +224,7 @@ export default function AuthScreen() {
           <LexiMascot size={100} />
 
           <View className="mt-2.5 flex-row items-center" style={{ gap: 10 }}>
-            <Text className="font-ui-bold text-[32px] text-white" style={{ letterSpacing: -0.32 }}>
+            <Text className="font-ui-bold text-[33px] text-white" style={{ letterSpacing: -0.32 }}>
               LexiScan
             </Text>
             <SpeakButton
@@ -235,7 +235,7 @@ export default function AuthScreen() {
             />
           </View>
 
-          <Text className="mt-1 font-ui text-[13px] text-white/55">{t.auth.appTagline}</Text>
+          <Text className="mt-1 font-ui text-[14px] text-white/55">{t.auth.appTagline}</Text>
 
           {/*
             Titik langkah hanya untuk pengguna baru. Yang sudah punya akun cuma
@@ -262,7 +262,7 @@ export default function AuthScreen() {
               </View>
 
               <Text
-                className="mt-1.5 font-ui-semibold text-[11px] text-white/40"
+                className="mt-1.5 font-ui-semibold text-[12px] text-white/40"
                 style={{ letterSpacing: 0.77 }}>
                 {t.auth.stepLabel(step + 1, TOTAL_STEPS, stepName)}
               </Text>
@@ -326,12 +326,12 @@ export default function AuthScreen() {
               </View>
             ) : null}
 
-            <Text className={`font-ui-bold text-[20px] leading-[30px] text-text-main ${
+            <Text className={`font-ui-bold text-[21px] leading-[31px] text-text-main ${
               step === 0 ? 'mt-5' : 'mt-6'
             }`}>
               {heading.title}
             </Text>
-            <Text className="mb-5 mt-1.5 font-ui text-[13px] text-text-muted">
+            <Text className="mb-5 mt-1.5 font-ui text-[14px] text-text-muted">
               {heading.subtitle}
             </Text>
 
@@ -397,7 +397,7 @@ export default function AuthScreen() {
 
             {error ? (
               <View className="mt-4 rounded-2xl bg-primary/[0.06] px-4 py-3">
-                <Text className="font-ui-medium text-[14px] leading-6 text-text-main">{error}</Text>
+                <Text className="font-ui-medium text-[15px] leading-6 text-text-main">{error}</Text>
               </View>
             ) : null}
 
@@ -415,7 +415,7 @@ export default function AuthScreen() {
                 accessibilityLabel={`${t.auth.skip}. ${t.auth.skipHint}`}
                 scaleTo={0.98}
                 className="mt-4 h-12 items-center justify-center rounded-2xl">
-                <Text className="font-ui-bold text-[14px] text-text-muted">{t.auth.skip}</Text>
+                <Text className="font-ui-bold text-[15px] text-text-muted">{t.auth.skip}</Text>
               </PressableScale>
             ) : null}
           </ScrollView>
@@ -455,7 +455,7 @@ export default function AuthScreen() {
                   justifyContent: 'center',
                   gap: 8,
                 }}>
-                <Text className="font-ui-bold text-[17px] text-white">{primaryLabel}</Text>
+                <Text className="font-ui-bold text-[18px] text-white">{primaryLabel}</Text>
                 {!loading ? <ArrowRight size={18} color="#ffffff" strokeWidth={3} /> : null}
               </LinearGradient>
             </PressableScale>

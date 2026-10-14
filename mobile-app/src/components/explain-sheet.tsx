@@ -112,8 +112,8 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
             <ArrowLeft size={18} color={colors.textMuted} />
           </PressableScale>
           <View className="flex-1">
-            <Text className="font-ui-bold text-[17px] text-text-main">{t.explain.title}</Text>
-            <Text className="font-ui-medium text-[13px] text-text-muted" numberOfLines={1}>
+            <Text className="font-ui-bold text-[18px] text-text-main">{t.explain.title}</Text>
+            <Text className="font-ui-medium text-[14px] text-text-muted" numberOfLines={1}>
               {active ? t.explain.fromLexi : t.explain.about(target?.term ?? '')}
             </Text>
           </View>
@@ -125,7 +125,7 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
               <View className="mr-2">
                 {renderStyleIcon(active.id, 14, colors.primary)}
               </View>
-              <Text className="font-ui-bold text-[13px] text-primary">{active.name}</Text>
+              <Text className="font-ui-bold text-[14px] text-primary">{active.name}</Text>
             </View>
 
             <View className="flex-row">
@@ -218,7 +218,7 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
               <View className="mb-4 h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-primary/10">
                 <LexiMascot size={72} />
               </View>
-              <Text className="font-ui-bold text-[17px] text-text-main">
+              <Text className="font-ui-bold text-[18px] text-text-main">
                 {t.explain.chooseStyle}
               </Text>
             </View>
@@ -238,10 +238,10 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
                     {renderStyleIcon(sid, 22, colors.primary)}
                   </View>
                   <View className="flex-1">
-                    <Text className="mb-0.5 font-ui-bold text-[15px] text-text-main">
+                    <Text className="mb-0.5 font-ui-bold text-[16px] text-text-main">
                       {style.name}
                     </Text>
-                    <Text className="font-ui-medium text-[13px] text-primary">{style.desc}</Text>
+                    <Text className="font-ui-medium text-[14px] text-primary">{style.desc}</Text>
                   </View>
                   <ChevronRight size={18} color={colors.textMuted} />
                 </PressableScale>

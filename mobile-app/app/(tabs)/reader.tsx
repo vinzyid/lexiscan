@@ -621,7 +621,7 @@ export default function ReaderScreen() {
                   <Text className="font-ui-bold text-xs text-white">{t.reader.nowReading}</Text>
                 </View>
               </View>
-              <Text className="mt-1.5 font-ui-bold text-[17px] text-white" numberOfLines={1}>
+              <Text className="mt-1.5 font-ui-bold text-[18px] text-white" numberOfLines={1}>
                 {isScanned ? t.reader.scanResult : t.sampleDoc.title}
               </Text>
             </View>
@@ -633,7 +633,7 @@ export default function ReaderScreen() {
               className="h-11 flex-row items-center rounded-[16px] border border-white/20 bg-white/[0.14] px-3.5"
               style={{ gap: 6 }}>
               <Type size={16} color="#ffffff" />
-              <Text className="font-ui-bold text-[13px] text-white">{typeLevelName}</Text>
+              <Text className="font-ui-bold text-[14px] text-white">{typeLevelName}</Text>
             </PressableScale>
           </View>
         </LinearGradient>
@@ -807,7 +807,7 @@ export default function ReaderScreen() {
                 </View>
                 <View className="flex-1">
                   <Text className="font-ui-bold text-sm text-text-main">{t.reader.sampleTitle}</Text>
-                  <Text className="mt-0.5 font-ui-medium text-xs leading-[18px] text-text-muted">
+                  <Text className="mt-0.5 font-ui-medium text-xs leading-[19px] text-text-muted">
                     {t.reader.sampleDesc}
                   </Text>
                 </View>
@@ -835,7 +835,7 @@ export default function ReaderScreen() {
                   className="mt-4 flex-row items-center rounded-2xl bg-primary/[0.06] px-3.5 py-3"
                   style={{ gap: 10 }}>
                   <Sparkles size={16} color={colors.primary} />
-                  <Text className="flex-1 font-ui-medium text-[13px] text-primary">
+                  <Text className="flex-1 font-ui-medium text-[14px] text-primary">
                     {t.reader.simplifying(activeLevel.name)}
                   </Text>
                 </View>
@@ -861,6 +861,12 @@ export default function ReaderScreen() {
                     lineMetrics={lineMetrics}
                     rulerIndex={rulerIndex}
                     rulerFollowingSpeech={rulerFollowingSpeech}
+                    /*
+                     * Hanya paragraf aktif yang punya penggaris, jadi baris
+                     * penggarisnya pun hanya diteruskan ke situ. Paragraf lain
+                     * menerima `null` dan bicolor-nya berjalan seperti biasa.
+                     */
+                    rulerLine={index === activeIndex ? rulerLine : null}
                     positions={paragraphPositions}
                     bodyOffsets={paragraphBodyOffsets}
                     onWordPress={setSelectedWord}
@@ -881,7 +887,7 @@ export default function ReaderScreen() {
                 className="mt-5 flex-row items-center rounded-2xl bg-primary/[0.06] p-3"
                 style={{ gap: 8 }}>
                 <GripHorizontal size={16} color={colors.primary} />
-                <Text className="flex-1 font-ui-medium text-xs leading-[18px] text-text-muted">
+                <Text className="flex-1 font-ui-medium text-xs leading-[19px] text-text-muted">
                   {t.reader.rulerHintLead}
                   <Text className="font-ui-bold text-primary">
                     {t.reader.rulerLineOf(Math.min(rulerLine, lineCount - 1) + 1, lineCount)}
@@ -1037,6 +1043,7 @@ const ParagraphBlock = memo(function ParagraphBlock({
   lineMetrics,
   rulerIndex,
   rulerFollowingSpeech,
+  rulerLine,
   positions,
   bodyOffsets,
   onWordPress,
@@ -1056,6 +1063,8 @@ const ParagraphBlock = memo(function ParagraphBlock({
   lineMetrics: SharedValue<LineMetric[]>;
   rulerIndex: SharedValue<number>;
   rulerFollowingSpeech: SharedValue<boolean>;
+  /** Baris yang ditunjuk penggaris; `null` di paragraf yang bukan aktif. */
+  rulerLine: number | null;
   /*
    * Peta posisi paragraf dioper sebagai ref utuh (bukan callback per indeks),
    * supaya komponen ini bisa di-memo: callback yang dibuat di dalam `.map`
@@ -1142,6 +1151,8 @@ const ParagraphBlock = memo(function ParagraphBlock({
         bicolor={bicolor}
         dimmed={dimmed}
         activeWordIndex={activeWordIndex}
+        /* Bicolor dimatikan di baris penggaris; lihat `rulerLineIndex`. */
+        rulerLineIndex={showRuler ? rulerLine : null}
         onWordPress={dimmed ? undefined : onWordPress}
         onTextLayout={
           rulerMode && isActive ? (event) => onSyncLines(index, event.nativeEvent.lines) : undefined

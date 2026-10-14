@@ -88,16 +88,12 @@ export const id = {
   /**
    * Jenjang sekolah di langkah 2 pendaftaran.
    *
-   * `age` ditulis apa adanya dan bukan patokan kaku — gunanya membantu pengguna
-   * mengenali barisnya sendiri saat namanya ("SD Kelas 4–6") belum tentu
-   * terbaca.
+   * Sengaja tidak ada deskripsi usia di bawah nama: yang ditanyakan di sini
+   * jenjangnya, bukan umurnya.
    */
   schoolLevels: {
-    sd1: { name: 'SD Kelas 1–3', age: 'Usia 6–9 tahun' },
-    sd2: { name: 'SD Kelas 4–6', age: 'Usia 9–12 tahun' },
-    smp: { name: 'SMP', age: 'Usia 12–15 tahun' },
-    sma: { name: 'SMA', age: 'Usia 15–18 tahun' },
-    umum: { name: 'Umum', age: 'Semua usia' },
+    sd: { name: 'SD Kelas 1–3' },
+    umum: { name: 'Umum' },
   },
 
   auth: {
@@ -640,140 +636,6 @@ export const id = {
     ],
   },
 
-  lexiprogress: {
-    title: 'Progres Membaca',
-    subtitle: 'Catat waktu, pemahaman, dan goal secara transparan.',
-    viewProgress: 'Lihat Progres',
-    startEvaluation: 'Mulai Evaluasi',
-    empty: 'Mulai sesi pertama untuk melihat progres membaca.',
-    completedSessions: 'Sesi selesai',
-    activeGoals: 'Goal aktif',
-    latestSession: 'Sesi terakhir',
-    baseline: 'Baseline',
-    assisted: 'Dengan LexiScan',
-    notMeasured: 'Belum diukur',
-    noData: 'Belum ada data',
-    duration: 'Durasi',
-    comprehension: 'Pemahaman',
-    difficulty: 'Kesulitan subjektif',
-    features: 'Fitur aktif',
-    points: 'poin persentase',
-    relative: 'perubahan relatif',
-    limitation: 'Satu perbandingan tidak membuktikan sebab-akibat atau efektivitas klinis.',
-    historyShortcut: 'Riwayat & Laporan Progres',
-    historyShortcutDesc: 'Lihat sesi, goal, dan perbandingan bacaanmu.',
-    feedback: 'Data ini berasal dari sesi yang benar-benar disimpan.',
-    baselineNote: 'Kondisi pembanding tanpa bantuan yang sedang diuji.',
-    assistedNote: 'Fitur bantuan yang aktif ditampilkan pada sesi.',
-
-    /* Setup evaluasi */
-    setupTitle: 'Mulai Evaluasi',
-    setupSubtitle: 'Siapkan sesi baca, lalu bandingkan kondisi baseline dan berbantuan.',
-    chooseText: 'Pilih teks yang dibaca',
-    chooseTextPlaceholder: 'Tempel teks di sini, atau pakai contoh bacaan.',
-    useSampleText: 'Pakai contoh bacaan',
-    titleLabel: 'Judul teks',
-    titlePlaceholder: 'Contoh: Bab 1 — Mitokondria',
-    conditionLabel: 'Kondisi sesi',
-    conditionHint:
-      'Baseline berarti tanpa fitur bantuan yang sedang diuji. Jangan matikan semua fitur kalau hanya menguji satu fitur tertentu.',
-    featureLabel: 'Fitur bantuan yang aktif',
-    featureHint: 'Catat fitur yang benar-benar dipakai, bukan semua fitur aplikasi.',
-    sameGroupHint:
-      'Untuk perbandingan, baseline dan berbantuan sebaiknya memakai teks yang sama. Ulangi teks bisa menimbulkan efek ingatan.',
-    startReading: 'Mulai membaca',
-    saveDocumentFailed: 'Gagal menyimpan teks. Coba lagi ya.',
-    needText: 'Isi teks dulu sebelum lanjut.',
-    needTitle: 'Beri judul teksnya dulu ya.',
-
-    /* Sesi baca */
-    readingTitle: 'Sesi Membaca',
-    readingHint: 'Baca teks sampai selesai, lalu tekan Selesai. Timer berjalan otomatis.',
-    tapToStart: 'Mulai timer & baca',
-    finishReading: 'Selesai membaca',
-    notYet: 'Belum yakin',
-
-    /* Penilaian */
-    assessmentTitle: 'Penilaian Sesi',
-    comprehensionTitle: 'Kuis pemahaman',
-    comprehensionHint:
-      'Tulis 3–5 pertanyaan yang jawabannya benar-benar ada di teks. Untuk evaluasi formal, minta pendamping meninjau soalnya.',
-    addQuestion: 'Tambah pertanyaan',
-    removeQuestion: 'Hapus pertanyaan',
-    questionLabel: (index: number) => `Pertanyaan ${index}`,
-    optionsLabel: 'Pilihan jawaban',
-    addOption: 'Tambah pilihan',
-    correctAnswer: 'Kunci jawaban',
-    chooseCorrect: 'Tandai jawaban yang benar',
-    skipQuiz: 'Lewati kuis',
-    skippedNote: 'Skor pemahaman akan berstatus Belum diukur.',
-    difficultyTitle: 'Seberapa sulit teks ini bagimu?',
-    difficultyHint: 'Penilaian pribadi, bukan ukuran objektif.',
-    difficultyScale: ['Sangat mudah', 'Mudah', 'Sedang', 'Sulit', 'Sangat sulit'],
-    notesTitle: 'Catatan (opsional)',
-    notesPlaceholder: 'Mis. bagian yang terasa berat.',
-    saveSession: 'Simpan sesi',
-    saveSessionFailed: 'Gagal menyimpan sesi. Coba lagi ya.',
-    needQuestion: 'Isi pertanyaannya dulu, atau lewati kuis.',
-
-    /* Hasil */
-    resultTitle: 'Hasil Sesi',
-    resultBaseline: 'Ini sesi baseline.',
-    resultAssisted: 'Ini sesi berbantuan LexiScan.',
-    compareTitle: 'Perbandingan baseline & berbantuan',
-    compareEmpty:
-      'Belum ada pasangan baseline dan berbantuan pada teks ini. Jalankan kondisi satunya untuk melihat perbandingan.',
-    rawValues: 'Nilai mentah',
-    formula: 'Cara hitung',
-    quizReview: 'Jawaban kuis',
-    answeredCorrect: 'Benar',
-    answeredWrong: 'Salah',
-    answeredSkipped: 'Dilewati',
-    viewHistory: 'Lihat riwayat',
-    startAnother: 'Sesi baru',
-
-    /* Goal */
-    goalTitle: 'Goal Belajar',
-    goalEmpty: 'Belum ada goal. Buat satu untuk mengarahkan latihan.',
-    newGoal: 'Buat goal',
-    goalFormTitle: 'Goal baru',
-    goalNameLabel: 'Judul goal',
-    goalNamePlaceholder: 'Contoh: Selesaikan 4 sesi dalam 2 minggu',
-    goalMetricLabel: 'Metrik',
-    goalBaselineLabel: 'Nilai awal',
-    goalTargetLabel: 'Target',
-    goalUnitLabel: 'Satuan',
-    goalUnitPlaceholder: 'sesi / % / skala',
-    goalStartLabel: 'Tanggal mulai',
-    goalDeadlineLabel: 'Target selesai (opsional)',
-    goalSave: 'Simpan goal',
-    goalSaveFailed: 'Gagal menyimpan goal. Coba lagi ya.',
-    goalCreated: 'Goal tersimpan.',
-    goalDelete: 'Hapus goal',
-    goalNoValue: 'nilai',
-    metrics: {
-      session_count: { name: 'Jumlah sesi selesai', unit: 'sesi' },
-      comprehension_percent: { name: 'Skor pemahaman', unit: '%' },
-      difficulty_rating: { name: 'Kesulitan subjektif', unit: 'skala 1-5' },
-      wpm: { name: 'Kecepatan membaca (WPM)', unit: 'kata/menit' },
-      cwpm: { name: 'CWPM (kata benar/menit)', unit: 'kata/menit' },
-      duration_seconds: { name: 'Durasi membaca', unit: 'detik' },
-      accuracy_percent: { name: 'Akurasi kata', unit: '%' },
-    },
-
-    /* Nama fitur bantuan & kondisi */
-    featureNames: {
-      typography: 'Atur tulisan',
-      simplify: 'Sederhanakan teks',
-      focus: 'Mode fokus',
-      ruler: 'Penggaris baca',
-      bicolor: 'Kata dua warna',
-      syllables: 'Pisah suku kata',
-      speech: 'Bacakan suara',
-      explain: 'Tanya Lexi',
-    },
-  },
-
   dailyTips: [
     'Cahaya hangat lebih nyaman dari layar putih terang.',
     'Di layar Baca, geser ke kiri atau kanan untuk pindah paragraf.',
@@ -783,6 +645,92 @@ export const id = {
     'Mode Fokus meredupkan paragraf lain supaya matamu tidak melompat.',
     'Ketuk kata yang sulit — LexiScan akan memecahnya jadi suku kata.',
   ],
+
+  /**
+   * Cek Awal Risiko Disleksia.
+   *
+   * DITUJUKAN KE PENDAMPING, BUKAN KE ANAK. Orang tua atau guru yang membaca
+   * arahan ini, meminta anak bersuara, lalu menandai hasilnya. Karena itu
+   * teksnya memakai kata "Ibu/Bapak", bukan "kamu".
+   *
+   * NADA SELURUH TEKS DI SINI SENGAJA HATI-HATI. Aplikasi ini TIDAK mendiagnosis
+   * dan TIDAK menilai; ia hanya mencatat tanda-tanda yang muncul lalu mengarahkan
+   * ke tenaga ahli. Karena itu tidak ada kata "terdeteksi", "risiko tinggi",
+   * "skor", atau angka apa pun — semua itu kesan mengklaim yang bukan haknya.
+   */
+  screening: {
+    title: 'Cek Awal',
+    cardTitle: 'Cek Awal Risiko Disleksia',
+    cardDesc: 'Dipandu pendamping, tanpa skor. Lalu bicarakan dengan tenaga ahli.',
+    entryLabel: 'Buka cek awal risiko disleksia',
+
+    /* Pengantar — untuk pendamping, jadi boleh dibaca sendiri. */
+    introTitle: 'Sebelum mulai',
+    introLead:
+      'Halaman ini membantu Ibu/Bapak mengenali tanda-tanda kesulitan membaca pada anak. Ini bukan pemeriksaan dan bukan diagnosis.',
+    introPoints: [
+      'Ibu/Bapak yang memandu; anak yang bersuara. Jawaban anak tidak diketik, cukup didengar.',
+      'Hasilnya hanya catatan tanda, bukan penilaian kemampuan anak.',
+      'Yang bisa memastikan adalah dokter atau psikolog.',
+      'Jangan memaksa. Kalau anak menolak, hentikan dan coba lain waktu.',
+    ],
+    introStart: 'Mulai',
+    introLater: 'Nanti saja',
+
+    /* Pengerjaan butir terpandu. */
+    stepLabel: (step: number, total: number) => `Bagian ${step} dari ${total}`,
+    listenChip: 'Minta anak bersuara',
+    triggerLabel: 'Kata pemicu',
+    expectLabel: 'Yang kira-kira diharapkan',
+    replay: 'Bacakan kata',
+    howDidItGo: 'Bagaimana jawabannya?',
+    previous: 'Kembali',
+    next: 'Lanjut',
+
+    /* Pilihan penilaian pendamping. */
+    markLancar: 'Lancar',
+    markRagu: 'Ragu-ragu',
+    markBelum: 'Belum bisa',
+
+    /* Lembar observasi. */
+    obsTitle: 'Tanda sehari-hari',
+    obsLead:
+      'Selain tadi, centang yang sering Ibu/Bapak lihat saat anak membaca di rumah atau di sekolah. Boleh tidak ada sama sekali.',
+    observations: {
+      reversal: 'Sering terbalik menulis atau membaca huruf seperti b/d, p/q',
+      spelling: 'Ejaan tulisannya banyak tertukar walau sudah sering dilatih',
+      'slow-read': 'Membaca jauh lebih lambat dan ragu dibanding teman sebayanya',
+      avoid: 'Menghindari kegiatan membaca atau menulis',
+      tired: 'Cepat lelah atau mengeluh pusing saat membaca',
+      sequence: 'Sering tertukar urutan, mis. membaca "nama" jadi "mana"',
+      'spell-aloud': 'Sulit mengeja kata dengan bersuara',
+      guessing: 'Sering menebak kata dari gambar atau konteks, bukan membacanya',
+    },
+    obsContinue: 'Lihat catatan',
+
+    /* Hasil — bahasa penyaring, bukan penilai. */
+    resultTitle: 'Catatan tanda',
+    resultClearTitle: 'Belum terlihat tanda yang menonjol',
+    resultClearBody:
+      'Dari kegiatan tadi, belum ada tanda yang menonjol. Kalau Ibu/Bapak tetap merasa anak kesulitan membaca, tidak ada salahnya tetap berkonsultasi.',
+    resultFlagsTitle: 'Ada beberapa tanda yang tercatat',
+    resultFlagsBody:
+      'Tanda-tanda di bawah ini juga sering terlihat pada anak yang mengalami disleksia. Ini belum berarti apa-apa — banyak anak melewatinya dan baik-baik saja.',
+    resultTaskSection: 'Dari kegiatan tadi',
+    resultObsSection: 'Dari pengamatan sehari-hari',
+    resultConsult:
+      'Langkah yang baik berikutnya adalah membicarakannya dengan dokter anak, psikolog, atau guru pendamping. Hanya mereka yang bisa memeriksa dan memastikan.',
+    resultDisclaimer:
+      'Aplikasi ini tidak mendiagnosis. Hasil di sini tidak menggantikan pemeriksaan tenaga ahli.',
+    resultAgain: 'Ulangi',
+    resultDone: 'Selesai',
+
+    domainNames: {
+      syllable: 'Mengenali suku kata',
+      nonword: 'Menyusun bunyi kata',
+      naming: 'Menamai dengan cepat',
+    },
+  },
 };
 
 /** Sengaja tanpa `as const`: tipenya perlu melebar jadi `string`, strukturnya tetap terkunci. */

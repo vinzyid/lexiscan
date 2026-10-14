@@ -39,7 +39,7 @@ export function FootprintChip() {
       accessibilityRole="text"
       style={{ gap: 6, backgroundColor: colors.surfaceAlt }}>
       <Leaf size={12} color={colors.textMuted} />
-      <Text className="font-ui-medium text-[11px] text-text-muted">{label}</Text>
+      <Text className="font-ui-medium text-[12px] text-text-muted">{label}</Text>
     </View>
   );
 }

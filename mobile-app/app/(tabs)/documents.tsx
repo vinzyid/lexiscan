@@ -104,7 +104,7 @@ export default function DocumentsScreen() {
                 className="flex-row items-center rounded-[14px] border border-white/[0.18] bg-white/[0.12] px-3 py-1.5"
                 style={{ gap: 8 }}>
                 <FileText size={13} color="#ffffff" />
-                <Text className="font-ui-bold text-[13px] text-white/85">
+                <Text className="font-ui-bold text-[14px] text-white/85">
                   {t.documents.title}
                 </Text>
               </View>
@@ -230,7 +230,7 @@ function DocumentCard({
           </LinearGradient>
 
           <View className="flex-1">
-            <Text className="font-ui-bold text-[15px] leading-5 text-text-main" numberOfLines={2}>
+            <Text className="font-ui-bold text-[16px] leading-5 text-text-main" numberOfLines={2}>
               {doc.title}
             </Text>
             <Text className="mt-1 font-ui-medium text-xs text-text-muted">
@@ -308,7 +308,7 @@ function EmptyState({ onScan }: { onScan: () => void }) {
         <ScanLine size={34} color={colors.primary} />
       </View>
       <Text className="mt-4 font-ui-bold text-base text-text-main">{t.documents.emptyTitle}</Text>
-      <Text className="mt-1.5 text-center font-ui-medium text-[13px] leading-5 text-text-muted">
+      <Text className="mt-1.5 text-center font-ui-medium text-[14px] leading-5 text-text-muted">
         {t.documents.emptyDesc}
       </Text>
       <PressableScale

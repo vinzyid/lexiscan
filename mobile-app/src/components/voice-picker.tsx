@@ -83,7 +83,7 @@ export function VoicePicker() {
 
   if (voices === null) {
     return (
-      <Text className="font-ui-medium text-[13px] text-text-muted">{t.settings.voiceLoading}</Text>
+      <Text className="font-ui-medium text-[14px] text-text-muted">{t.settings.voiceLoading}</Text>
     );
   }
 
@@ -95,7 +95,7 @@ export function VoicePicker() {
   if (voices.length === 0) {
     return (
       <View style={{ gap: 10 }}>
-        <Text className="font-ui-medium text-[13px] leading-5 text-text-muted">
+        <Text className="font-ui-medium text-[14px] leading-5 text-text-muted">
           {t.settings.voiceNone}
         </Text>
 
@@ -123,7 +123,7 @@ export function VoicePicker() {
             className="h-12 flex-row items-center justify-center rounded-2xl bg-primary/10"
             style={{ gap: 8 }}>
             <ExternalLink size={16} color={colors.primary} />
-            <Text className="font-ui-bold text-[14px] text-primary">
+            <Text className="font-ui-bold text-[15px] text-primary">
               {t.settings.voiceOpenSettings}
             </Text>
           </PressableScale>
@@ -172,11 +172,11 @@ export function VoicePicker() {
 
             <View className="flex-1">
               <Text
-                className={`font-ui-bold text-[15px] ${active ? 'text-primary' : 'text-text-main'}`}>
+                className={`font-ui-bold text-[16px] ${active ? 'text-primary' : 'text-text-main'}`}>
                 {identifier === null ? t.settings.voiceAuto : t.settings.voiceName(index)}
               </Text>
 
-              <Text className="mt-0.5 font-ui-medium text-[12px] text-text-muted">
+              <Text className="mt-0.5 font-ui-medium text-[13px] text-text-muted">
                 {identifier === null
                   ? t.settings.voiceAutoDesc
                   : voice?.network
@@ -193,7 +193,7 @@ export function VoicePicker() {
                 dan tanpa itu diagnosisnya cuma tebak-tebakan.
               */}
               {identifier !== null ? (
-                <Text className="mt-0.5 text-[10px] text-text-muted/60" selectable>
+                <Text className="mt-0.5 text-[12px] text-text-muted/60" selectable>
                   {identifier}
                 </Text>
               ) : null}
@@ -206,7 +206,7 @@ export function VoicePicker() {
         );
       })}
 
-      <Text className="mt-1 font-ui-medium text-[13px] leading-5 text-text-muted">
+      <Text className="mt-1 font-ui-medium text-[14px] leading-5 text-text-muted">
         {t.settings.voicePickerHint}
       </Text>
 
@@ -216,7 +216,7 @@ export function VoicePicker() {
         jawabannya sering ada di salah satu dari keduanya. Mengubahnya langsung
         membunyikan contoh, sama seperti memilih suara.
       */}
-      <Text className="mt-4 font-ui-bold text-[15px] text-text-main">{t.settings.rateTitle}</Text>
+      <Text className="mt-4 font-ui-bold text-[16px] text-text-main">{t.settings.rateTitle}</Text>
 
       <View className="mt-2 flex-row" style={{ gap: 8 }}>
         {SPEECH_RATES.map((option) => {
@@ -238,7 +238,7 @@ export function VoicePicker() {
                 active ? 'border-primary/30 bg-primary/[0.08]' : 'border-border/10 bg-surface'
               }`}>
               <Text
-                className={`font-ui-bold text-[13px] ${
+                className={`font-ui-bold text-[14px] ${
                   active ? 'text-primary' : 'text-text-muted'
                 }`}>
                 {t.settings.rates[option.id]}

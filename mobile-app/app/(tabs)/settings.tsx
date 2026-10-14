@@ -16,7 +16,6 @@ import {
   LogOut,
   Palette,
   SquarePen,
-  TrendingUp,
   Type,
   UserRound,
   Volume2,
@@ -100,8 +99,16 @@ export default function SettingsScreen() {
    * ("Kelas 10 · SMA Negeri 1"). Nama sekolahnya tidak pernah ditanyakan
    * aplikasi ini, jadi yang ditampilkan hanya yang benar-benar diketahui.
    */
+  /*
+   * `school_level` datang dari server, dan bisa saja berisi id lama yang tidak
+   * lagi dikenal aplikasi ini (mis. 'sma' dari sebelum jenjang disederhanakan
+   * jadi SD & Umum). Membacanya langsung lewat `t.schoolLevels[id].name` akan
+   * melempar begitu id-nya tidak ada — dan layar Atur gagal terbuka karenanya.
+   * Jadi nilainya diperiksa dulu; yang tak dikenal jatuh ke nama kemampuan
+   * membaca, bukan crash.
+   */
   const schoolLine = reader?.school_level
-    ? t.schoolLevels[reader.school_level].name
+    ? (t.schoolLevels[reader.school_level]?.name ?? t.readingLevels[readingLevel].name)
     : t.readingLevels[readingLevel].name;
 
   const changeReadingLevel = (id: ReadingLevelId) => {
@@ -228,10 +235,10 @@ export default function SettingsScreen() {
                 </View>
               </View>
 
-              <Text className="mt-1.5 font-ui-bold text-[21px] text-white" numberOfLines={1}>
+              <Text className="mt-1.5 font-ui-bold text-[22px] text-white" numberOfLines={1}>
                 {reader ? reader.name : t.settings.guestName}
               </Text>
-              <Text className="mt-0.5 font-ui text-[13px] text-white/55" numberOfLines={1}>
+              <Text className="mt-0.5 font-ui text-[14px] text-white/55" numberOfLines={1}>
                 {reader ? schoolLine : t.settings.guestSubtitle}
               </Text>
             </View>
@@ -341,20 +348,6 @@ export default function SettingsScreen() {
                 }}
               />
             ) : null}
-            {/*
-             * Pintasan ke halaman progres lengkap. Ditaruh di sini, bukan sebagai
-             * tab baru: Atur memang tempat menelusuri data pribadi pembaca, dan
-             * menambah tab akan mengubah pola navigasi yang sudah ada demi satu
-             * halaman. Isi ringkasnya ada di Beranda.
-             */}
-            {reader ? (
-              <SettingsRow
-                Icon={TrendingUp}
-                title={t.lexiprogress.historyShortcut}
-                value={t.lexiprogress.historyShortcutDesc}
-                onPress={() => router.push('/progress' as never)}
-              />
-            ) : null}
             <SettingsRow
               Icon={LifeBuoy}
               title={t.settings.rowHelp}
@@ -376,8 +369,8 @@ export default function SettingsScreen() {
             <View className="flex-row items-center" style={{ gap: 14 }}>
               <LexiMascot size={52} />
               <View className="flex-1">
-                <Text className="font-ui-bold text-[19px] text-white">LexiScan</Text>
-                <Text className="mt-0.5 font-ui text-[12px] text-white/55">
+                <Text className="font-ui-bold text-[20px] text-white">LexiScan</Text>
+                <Text className="mt-0.5 font-ui text-[13px] text-white/55">
                   {t.settings.aboutTagline}
                 </Text>
 
@@ -385,7 +378,7 @@ export default function SettingsScreen() {
                   {[`v${version}`, ...t.settings.aboutTags.slice(1)].map(
                     (chip) => (
                       <View key={chip} className="rounded-lg bg-white/[0.14] px-2 py-0.5">
-                        <Text className="font-ui-bold text-[10px] text-white/80">{chip}</Text>
+                        <Text className="font-ui-bold text-[12px] text-white/80">{chip}</Text>
                       </View>
                     ),
                   )}
@@ -393,7 +386,7 @@ export default function SettingsScreen() {
               </View>
             </View>
 
-            <Text className="mt-3.5 font-ui-medium text-[12px] leading-[19px] text-white/55">
+            <Text className="mt-3.5 font-ui-medium text-[13px] leading-[20px] text-white/55">
               {t.settings.aboutBody}
             </Text>
           </LinearGradient>
@@ -408,13 +401,13 @@ export default function SettingsScreen() {
               className="mt-4 h-14 flex-row items-center justify-center rounded-2xl border border-danger/30 bg-danger/[0.08]"
               style={{ gap: 8 }}>
               <LogOut size={17} color="#ef4444" />
-              <Text className="font-ui-bold text-[15px]" style={{ color: '#ef4444' }}>
+              <Text className="font-ui-bold text-[16px]" style={{ color: '#ef4444' }}>
                 {t.settings.logoutAction}
               </Text>
             </PressableScale>
           ) : null}
 
-          <Text className="mt-5 text-center font-ui-medium text-[11px] text-text-muted">
+          <Text className="mt-5 text-center font-ui-medium text-[12px] text-text-muted">
             {t.settings.footer(version)}
           </Text>
         </View>
@@ -453,7 +446,7 @@ export default function SettingsScreen() {
                   />
                   <View className="flex-1">
                     <Text
-                      className="font-ui-bold text-[15px]"
+                      className="font-ui-bold text-[16px]"
                       style={{ color: theme.tokens.textMain }}>
                       {t.themes[theme.id]}
                     </Text>
@@ -513,19 +506,19 @@ export default function SettingsScreen() {
                   ) : null}
 
                   <Text
-                    className={`flex-1 font-ui-bold text-[15px] ${
+                    className={`flex-1 font-ui-bold text-[16px] ${
                       selected ? 'text-primary' : 'text-text-main'
                     }`}>
                     {t.typeLevels[level.id].name}
                   </Text>
 
                   {/* Angka pastinya, seperti di Figma: "18px · spasi 5px". */}
-                  <Text className="font-ui-medium text-[11px] text-text-muted">
+                  <Text className="font-ui-medium text-[12px] text-text-muted">
                     {level.fontSize}px · {t.settings.spacingChip.toLowerCase()} {level.spacingLabel}
                   </Text>
                 </View>
 
-                <Text className="mt-1.5 font-ui-medium text-[12px] leading-[18px] text-text-muted">
+                <Text className="mt-1.5 font-ui-medium text-[13px] leading-[19px] text-text-muted">
                   {t.typeLevels[level.id].desc}
                 </Text>
 
@@ -566,12 +559,12 @@ export default function SettingsScreen() {
                 <Languages size={18} color={selected ? colors.primary : colors.textMuted} />
                 <View className="flex-1">
                   <Text
-                    className={`font-ui-bold text-[15px] ${
+                    className={`font-ui-bold text-[16px] ${
                       selected ? 'text-primary' : 'text-text-main'
                     }`}>
                     {item.name}
                   </Text>
-                  <Text className="mt-0.5 font-ui-medium text-[12px] text-text-muted">
+                  <Text className="mt-0.5 font-ui-medium text-[13px] text-text-muted">
                     {item.english}
                   </Text>
                 </View>
@@ -580,7 +573,7 @@ export default function SettingsScreen() {
             );
           })}
 
-          <Text className="mt-1 font-ui-medium text-[13px] leading-5 text-text-muted">
+          <Text className="mt-1 font-ui-medium text-[14px] leading-5 text-text-muted">
             {t.settings.languageNote}
           </Text>
         </View>
@@ -588,7 +581,7 @@ export default function SettingsScreen() {
 
       {/* ── Lembar: Kemampuan membaca ──────────────────────────────────────── */}
       <SettingsSheet visible={sheet === 'reading'} title={t.settings.rowReading} onClose={close}>
-        <Text className="mb-4 font-ui-medium text-[13px] leading-5 text-text-muted">
+        <Text className="mb-4 font-ui-medium text-[14px] leading-5 text-text-muted">
           {t.settings.readingNote}
         </Text>
         <ReadingLevelPicker value={readingLevel} onChange={changeReadingLevel} />
@@ -632,7 +625,7 @@ export default function SettingsScreen() {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={{ height: 56, alignItems: 'center', justifyContent: 'center' }}>
-            <Text className="font-ui-bold text-[16px] text-white">{t.settings.nameSave}</Text>
+            <Text className="font-ui-bold text-[17px] text-white">{t.settings.nameSave}</Text>
           </LinearGradient>
         </PressableScale>
       </SettingsSheet>
@@ -647,7 +640,7 @@ export default function SettingsScreen() {
             <LogOut size={26} color="#ef4444" />
           </View>
 
-          <Text className="mt-4 text-center font-ui-medium text-[14px] leading-[22px] text-text-muted">
+          <Text className="mt-4 text-center font-ui-medium text-[15px] leading-[23px] text-text-muted">
             {t.settings.logoutBody}
           </Text>
         </View>
@@ -660,7 +653,7 @@ export default function SettingsScreen() {
             scaleTo={0.97}
             wrapperStyle={{ flex: 1 }}
             className="h-14 items-center justify-center rounded-2xl bg-surface-alt">
-            <Text className="font-ui-bold text-[15px] text-text-main">{t.settings.cancel}</Text>
+            <Text className="font-ui-bold text-[16px] text-text-main">{t.settings.cancel}</Text>
           </PressableScale>
 
           <PressableScale
@@ -674,7 +667,7 @@ export default function SettingsScreen() {
             wrapperStyle={{ flex: 1 }}
             className="h-14 items-center justify-center rounded-2xl"
             style={{ backgroundColor: 'rgba(239,68,68,0.12)' }}>
-            <Text className="font-ui-bold text-[15px]" style={{ color: '#ef4444' }}>
+            <Text className="font-ui-bold text-[16px]" style={{ color: '#ef4444' }}>
               {t.settings.logoutConfirm}
             </Text>
           </PressableScale>
@@ -761,13 +754,13 @@ function VoiceSheetBody() {
         ))}
       </SettingsGroup>
 
-      <Text className="mt-3 font-ui-medium text-[13px] leading-5 text-text-muted">
+      <Text className="mt-3 font-ui-medium text-[14px] leading-5 text-text-muted">
         {t.settings.voiceOfflineNote}
       </Text>
 
       {ttsEnabled ? (
         <View className="mt-5">
-          <Text className="mb-3 font-ui-bold text-[15px] text-text-main">
+          <Text className="mb-3 font-ui-bold text-[16px] text-text-main">
             {t.settings.voicePickerTitle}
           </Text>
           <VoicePicker />

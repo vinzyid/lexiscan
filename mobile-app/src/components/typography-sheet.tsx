@@ -27,7 +27,7 @@ export function TypographySheet({ visible, onClose }: { visible: boolean; onClos
           <View className="mb-5 flex-row items-start justify-between">
             <View className="flex-1 pr-3">
               <Text className="mb-1 font-ui-bold text-xl text-text-main">{t.typography.title}</Text>
-              <Text className="font-ui-medium text-[13px] text-primary">
+              <Text className="font-ui-medium text-[14px] text-primary">
                 {t.typography.subtitle}
               </Text>
             </View>
@@ -58,7 +58,7 @@ export function TypographySheet({ visible, onClose }: { visible: boolean; onClos
                   }`}>
                   <View className="mb-1 flex-row items-start justify-between">
                     <Text
-                      className={`font-ui-bold text-[15px] ${selected ? 'text-primary' : 'text-text-main'}`}>
+                      className={`font-ui-bold text-[16px] ${selected ? 'text-primary' : 'text-text-main'}`}>
                       {selected ? `✓ ${t.typeLevels[level.id].name}` : t.typeLevels[level.id].name}
                     </Text>
                     <View className="flex-row">
@@ -74,7 +74,7 @@ export function TypographySheet({ visible, onClose }: { visible: boolean; onClos
                       </View>
                     </View>
                   </View>
-                  <Text className="mb-3 font-ui-medium text-[13px] text-text-muted">
+                  <Text className="mb-3 font-ui-medium text-[14px] text-text-muted">
                     {t.typeLevels[level.id].desc}
                   </Text>
                   <DyslexicText levelOverride={level}>{t.typography.preview}</DyslexicText>
@@ -126,10 +126,10 @@ function ToggleRow({
   return (
     <View className="mb-3 flex-row items-center justify-between rounded-3xl border border-border/10 bg-surface p-4">
       <View className="flex-1 pr-3">
-        <Text className="mb-0.5 font-ui-bold text-[15px] text-text-main">
+        <Text className="mb-0.5 font-ui-bold text-[16px] text-text-main">
           {emoji} {title}
         </Text>
-        <Text className="font-ui-medium text-[13px] leading-[19px] text-text-muted">{desc}</Text>
+        <Text className="font-ui-medium text-[14px] leading-[20px] text-text-muted">{desc}</Text>
       </View>
       {/* Sama seperti ToggleRow di layar Atur: Switch tidak lewat PressableScale,
           jadi keadaan barunya harus diucapkan di sini. */}

@@ -11,10 +11,7 @@ import IlluExplainSvg from '../../assets/figma/illu-explain.svg';
 import ArtRulerSvg from '../../assets/figma/art-ruler.svg';
 import ArtIsolationSvg from '../../assets/figma/art-isolation.svg';
 import ArtBicolorSvg from '../../assets/figma/art-bicolor.svg';
-import IlluGradeSd1Svg from '../../assets/figma/illu-grade-sd1.svg';
-import IlluGradeSd2Svg from '../../assets/figma/illu-grade-sd2.svg';
-import IlluGradeSmpSvg from '../../assets/figma/illu-grade-smp.svg';
-import IlluGradeSmaSvg from '../../assets/figma/illu-grade-sma.svg';
+import IlluGradeSdSvg from '../../assets/figma/illu-grade-sd1.svg';
 import IlluGradeUmumSvg from '../../assets/figma/illu-grade-umum.svg';
 import IlluCanReadSvg from '../../assets/figma/illu-can-read.svg';
 import IlluNeedVoiceSvg from '../../assets/figma/illu-need-voice.svg';
@@ -79,11 +76,8 @@ export function ArtBicolorWords({ width = 322 }: { width?: number }) {
  * memang mengulang `SCHOOL_LEVELS` — dan tabel inilah yang membuat menambah
  * jenjang baru gagal di TypeScript kalau gambarnya belum ada.
  */
-const GRADE_SVGS: Record<SchoolLevelId, typeof IlluGradeSd1Svg> = {
-  sd1: IlluGradeSd1Svg,
-  sd2: IlluGradeSd2Svg,
-  smp: IlluGradeSmpSvg,
-  sma: IlluGradeSmaSvg,
+const GRADE_SVGS: Record<SchoolLevelId, typeof IlluGradeSdSvg> = {
+  sd: IlluGradeSdSvg,
   umum: IlluGradeUmumSvg,
 };
 

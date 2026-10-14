@@ -39,7 +39,7 @@ export function AuthField({ label, hint, password, speechKey, ...rest }: Props) 
   return (
     <View className="mb-4">
       <View className="mb-2 flex-row items-center" style={{ gap: 8 }}>
-        <Text className="flex-1 font-ui-bold text-[15px] text-text-main">{label}</Text>
+        <Text className="flex-1 font-ui-bold text-[16px] text-text-main">{label}</Text>
         <SpeakButton text={spoken} speechKey={speechKey} size={16} />
       </View>
 
@@ -75,7 +75,7 @@ export function AuthField({ label, hint, password, speechKey, ...rest }: Props) 
       </View>
 
       {hint ? (
-        <Text className="mt-1.5 font-ui-medium text-[13px] text-text-muted">{hint}</Text>
+        <Text className="mt-1.5 font-ui-medium text-[14px] text-text-muted">{hint}</Text>
       ) : null}
     </View>
   );

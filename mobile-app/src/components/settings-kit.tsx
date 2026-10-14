@@ -32,11 +32,11 @@ export function SettingsSection({ eyebrow, title }: { eyebrow: string; title: st
       <View style={{ width: 3, borderRadius: 2, backgroundColor: colors.primary }} />
       <View>
         <Text
-          className="font-ui-bold text-[10px] text-text-muted"
+          className="font-ui-bold text-[12px] text-text-muted"
           style={{ letterSpacing: 1.1, textTransform: 'uppercase' }}>
           {eyebrow}
         </Text>
-        <Text className="mt-0.5 font-ui-bold text-[16px] text-text-main">{title}</Text>
+        <Text className="mt-0.5 font-ui-bold text-[17px] text-text-main">{title}</Text>
       </View>
     </View>
   );
@@ -76,9 +76,9 @@ export function SettingsRow({ Icon, title, value, divider = true, onPress, toggl
       </View>
 
       <View className="flex-1">
-        <Text className="font-ui-bold text-[15px] text-text-main">{title}</Text>
+        <Text className="font-ui-bold text-[16px] text-text-main">{title}</Text>
         {value ? (
-          <Text className="mt-0.5 font-ui-medium text-[12px] leading-[17px] text-text-muted">
+          <Text className="mt-0.5 font-ui-medium text-[13px] leading-[18px] text-text-muted">
             {value}
           </Text>
         ) : null}
@@ -182,7 +182,7 @@ export function SettingsSheet({
           </View>
 
           <View className="mb-4 flex-row items-center" style={{ gap: 12 }}>
-            <Text className="flex-1 font-ui-bold text-[19px] text-text-main">{title}</Text>
+            <Text className="flex-1 font-ui-bold text-[20px] text-text-main">{title}</Text>
             <PressableScale
               onPress={onClose}
               accessibilityRole="button"

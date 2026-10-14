@@ -26,7 +26,7 @@ export function FootprintCard() {
   if (totals.requests === 0) {
     return (
       <View className="mt-4 rounded-2xl border border-border/10 bg-surface p-4">
-        <Text className="font-ui-medium text-[13px] leading-[21px] text-text-muted">
+        <Text className="font-ui-medium text-[14px] leading-[22px] text-text-muted">
           {t.footprint.empty}
         </Text>
       </View>
@@ -61,7 +61,7 @@ export function FootprintCard() {
       </View>
 
       {totals.cachedRequests > 0 ? (
-        <Text className="mt-3 font-ui-medium text-[13px] leading-[21px] text-text-muted">
+        <Text className="mt-3 font-ui-medium text-[14px] leading-[22px] text-text-muted">
           {t.footprint.cachedShare(totals.cachedRequests, totals.requests, cachedPercent)}
         </Text>
       ) : null}
@@ -69,7 +69,7 @@ export function FootprintCard() {
       {totals.energyWh > 0 ? (
         <View className="mt-2 flex-row items-center" style={{ gap: 6 }}>
           <Zap size={13} color={colors.textMuted} />
-          <Text className="flex-1 font-ui-medium text-[13px] text-text-muted">
+          <Text className="flex-1 font-ui-medium text-[14px] text-text-muted">
             {t.footprint.equivalent(batteryPercent(totals.energyWh, locale))}
           </Text>
         </View>
@@ -77,7 +77,7 @@ export function FootprintCard() {
 
       {/* Kejujuran metodologi ditaruh di kartunya sendiri, bukan disembunyikan
           di halaman lain: angkanya taksiran dan pembacanya berhak tahu. */}
-      <Text className="mt-3 border-t border-border/10 pt-3 font-ui-medium text-[11px] leading-[18px] text-text-muted">
+      <Text className="mt-3 border-t border-border/10 pt-3 font-ui-medium text-[12px] leading-[19px] text-text-muted">
         {t.footprint.methodNote}
       </Text>
 
@@ -89,7 +89,7 @@ export function FootprintCard() {
         className="mt-3 h-10 flex-row items-center justify-center rounded-xl bg-primary/10"
         style={{ gap: 6 }}>
         <RotateCcw size={13} color={colors.primary} />
-        <Text className="font-ui-bold text-[13px] text-primary">{t.footprint.resetLabel}</Text>
+        <Text className="font-ui-bold text-[14px] text-primary">{t.footprint.resetLabel}</Text>
       </PressableScale>
     </View>
   );
@@ -112,9 +112,9 @@ export function FootprintCard() {
         style={{ backgroundColor: colors.surfaceAlt }}>
         <View className="flex-row items-center" style={{ gap: 5 }}>
           {icon}
-          <Text className="font-ui-medium text-[11px] text-text-muted">{label}</Text>
+          <Text className="font-ui-medium text-[12px] text-text-muted">{label}</Text>
         </View>
-        <Text className="mt-1 font-ui-bold text-[19px]" style={{ color: tone }}>
+        <Text className="mt-1 font-ui-bold text-[20px]" style={{ color: tone }}>
           {value}
         </Text>
       </View>
@@ -125,8 +125,8 @@ export function FootprintCard() {
   function SmallMetric({ label, value }: { label: string; value: string }) {
     return (
       <View className="flex-1 rounded-xl px-3 py-2" style={{ backgroundColor: colors.surfaceAlt }}>
-        <Text className="font-ui-medium text-[11px] text-text-muted">{label}</Text>
-        <Text className="mt-0.5 font-ui-bold text-[15px] text-text-main">{value}</Text>
+        <Text className="font-ui-medium text-[12px] text-text-muted">{label}</Text>
+        <Text className="mt-0.5 font-ui-bold text-[16px] text-text-main">{value}</Text>
       </View>
     );
   }

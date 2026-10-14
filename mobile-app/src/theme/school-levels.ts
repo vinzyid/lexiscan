@@ -13,10 +13,10 @@
  *
  * Id-nya harus sama persis dengan App\Models\Reader::schoolLevels().
  */
-export type SchoolLevelId = 'sd1' | 'sd2' | 'smp' | 'sma' | 'umum';
+export type SchoolLevelId = 'sd' | 'umum';
 
 export type SchoolLevelPreset = {
-  /** Nama & rentang usianya ada di `src/i18n` (`t.schoolLevels[id]`). */
+  /** Namanya ada di `src/i18n` (`t.schoolLevels[id]`). */
   id: SchoolLevelId;
 
   /**
@@ -28,10 +28,7 @@ export type SchoolLevelPreset = {
 };
 
 export const SCHOOL_LEVELS: SchoolLevelPreset[] = [
-  { id: 'sd1', wide: false },
-  { id: 'sd2', wide: false },
-  { id: 'smp', wide: false },
-  { id: 'sma', wide: false },
+  { id: 'sd', wide: false },
   { id: 'umum', wide: true },
 ];
 

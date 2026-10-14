@@ -384,7 +384,7 @@ export default function ScannerScreen() {
                 className="flex-row items-center rounded-[14px] border border-white/[0.18] bg-white/[0.12] px-3 py-1.5"
                 style={{ gap: 8 }}>
                 <ScanLine size={13} color="#ffffff" />
-                <Text className="font-ui-bold text-[13px] text-white/85">{t.scanner.badge}</Text>
+                <Text className="font-ui-bold text-[14px] text-white/85">{t.scanner.badge}</Text>
               </View>
             </View>
             <Text className="mt-3 font-ui-bold text-2xl text-white">{t.scanner.title}</Text>
@@ -427,7 +427,7 @@ export default function ScannerScreen() {
                 style={{ borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)' }}>
                 <View className="flex-row items-center" style={{ gap: 8 }}>
                   <View className="h-2 w-2 rounded-full" style={{ backgroundColor: '#10b981' }} />
-                  <Text className="font-ui-bold text-[13px]" style={{ color: '#10b981' }}>
+                  <Text className="font-ui-bold text-[14px]" style={{ color: '#10b981' }}>
                     {t.scanner.detected}
                   </Text>
                   {isCorrectingTypo ? (
@@ -473,7 +473,7 @@ export default function ScannerScreen() {
               <View
                 className="rounded-2xl bg-surface p-4"
                 style={{ borderWidth: 1, borderColor: colors.border }}>
-                <Text className="font-ui-bold text-[13px] text-text-muted">{t.scanner.processTitle}</Text>
+                <Text className="font-ui-bold text-[14px] text-text-muted">{t.scanner.processTitle}</Text>
 
                 <View className="mt-3.5" style={{ gap: 10 }}>
                   {t.scanner.processSteps.map((step, index) => {
@@ -492,7 +492,7 @@ export default function ScannerScreen() {
                           <Check size={15} color="#ffffff" strokeWidth={3} />
                         </GradientTile>
                         <Text
-                          className="flex-1 font-ui-bold text-[13px]"
+                          className="flex-1 font-ui-bold text-[14px]"
                           style={{ color: done ? '#10b981' : colors.textMuted }}>
                           {step}
                         </Text>
@@ -631,7 +631,7 @@ export default function ScannerScreen() {
               <View
                 className="rounded-2xl bg-surface p-4"
                 style={{ borderWidth: 1, borderColor: colors.border }}>
-                <Text className="font-ui-bold text-[13px] text-text-muted">
+                <Text className="font-ui-bold text-[14px] text-text-muted">
                   {t.scanner.tipsTitle}
                 </Text>
                 <View className="mt-3.5" style={{ gap: 10 }}>
@@ -643,7 +643,7 @@ export default function ScannerScreen() {
                         <GradientTile gradient={gradient}>
                           <Icon size={15} color="#ffffff" />
                         </GradientTile>
-                        <Text className="flex-1 font-ui text-[13px] text-text-muted">{tip}</Text>
+                        <Text className="flex-1 font-ui text-[14px] text-text-muted">{tip}</Text>
                       </View>
                     );
                   })}
@@ -815,7 +815,7 @@ function SourceTab({
 function StatChip({ label, color, tint }: { label: string; color: string; tint: string }) {
   return (
     <View className="rounded-[10px] px-2.5 py-1" style={{ backgroundColor: tint }}>
-      <Text className="font-ui-bold text-[11px]" style={{ color }}>
+      <Text className="font-ui-bold text-[12px]" style={{ color }}>
         {label}
       </Text>
     </View>

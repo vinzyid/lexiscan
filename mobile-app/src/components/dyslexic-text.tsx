@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Text, type TextLayoutEventData, type NativeSyntheticEvent } from 'react-native';
 
 import { getTypeLevel, type TypeLevel } from '../theme/palettes';
@@ -28,6 +28,17 @@ type Props = {
   activeWordIndex?: number | null;
   /** Posisi tiap baris hasil layout — dipakai Reading Ruler untuk menempatkan penggaris. */
   onTextLayout?: (event: NativeSyntheticEvent<TextLayoutEventData>) => void;
+  /**
+   * Nomor baris yang sedang ditunjuk Reading Ruler, atau `null` kalau penggaris
+   * mati / paragraf ini bukan yang aktif.
+   *
+   * Gunanya satu: Bicolor Words DIMATIKAN pada kata-kata yang duduk di baris
+   * itu. Alasannya kontras — penggaris menggambar latar kuning, dan kata genap
+   * yang berwarna emas di atas kuning nyaris tidak terbaca. Di baris lain
+   * bicolor tetap jalan seperti biasa, jadi yang kehilangan warna hanya satu
+   * baris yang memang sedang ditunjuk.
+   */
+  rulerLineIndex?: number | null;
 };
 
 /** Hanya huruf/angka — tanda baca dibuang agar sheet suku kata tidak ikut kebawa. */
@@ -123,6 +134,7 @@ export function DyslexicText({
   syllableOverride,
   activeWordIndex,
   onTextLayout,
+  rulerLineIndex,
 }: Props) {
   const typeLevelId = useOCRStore((s) => s.typeLevelId);
   const storeSyllableSpacing = useOCRStore((s) => s.syllableSpacing);
@@ -143,6 +155,45 @@ export function DyslexicText({
   );
 
   /*
+   * Teks tiap baris hasil layout, dipakai untuk tahu kata mana yang duduk di
+   * barisan penggaris. Disimpan di state (bukan ref) karena perubahannya harus
+   * memicu render ulang — kalau di ref, warnanya baru berubah pada render
+   * berikutnya dan penggaris terlihat "telat" satu langkah.
+   */
+  const [lineTexts, setLineTexts] = useState<string[]>([]);
+
+  /*
+   * Pemetaan kata → baris yang sedang ditunjuk penggaris.
+   *
+   * CARA MENGHITUNGNYA: tiap baris dari `onTextLayout` membawa teksnya sendiri,
+   * dan jumlah katanya menentukan berapa banyak kata berurutan yang jatuh di
+   * baris itu. Jadi peta dibangun dengan menghitung kata per baris secara
+   * kumulatif — tanpa perlu mengukur posisi y tiap kata, yang tidak tersedia
+   * dari layout teks.
+   *
+   * Ini perkiraan yang cukup untuk pewarnaan: kalau jumlah katanya meleset
+   * sedikit, yang salah cuma warna di ujung baris, bukan isi teksnya.
+   */
+  const rulerWords = useMemo(() => {
+    if (rulerLineIndex == null || lineTexts.length === 0) return null;
+
+    const flagged = new Set<number>();
+    let wordCursor = 0;
+
+    for (let line = 0; line < lineTexts.length; line += 1) {
+      const count = lineTexts[line].split(/\s+/).filter((word) => word.length > 0).length;
+
+      if (line === rulerLineIndex) {
+        for (let i = 0; i < count; i += 1) flagged.add(wordCursor + i);
+      }
+
+      wordCursor += count;
+    }
+
+    return flagged;
+  }, [rulerLineIndex, lineTexts]);
+
+  /*
    * Jarak antar kata tetap satu spasi, bahkan saat pemenggalan menyala.
    *
    * Dulu dilebarkan jadi dua spasi karena suku kata dipisahkan spasi juga —
@@ -156,7 +207,27 @@ export function DyslexicText({
   return (
     <Text
       className="font-read"
-      onTextLayout={onTextLayout}
+      /*
+       * Dua tugas digabung di satu handler: teks tiap baris disimpan sendiri
+       * supaya peta kata→baris di atas terisi, lalu kejadian aslinya diteruskan
+       * ke pemanggil. Memasang dua `onTextLayout` tidak mungkin — prop-nya satu.
+       */
+      onTextLayout={(event) => {
+        const lines = event.nativeEvent.lines.map((line) => line.text);
+
+        /*
+         * Dibandingkan dulu sebelum disimpan: `onTextLayout` terpanggil tiap
+         * render dengan array baru, dan menyetel state tanpa perbandingan akan
+         * memicu render tanpa henti.
+         */
+        setLineTexts((previous) =>
+          previous.length === lines.length && previous.every((text, i) => text === lines[i])
+            ? previous
+            : lines,
+        );
+
+        onTextLayout?.(event);
+      }}
       /*
        * Label diisi teks aslinya. TalkBack membaca isi elemen apa adanya, jadi
        * tanpa ini pembaca layar ikut mengeja "Mi-to-kon-dri-a" suku kata demi
@@ -174,25 +245,32 @@ export function DyslexicText({
       {chunks.map((chunk, index) => {
         if (chunk.kind === 'space') return <Text key={index}>{wordGap}</Text>;
 
+        /*
+         * Bicolor Words dimatikan pada kata yang duduk di baris penggaris.
+         * Latar penggaris sudah berwarna, dan kata genap yang bernuansa emas di
+         * atasnya nyaris hilang — jadi di baris itu saja teksnya dikembalikan ke
+         * warna biasa supaya tetap terbaca. Baris lain tidak terpengaruh.
+         */
+        const onRulerLine = rulerWords?.has(chunk.wordIndex) ?? false;
+
         const color = dimmed
           ? undefined
-          : bicolor
+          : bicolor && !onRulerLine
             ? chunk.wordIndex % 2 === 0
               ? colors.bicolorA
               : colors.bicolorB
             : undefined;
 
         /*
-         * Kata yang sedang dibacakan diberi latar sorot. Warnanya diambil dari
-         * `colors.highlight` yang sama dengan Reading Ruler, supaya kedua
-         * penanda posisi memakai "warna sorot" yang konsisten dan pengguna
-         * tidak perlu belajar dua arti warna berbeda.
+         * Kata yang sedang dibacakan diberi latar sorot. Warnanya `wordHighlight`,
+         * BUKAN `highlight` milik penggaris: keduanya sering menyala bersamaan,
+         * dan kalau warnanya sama, kata yang dibacakan tenggelam di dalam balok
+         * penggaris. Dua token berbeda membuat penanda kata tetap terlihat di
+         * atas penanda baris.
          *
          * Warna teksnya dikunci ke `textMain`, bukan diwarisi warna Bicolor:
          * belum ada token teks khusus-di-atas-sorotan, dan `textMain` sudah
-         * dijamin kontras dengan `highlight` di setiap tema — hampir hitam di
-         * atas kuning muda (tema terang), hampir putih di atas cokelat gelap
-         * (tema gelap).
+         * dijamin kontras dengan `wordHighlight` di setiap tema.
          */
         const isActive = !dimmed && activeWordIndex === chunk.wordIndex;
 
@@ -203,7 +281,7 @@ export function DyslexicText({
             key={index}
             style={
               isActive
-                ? { color: colors.textMain, backgroundColor: colors.highlight }
+                ? { color: colors.textMain, backgroundColor: colors.wordHighlight }
                 : color
                   ? { color }
                   : undefined
