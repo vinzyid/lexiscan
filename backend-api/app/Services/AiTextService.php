@@ -35,7 +35,6 @@ class AiTextService
 
     /**
      * Dipakai kalau permintaannya tidak menyebutkan kemampuan membaca — yaitu
-     * aplikasi versi lama, dan pemakaian tanpa mendaftar.
      *
      * Sengaja yang paling longgar. Kalau tidak tahu siapa yang bertanya, memotong
      * jawaban terlalu pendek berisiko membuang fakta yang justru dibutuhkan;
@@ -51,13 +50,6 @@ class AiTextService
             'L2' => 'Pertahankan semua istilah teknis, tetapi pecah kalimat panjang menjadi kalimat pendek. Ini hanya sedikit lebih mudah dari aslinya.',
             'L3' => 'Gunakan bahasa sehari-hari yang santai. Istilah teknis boleh diganti padanan awam, tetapi fakta harus tetap akurat.',
             'L4' => 'Format Easy Read: sangat singkat dan padat. Boleh memakai tanda panah atau tanda sama dengan untuk menunjukkan hubungan.',
-            /*
-             * Dulu berbunyi "setara pemahaman anak sekolah dasar". Dibuang atas
-             * masukan dosen PLB: menyebut jenjang atau usia untuk menggambarkan
-             * kemampuan seseorang itu merendahkan, dan tidak menambah apa pun
-             * bagi model — yang dibutuhkannya adalah panjang kalimat dan pilihan
-             * kata, dan keduanya sudah dinyatakan langsung.
-             */
             'L5' => 'Sesederhana mungkin. Gunakan kalimat sangat pendek dan kata yang paling umum dipakai sehari-hari.',
         ],
         'en' => [
@@ -293,50 +285,111 @@ class AiTextService
             );
         }
 
+        return $this->simplifyChunks($chunks, $language, $level, $readingLevel, $rule);
+    }
+
+    /**
+     * Beberapa potongan teks panjang, dikerjakan BERSAMAAN.
+     *
+     * Dulu potongan dikirim satu per satu, sehingga tiga potongan butuh hampir
+     * tiga kali lipat waktu satu potongan. Sekarang seluruh potongan yang belum
+     * ada di cache dikirim sekaligus lewat `paragraphsForMany`, lalu hasilnya
+     * digabung sesuai urutan aslinya.
+     *
+     * CACHE TETAP PER POTONGAN, dan itu disengaja: halaman yang dipindai ulang
+     * atau dipecah dengan cara yang sama akan memakai ulang jawaban potongan
+     * yang sudah pernah dibuat, jadi hanya potongan yang benar-benar baru yang
+     * dikirim ke penyedia.
+     *
+     * @param  array<int, string>  $chunks
+     */
+    private function simplifyChunks(
+        array $chunks,
+        string $language,
+        string $level,
+        string $readingLevel,
+        string $rule,
+    ): AiAnswer {
+        /** @var array<int, AiAnswer|null> $answers */
+        $answers = array_fill(0, count($chunks), null);
+
         /*
-         * Tiap potongan disimpan di cache dengan kuncinya SENDIRI (kuncinya
-         * memuat md5 potongan itu, bukan md5 teks penuh). Dengan begitu halaman
-         * yang dipindai ulang, atau dipecah dengan cara yang sama lain kali,
-         * memakai ulang potongan yang sudah pernah dijawab — kuota tidak
-         * terbuang dua kali untuk teks yang sama.
-         *
-         * DEADLINE TOTAL, BUKAN ANGGARAN PER POTONGAN. Tiap potongan diberi
-         * sisa waktu sampai deadline bersama, jadi:
-         *   - potongan pertama memakai anggaran nyaris penuh (cukup untuk satu
-         *     panggilan Griphub yang butuh 8–14 detik), dan
-         *   - totalnya tetap tidak melewati batas eksekusi PHP.
-         * Membagi anggaran rata (dicoba sebelumnya) justru memangkas potongan
-         * pertama sampai timeout, karena pembagian berlapis di dalam penyedia
-         * memotongnya berkali-kali.
-         *
-         * Batas ini juga yang membuat kegagalan datang sebagai pesan yang jelas
-         * sebelum PHP membunuh prosesnya — lihat ExecutionBudget.
+         * Kunci cache tiap potongan memuat md5 potongan ITU, bukan md5 teks
+         * penuh — lihat alasan di remember(). Promptnya disusun di sini supaya
+         * sidik jarinya ikut jadi bagian kunci, sama seperti jalur tunggal.
          */
-        $deadline = microtime(true) + ExecutionBudget::seconds();
-        $answer = null;
+        $prompts = [];
+        $keys = [];
 
         foreach ($chunks as $index => $chunk) {
-            $remaining = $deadline - microtime(true);
+            $prompt = $this->simplifyPrompt($chunk, $rule, $language, $readingLevel);
+            $suffix = "simplify:{$language}:{$level}:{$readingLevel}:part{$index}:" . md5($chunk);
+            $keys[$index] = $this->cacheKey($suffix, $prompt);
+            $prompts[$index] = $prompt;
 
-            if ($remaining <= 1.0) {
+            $cached = $this->readCache($keys[$index]);
+            if ($cached !== null) {
+                $answers[$index] = $cached;
+            }
+        }
+
+        // Potongan yang belum ada di cache, dikirim bersama-sama.
+        $missing = array_keys(array_filter($answers, static fn (?AiAnswer $answer): bool => $answer === null));
+
+        if ($missing !== []) {
+            /*
+             * Seluruh batch berbagi satu anggaran waktu, sama seperti versi
+             * berurutannya yang juga menghabiskan satu deadline bersama. Angka
+             * ini diteruskan apa adanya; provider yang memecahnya lagi ke
+             * beberapa model/cadangan yang mengaturnya sendiri.
+             */
+            $budget = ExecutionBudget::seconds();
+
+            if ($budget <= 1.0) {
                 throw new RuntimeException(
                     'Dokumennya terlalu panjang untuk disederhanakan sekaligus. Pindai bagian yang lebih pendek.'
                 );
             }
 
-            $part = $this->remember(
-                "simplify:{$language}:{$level}:{$readingLevel}:part{$index}:" . md5($chunk),
-                $this->simplifyPrompt($chunk, $rule, $language, $readingLevel),
-                $remaining,
-            );
+            $missingPrompts = array_map(static fn (int $i): string => $prompts[$i], $missing);
 
-            $answer = $answer === null ? $part : new AiAnswer(
-                array_merge($answer->paragraphs, $part->paragraphs),
-                $answer->footprint->merge($part->footprint),
+            /*
+             * Satu panggilan untuk seluruh potongan yang tersisa. Provider yang
+             * tidak mendukung batch akan mengerjakannya berurutan; yang
+             * mendukung (Griphub) mengirim semuanya sekaligus.
+             */
+            $results = $this->provider->paragraphsForMany($missingPrompts, $budget);
+
+            foreach ($missing as $position => $index) {
+                $result = $results[$position];
+                $answer = new AiAnswer($result->paragraphs, $this->footprint->forUsage($result->tokens));
+                $answers[$index] = $answer;
+
+                $this->writeCache($keys[$index], $result);
+            }
+        }
+
+        // Digabung sesuai urutan potongan aslinya, bukan urutan selesai.
+        $merged = null;
+
+        foreach ($answers as $answer) {
+            if ($answer === null) {
+                continue;
+            }
+
+            $merged = $merged === null ? $answer : new AiAnswer(
+                array_merge($merged->paragraphs, $answer->paragraphs),
+                $merged->footprint->merge($answer->footprint),
             );
         }
 
-        return $answer;
+        if ($merged === null) {
+            throw new RuntimeException(
+                'Dokumennya terlalu panjang untuk disederhanakan sekaligus. Pindai bagian yang lebih pendek.'
+            );
+        }
+
+        return $merged;
     }
 
     /** Prompt penyederhanaan untuk SATU potongan teks yang sudah pasti muat. */
@@ -584,45 +637,69 @@ class AiTextService
      */
     private function remember(string $suffix, string $prompt, ?float $timeoutSeconds = null): AiAnswer
     {
-        /*
-         * Sidik jari promptnya ikut jadi kunci.
-         *
-         * Simpanannya permanen, sementara $suffix hanya memuat teks MASUKAN —
-         * bukan instruksi yang membungkusnya. Tanpa sidik jari ini, aturan yang
-         * baru disunting admin dari dashboard tidak akan pernah menggantikan
-         * hasil lama: kuncinya sama persis, jadi jawaban dari aturan sebelumnya
-         * disajikan selamanya. Dulu masalah ini hilang sendiri dalam sehari
-         * karena ada TTL; sekarang tidak.
-         *
-         * Dihitung dari prompt yang benar-benar dikirim, jadi perubahan apa pun
-         * — aturan per level, badan prompt, maupun ketentuan wajibnya — ikut
-         * tertangkap tanpa ada yang perlu menaikkan nomor versi dengan tangan.
-         */
-        $fingerprint = substr(md5($prompt), 0, 12);
+        $key = $this->cacheKey($suffix, $prompt);
 
-        // Provider dan model ikut supaya hasil lama tidak terpakai setelah
-        // AI_PROVIDER diganti.
-        $key = "ai:{$fingerprint}:{$this->provider->name()}:{$this->provider->model()}:{$suffix}";
-
-        try {
-            if (($cached = $this->fromCache(Cache::get($key))) !== null) {
-                return $cached;
-            }
-        } catch (Throwable $e) {
-            $this->warnCacheUnavailable('baca', $e);
+        if (($cached = $this->readCache($key)) !== null) {
+            return $cached;
         }
 
         $result = $this->ask($prompt, $timeoutSeconds);
 
+        $this->writeCache($key, $result);
+
+        return new AiAnswer($result->paragraphs, $this->footprint->forUsage($result->tokens));
+    }
+
+    /**
+     * Kunci cache satu permintaan.
+     *
+     * SIDIK JARI PROMPTNYA IKUT JADI BAGIAN KUNCI. Simpanannya permanen,
+     * sementara $suffix hanya memuat teks MASUKAN — bukan instruksi yang
+     * membungkusnya. Tanpa sidik jari ini, aturan yang baru disunting admin dari
+     * dashboard tidak akan pernah menggantikan hasil lama: kuncinya sama persis,
+     * jadi jawaban dari aturan sebelumnya disajikan selamanya. Dihitung dari
+     * prompt yang benar-benar dikirim, jadi perubahan apa pun — aturan per level,
+     * badan prompt, maupun ketentuan wajibnya — ikut tertangkap tanpa ada yang
+     * perlu menaikkan nomor versi dengan tangan.
+     *
+     * Provider dan model juga ikut supaya hasil lama tidak terpakai setelah
+     * AI_PROVIDER diganti.
+     */
+    private function cacheKey(string $suffix, string $prompt): string
+    {
+        $fingerprint = substr(md5($prompt), 0, 12);
+
+        return "ai:{$fingerprint}:{$this->provider->name()}:{$this->provider->model()}:{$suffix}";
+    }
+
+    /**
+     * Baca jawaban dari cache, atau null kalau tidak ada / tidak terpakai.
+     *
+     * Kegagalan store tidak pernah melempar ke pemanggil: cache adalah
+     * penghematan, bukan sumber kebenaran, jadi store yang mati tidak boleh ikut
+     * mematikan fitur AI.
+     */
+    private function readCache(string $key): ?AiAnswer
+    {
         try {
-            /*
-             * Jumlah token ikut disimpan supaya cache hit nanti bisa melaporkan
-             * berapa besar emisi yang dihindarinya. Tanpa ini, penghematan
-             * hanya bisa dihitung sebagai "entah berapa".
-             *
-             * TTL null menyimpan selamanya — itu bawaannya, lihat alasannya di
-             * config/services.php.
-             */
+            return $this->fromCache(Cache::get($key));
+        } catch (Throwable $e) {
+            $this->warnCacheUnavailable('baca', $e);
+
+            return null;
+        }
+    }
+
+    /**
+     * Simpan jawaban ke cache.
+     *
+     * Jumlah token ikut disimpan supaya cache hit nanti bisa melaporkan berapa
+     * besar emisi yang dihindarinya. TTL null menyimpan selamanya — itu
+     * bawaannya, lihat alasannya di config/services.php.
+     */
+    private function writeCache(string $key, LlmResult $result): void
+    {
+        try {
             Cache::put($key, [
                 'paragraphs' => $result->paragraphs,
                 'tokens' => $result->tokens->toArray(),
@@ -630,8 +707,6 @@ class AiTextService
         } catch (Throwable $e) {
             $this->warnCacheUnavailable('tulis', $e);
         }
-
-        return new AiAnswer($result->paragraphs, $this->footprint->forUsage($result->tokens));
     }
 
     /**

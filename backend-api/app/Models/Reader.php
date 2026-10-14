@@ -58,13 +58,7 @@ class Reader extends Authenticatable
      * Bukan turunan dari reading_level dan tidak boleh diperlakukan begitu:
      * anak kelas 5 yang masih mengeja justru sasaran utama aplikasi ini.
      */
-    public const SCHOOL_SD1 = 'sd1';
-
-    public const SCHOOL_SD2 = 'sd2';
-
-    public const SCHOOL_SMP = 'smp';
-
-    public const SCHOOL_SMA = 'sma';
+    public const SCHOOL_SD = 'sd';
 
     public const SCHOOL_UMUM = 'umum';
 
@@ -72,10 +66,7 @@ class Reader extends Authenticatable
     public static function schoolLevels(): array
     {
         return [
-            self::SCHOOL_SD1,
-            self::SCHOOL_SD2,
-            self::SCHOOL_SMP,
-            self::SCHOOL_SMA,
+            self::SCHOOL_SD,
             self::SCHOOL_UMUM,
         ];
     }
@@ -112,24 +103,6 @@ class Reader extends Authenticatable
             'syllable_spacing',
             'bicolor_words',
         ];
-    }
-
-    /** @return \Illuminate\Database\Eloquent\Relations\HasMany<ReadingDocument, $this> */
-    public function readingDocuments(): \Illuminate\Database\Eloquent\Relations\HasMany
-    {
-        return $this->hasMany(ReadingDocument::class);
-    }
-
-    /** @return \Illuminate\Database\Eloquent\Relations\HasMany<ReadingSession, $this> */
-    public function readingSessions(): \Illuminate\Database\Eloquent\Relations\HasMany
-    {
-        return $this->hasMany(ReadingSession::class);
-    }
-
-    /** @return \Illuminate\Database\Eloquent\Relations\HasMany<ReadingGoal, $this> */
-    public function readingGoals(): \Illuminate\Database\Eloquent\Relations\HasMany
-    {
-        return $this->hasMany(ReadingGoal::class);
     }
 
     protected function casts(): array

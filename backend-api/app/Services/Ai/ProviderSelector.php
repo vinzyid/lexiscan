@@ -26,6 +26,8 @@ use Throwable;
  */
 class ProviderSelector implements AiProvider
 {
+    use SequentialBatching;
+
     /**
      * Semua nama penyedia yang dikenal kode ini. Daftar tunggal, dipakai untuk
      * validasi permintaan dan untuk pesan galat, supaya menambah penyedia baru
@@ -33,13 +35,13 @@ class ProviderSelector implements AiProvider
      *
      * @var array<int, string>
      */
-    public const SUPPORTED = ['gemini', 'grok', 'mistral', 'openrouter', 'griphub'];
+    public const SUPPORTED = ['gemini', 'grok', 'mistral', 'openrouter', 'griphub', 'apinex'];
 
     /**
      * Urutan cadangan bawaan, dari yang paling diutamakan. Yang diminta
      * aplikasi selalu dicoba lebih dulu, apa pun isi daftar ini.
      */
-    private const ORDER = ['gemini', 'griphub', 'openrouter', 'grok', 'mistral'];
+    private const ORDER = ['gemini', 'griphub', 'apinex', 'openrouter', 'grok', 'mistral'];
 
     /** @param  array<int, AiProvider>  $providers  Terurut; kosong berarti tidak ada yang siap. */
     public function __construct(
@@ -86,6 +88,7 @@ class ProviderSelector implements AiProvider
             'mistral' => new MistralProvider,
             'openrouter' => new OpenRouterProvider,
             'griphub' => new GriphubProvider,
+            'apinex' => new ApinexProvider,
             default => null,
         };
     }

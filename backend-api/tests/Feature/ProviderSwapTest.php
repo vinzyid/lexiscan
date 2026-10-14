@@ -79,7 +79,7 @@ class ProviderSwapTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
         // Pesannya menyebut pilihan yang sah supaya salah ketik cepat ketemu.
-        $this->expectExceptionMessage('Pilihannya: gemini, grok, mistral, openrouter, griphub.');
+        $this->expectExceptionMessage('Pilihannya: gemini, grok, mistral, openrouter, griphub, apinex.');
 
         app(AiProvider::class);
     }

@@ -2,6 +2,9 @@
 
 namespace App\Services\Ai;
 
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -31,6 +34,13 @@ use RuntimeException;
  */
 class GriphubProvider implements AiProvider
 {
+    /*
+     * Batch BERURUTAN dari trait dipakai untuk `paragraphsForMany` cadangan,
+     * tapi method-nya ditimpa di bawah dengan versi paralel. Trait tetap
+     * dipasang supaya kalau penimpaan itu dihapus, kelas ini masih sah.
+     */
+    use SequentialBatching;
+
     /**
      * Porsi anggaran untuk model pertama; sisanya dibagi ke model berikutnya.
      *
@@ -188,21 +198,161 @@ class GriphubProvider implements AiProvider
     {
         $response = LlmHttp::client($this->name(), $timeoutSeconds)
             ->withToken((string) config('services.griphub.key'))
-            ->post($this->endpoint(), [
-                'model' => $model,
-                'temperature' => 0.3,
-                'messages' => [
-                    [
-                        'role' => 'system',
-                        'content' => self::SYSTEM_PROMPT,
-                    ],
-                    ['role' => 'user', 'content' => $prompt],
-                ],
-                'response_format' => [
-                    'type' => 'json_object',
-                ],
-            ]);
+            ->post($this->endpoint(), $this->payload($prompt, $model));
 
+        return $this->parse($response, $model);
+    }
+
+    /**
+     * Beberapa prompt sekaligus, dikirim BERSAMAAN lewat satu pool HTTP.
+     *
+     * INI INTI PERCEPATANNYA. Menyederhanakan dokumen panjang memecah teks jadi
+     * beberapa potongan, dan mengirimnya satu per satu membuat total waktunya
+     * jumlah dari semuanya. Pool mengirim semuanya paralel, jadi tiga potongan
+     * selesai dalam waktu satu potongan — bukan tiga kali.
+     *
+     * KENAPA DI GRIPHUB SAJA. Provider inilah yang dipakai produksi, dan
+     * endpoint-nya OpenAI-compatible sehingga bentuk body-nya bisa disusun
+     * ulang di sini. Provider lain tetap memakai jalur berurutan (trait), jadi
+     * perubahan ini tidak menyentuh perilaku mereka sama sekali.
+     *
+     * ANGGARAN WAKTU: `$timeoutSeconds` berlaku untuk SELURUH pool, bukan per
+     * permintaan — persis seperti versi berurutannya yang juga menghabiskan satu
+     * deadline bersama. Tiap permintaan di dalam pool memakai nilai yang sama,
+     * karena pool dianggap selesai saat yang paling lambat selesai.
+     *
+     * @param  array<int, string>  $prompts
+     * @return array<int, LlmResult>
+     */
+    public function paragraphsForMany(array $prompts, ?float $timeoutSeconds = null): array
+    {
+        if (! $this->isConfigured()) {
+            throw new RuntimeException('GRIPHUB_API_KEY belum diisi di file .env backend.');
+        }
+
+        // Satu prompt tidak perlu pool; jalur tunggal lebih sederhana dan sudah
+        // punya seluruh penanganan model cadangan.
+        if (count($prompts) <= 1) {
+            return array_map(fn (string $prompt): LlmResult => $this->paragraphsFor($prompt, $timeoutSeconds), $prompts);
+        }
+
+        /*
+         * Model yang dipakai batch = model PERTAMA pada daftar, sama seperti
+         * jalur tunggal. Model cadangan tidak dilibatkan di sini: menjalankan
+         * beberapa model sekaligus untuk satu batch berarti menggandakan kuota
+         * dan menyulitkan penelusuran. Kegagalan batch ditangani dengan
+         * mengulang seluruh batch pada jalur tunggal sekali — lihat di bawah.
+         */
+        $model = $this->model();
+
+        /*
+         * Kunci pool sengaja BERTEKSTUKS ("part0", "part1"), bukan angka.
+         * Laravel menormalkan kunci pool yang berupa string angka, sehingga
+         * "0" tidak selalu bisa ditemukan kembali sebagai "0" — dan akibatnya
+         * respons pertama hilang tanpa jejak. Prefiks teks menghindari itu.
+         */
+        $keyFor = static fn (int $index): string => "part{$index}";
+
+        try {
+            $responses = Http::pool(function (Pool $pool) use ($prompts, $model, $keyFor, $timeoutSeconds): void {
+                foreach ($prompts as $index => $prompt) {
+                    $pool->as($keyFor($index))
+                        /*
+                         * Tiap permintaan diberi anggaran penuh, bukan dibagi
+                         * rata: pool dianggap selesai saat yang PALING LAMBAT
+                         * selesai, jadi membagi rata hanya memangkas setiap
+                         * potongan tanpa mempercepat batch secara keseluruhan.
+                         */
+                        ->timeout((int) max(1, ceil($timeoutSeconds ?? ExecutionBudget::seconds())))
+                        ->connectTimeout(10)
+                        ->acceptJson()
+                        ->withToken((string) config('services.griphub.key'))
+                        ->post($this->endpoint(), $this->payload($prompt, $model));
+                }
+            });
+        } catch (\Throwable $e) {
+            /*
+             * Kegagalan pool itu sendiri (bukan satu permintaan di dalamnya):
+             * koneksi putus sebelum satu pun terkirim, atau pool tidak bisa
+             * dibentuk. Diterjemahkan sama seperti jalur tunggal.
+             */
+            Log::warning('Pool Griphub gagal', ['error' => $e->getMessage()]);
+
+            throw new RuntimeException('Tidak bisa menghubungi server AI. Periksa koneksi internet lalu coba lagi.');
+        }
+
+        $results = [];
+
+        foreach ($prompts as $index => $prompt) {
+            $response = $responses[$keyFor($index)] ?? null;
+
+            /*
+             * Entri pool bisa berupa exception kalau permintaan itu timeout atau
+             * koneksinya putus, dan `null` kalau kuncinya tidak kembali. Keduanya
+             * diperlakukan sama: batch gagal, dan pemanggil boleh mencoba ulang.
+             */
+            if (! $response instanceof Response) {
+                $reason = $response instanceof \Throwable ? $response->getMessage() : 'respons tidak kembali dari pool';
+
+                Log::warning('Batch Griphub gagal, mundur ke jalur berurutan', [
+                    'model' => $model,
+                    'part' => $index,
+                    'error' => $reason,
+                ]);
+
+                /*
+                 * MUNDUR KE JALUR TUNGGAL, bukan gagal begitu saja.
+                 *
+                 * Jalur tunggal sudah punya seluruh penanganan yang tidak dimiliki
+                 * pool: retry pada galat sementara, dan perpindahan ke model
+                 * cadangan. Menggagalkan batch hanya karena satu potongan gagal
+                 * berarti membuang potongan lain yang mungkin baik-baik saja —
+                 * dan pengguna melihat kegagalan yang tidak perlu. Jadi seluruh
+                 * batch dikerjakan ulang lewat jalur yang lebih tangguh.
+                 */
+                return array_map(
+                    fn (string $prompt): LlmResult => $this->paragraphsFor($prompt, $timeoutSeconds),
+                    $prompts,
+                );
+            }
+
+            $results[] = $this->parse($response, $model);
+        }
+
+        return $results;
+    }
+
+    /**
+     * Bentuk body permintaan yang sama untuk jalur tunggal maupun pool.
+     *
+     * @return array<string, mixed>
+     */
+    private function payload(string $prompt, string $model): array
+    {
+        return [
+            'model' => $model,
+            'temperature' => 0.3,
+            'messages' => [
+                [
+                    'role' => 'system',
+                    'content' => self::SYSTEM_PROMPT,
+                ],
+                ['role' => 'user', 'content' => $prompt],
+            ],
+            'response_format' => [
+                'type' => 'json_object',
+            ],
+        ];
+    }
+
+    /**
+     * Ubah respons HTTP jadi LlmResult, atau lempar galat yang layak dibaca.
+     *
+     * Dipakai bersama jalur tunggal dan jalur pool supaya pemeriksaan galatnya
+     * tidak berbeda diam-diam antara dua jalur itu.
+     */
+    private function parse(\Illuminate\Http\Client\Response $response, string $model): LlmResult
+    {
         if ($response->failed()) {
             // Pesan asli dicatat supaya kuota habis vs kunci salah bisa dibedakan.
             Log::warning('Permintaan Griphub gagal', [

@@ -163,4 +163,22 @@ return [
         'model' => env('GRIPHUB_MODEL', 'gemini-3.8-flash'),
     ],
 
+    /*
+     * APINEX — OpenAI-compatible, satu kunci untuk banyak model.
+     *
+     * Ditambahkan supaya hasilnya bisa dibandingkan langsung dengan Griphub:
+     * mana yang tulisannya lebih bagus untuk pembaca disleksia. Karena itu ia
+     * BUKAN penyedia utama secara bawaan — dipilih lewat AI_PROVIDER saat
+     * menguji, dan modelnya bisa diisi beberapa nama dipisah koma (dicoba
+     * berurutan seperti Griphub).
+     *
+     * Akhiran "/chat/completions" ditambahkan di provider, jadi base_url cukup
+     * diisi sampai "/v1".
+     */
+    'apinex' => [
+        'key' => env('APINEX_API_KEY'),
+        'base_url' => env('APINEX_BASE_URL', 'https://api.apinex.bond/v1'),
+        'model' => env('APINEX_MODEL', 'free/gemini-3.8-flash'),
+    ],
+
 ];

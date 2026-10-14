@@ -300,18 +300,30 @@ class AiTextServiceTest extends TestCase
      * — pengguna melihat "server AI tidak merespons". Sekarang teks dipecah dan
      * hasilnya digabung, jadi tiap panggilan selesai cepat.
      */
-    public function test_a_long_text_is_split_across_several_provider_calls(): void
+    public function test_a_long_text_is_split_and_sent_as_one_batch(): void
     {
-        $calls = 0;
+        $batchCalls = 0;
+        $chunksSeen = 0;
 
         $provider = Mockery::mock(AiProvider::class);
         $provider->shouldReceive('name')->andReturn('gemini');
         $provider->shouldReceive('model')->andReturn('gemini-3.6-flash');
-        $provider->shouldReceive('paragraphsFor')
-            ->andReturnUsing(function () use (&$calls): LlmResult {
-                $calls += 1;
 
-                return new LlmResult(["Bagian {$calls}."], new TokenUsage(500, 400));
+        /*
+         * Potongan yang belum di-cache dikirim sebagai SATU batch, bukan satu
+         * per satu — itu perubahan yang mengejar kecepatan. Test ini menjaga
+         * dua hal sekaligus: batch-nya benar-benar dipakai, dan potongan yang
+         * dikirim cuma satu kali panggilan batch (bukan berulang per potongan).
+         */
+        $provider->shouldReceive('paragraphsForMany')
+            ->andReturnUsing(function (array $prompts) use (&$batchCalls, &$chunksSeen): array {
+                $batchCalls += 1;
+                $chunksSeen = count($prompts);
+
+                return array_map(
+                    fn (int $i): LlmResult => new LlmResult(["Bagian {$i}."], new TokenUsage(500, 400)),
+                    array_keys($prompts),
+                );
             });
 
         Cache::swap($this->passthroughCache());
@@ -321,11 +333,13 @@ class AiTextServiceTest extends TestCase
 
         $answer = (new AiTextService($provider))->simplify($longText, 'L3');
 
-        $this->assertGreaterThan(1, $calls, 'Teks panjang harus dipecah menjadi beberapa panggilan.');
-        $this->assertCount($calls, $answer->paragraphs, 'Paragraf tiap potongan harus digabung.');
+        $this->assertSame(1, $batchCalls, 'Seluruh potongan harus lewat satu panggilan batch.');
+        $this->assertGreaterThan(1, $chunksSeen, 'Teks panjang harus dipecah menjadi beberapa potongan.');
+        $this->assertCount($chunksSeen, $answer->paragraphs, 'Paragraf tiap potongan harus digabung.');
+        $this->assertSame('Bagian 0.', $answer->paragraphs[0], 'Urutan paragraf harus sesuai urutan potongan.');
 
         // Token digabung, bukan sekadar diambil dari potongan terakhir.
-        $this->assertSame(500 * $calls, $answer->footprint->tokens->input);
+        $this->assertSame(500 * $chunksSeen, $answer->footprint->tokens->input);
     }
 
     public function test_a_short_text_still_uses_a_single_provider_call(): void

@@ -13,6 +13,8 @@ use RuntimeException;
  */
 class OpenRouterProvider implements AiProvider
 {
+    use SequentialBatching;
+
     private const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 
     public function name(): string

@@ -11,6 +11,8 @@ use RuntimeException;
  */
 class GrokProvider implements AiProvider
 {
+    use SequentialBatching;
+
     private const ENDPOINT = 'https://api.x.ai/v1/chat/completions';
 
     public function name(): string

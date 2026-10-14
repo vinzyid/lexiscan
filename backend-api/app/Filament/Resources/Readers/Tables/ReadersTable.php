@@ -20,10 +20,7 @@ class ReadersTable
 
     /** Label tiap jenjang sekolah; urutannya sama dengan kartu di aplikasi. */
     private const SCHOOLS = [
-        Reader::SCHOOL_SD1 => 'SD Kelas 1–3',
-        Reader::SCHOOL_SD2 => 'SD Kelas 4–6',
-        Reader::SCHOOL_SMP => 'SMP',
-        Reader::SCHOOL_SMA => 'SMA',
+        Reader::SCHOOL_SD => 'SD Kelas 1–3',
         Reader::SCHOOL_UMUM => 'Umum',
     ];
 

@@ -2,6 +2,7 @@
 
 namespace App\Services\Ai;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -13,15 +14,17 @@ use Illuminate\Support\Facades\Log;
  * aplikasinya. Perpindahannya tidak terlihat oleh aplikasi mobile — bentuk
  * responsnya sama persis, hanya kalimatnya yang mungkin sedikit berbeda gaya.
  *
- * Yang memicu perpindahan hanya ProviderExhaustedException (kuota habis, rate
- * limit, saldo kurang, server hulu goyah) dan ProviderResponseException
- * (jawaban tidak bisa dibaca). Kunci salah, model tidak ada, atau teks yang
- * ditolak filter keamanan tetap dilempar apa adanya: cadangannya akan gagal
- * dengan cara yang sama, dan menyembunyikan sebabnya hanya memperlambat
- * perbaikan.
+ * Yang memicu perpindahan: ProviderExhaustedException (kuota habis, rate
+ * limit, saldo kurang, server hulu goyah), ProviderResponseException (jawaban
+ * tidak bisa dibaca), dan ConnectionException (timeout, DNS, atau TLS — server
+ * utama yang menggantung sama saja dengan tidak ada bagi pengguna). Kunci salah,
+ * model tidak ada, atau teks yang ditolak filter keamanan tetap dilempar apa
+ * adanya: cadangannya akan gagal dengan cara yang sama, dan menyembunyikan
+ * sebabnya hanya memperlambat perbaikan.
  */
 class FallbackProvider implements AiProvider
 {
+
     /**
      * Waktu yang disisakan untuk penyedia cadangan, dalam detik.
      *
@@ -100,7 +103,18 @@ class FallbackProvider implements AiProvider
 
         try {
             return $this->primary->paragraphsFor($prompt, $primaryBudget);
-        } catch (ProviderExhaustedException | ProviderResponseException $e) {
+        } catch (ProviderExhaustedException | ProviderResponseException | ConnectionException $e) {
+            /*
+             * ConnectionException ikut memicu perpindahan, dan itu penting untuk
+             * keandalan: penyedia utama yang lambat atau tidak terjangkau
+             * (timeout, DNS, TLS) sama saja dengan tidak ada bagi pengguna.
+             * Dulu hanya kuota habis dan jawaban rusak yang memicu perpindahan,
+             * sehingga server utama yang menggantung membuat permintaan gagal
+             * walau cadangannya sehat.
+             *
+             * Syaratnya anggaran utama sudah dibatasi di atas, jadi cadangan
+             * masih punya sisa waktu nyata untuk mencoba.
+             */
             if (! $this->fallback->isConfigured()) {
                 throw $e;
             }
@@ -118,6 +132,41 @@ class FallbackProvider implements AiProvider
              * log baris atas.
              */
             return $this->fallback->paragraphsFor($prompt, $budget - $primaryBudget);
+        }
+    }
+
+    /**
+     * Beberapa prompt sekaligus, memakai jalur batch penyedia yang bersangkutan.
+     *
+     * PENTING UNTUK KECEPATAN: kalau method ini hanya memanggil `paragraphsFor`
+     * berulang (seperti bawaan trait), seluruh potongan teks panjang dikirim
+     * BERURUTAN — dan jalur paralel milik penyedia utama (Griphub/APINEX) tidak
+     * pernah terpakai, karena `paragraphsFor` memang satu permintaan. Meneruskan
+     * ke `paragraphsForMany` penyedia membuat potongan tetap dikirim bersamaan.
+     *
+     * @param  array<int, string>  $prompts
+     * @return array<int, LlmResult>
+     */
+    public function paragraphsForMany(array $prompts, ?float $timeoutSeconds = null): array
+    {
+        $budget = $timeoutSeconds ?? ExecutionBudget::seconds();
+        $fallbackReserve = min(self::FALLBACK_RESERVE_SECONDS, $budget / 2);
+        $primaryBudget = max(1.0, $budget - $fallbackReserve);
+
+        try {
+            return $this->primary->paragraphsForMany($prompts, $primaryBudget);
+        } catch (ProviderExhaustedException | ProviderResponseException | ConnectionException $e) {
+            if (! $this->fallback->isConfigured()) {
+                throw $e;
+            }
+
+            Log::warning('Batch penyedia utama gagal, berpindah ke cadangan', [
+                'primary' => $this->primary->name(),
+                'fallback' => $this->fallback->name(),
+                'reason' => $e->getMessage(),
+            ]);
+
+            return $this->fallback->paragraphsForMany($prompts, $budget - $primaryBudget);
         }
     }
 }

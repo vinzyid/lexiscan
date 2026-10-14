@@ -11,6 +11,8 @@ use RuntimeException;
  */
 class GeminiProvider implements AiProvider
 {
+    use SequentialBatching;
+
     private const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
     public function name(): string

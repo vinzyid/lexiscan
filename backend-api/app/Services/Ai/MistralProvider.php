@@ -12,6 +12,8 @@ use RuntimeException;
  */
 class MistralProvider implements AiProvider
 {
+    use SequentialBatching;
+
     private const ENDPOINT = 'https://api.mistral.ai/v1/chat/completions';
 
     public function name(): string

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\Ai\AiProvider;
+use App\Services\Ai\ApinexProvider;
 use App\Services\Ai\FallbackProvider;
 use App\Services\Ai\GeminiProvider;
 use App\Services\Ai\GriphubProvider;
@@ -66,6 +67,7 @@ class AppServiceProvider extends ServiceProvider
             'mistral' => new MistralProvider,
             'openrouter' => new OpenRouterProvider,
             'griphub' => new GriphubProvider,
+            'apinex' => new ApinexProvider,
             default => throw new InvalidArgumentException(
                 "{$setting} tidak dikenal: '{$name}'. Pilihannya: " . implode(', ', ProviderSelector::SUPPORTED) . '.'
             ),

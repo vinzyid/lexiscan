@@ -7,6 +7,7 @@ use App\Services\Ai\FallbackProvider;
 use App\Services\Ai\LlmResult;
 use App\Services\Ai\ProviderExhaustedException;
 use App\Services\Ai\ProviderSelector;
+use App\Services\Ai\SequentialBatching;
 use App\Services\Ai\TokenUsage;
 use RuntimeException;
 use Tests\TestCase;
@@ -104,6 +105,8 @@ class AiTimeBudgetTest extends TestCase
  */
 class RecordingProvider implements AiProvider
 {
+    use SequentialBatching;
+
     /** @var array<int, float|null> */
     public array $timeouts = [];
 
