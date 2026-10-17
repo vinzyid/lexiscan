@@ -473,6 +473,8 @@ export const en: Translation = {
     styleLabel: (name: string) => `Explain it in the ${name} style`,
     chooseStyle: 'How should Lexi explain it?',
     unexpectedError: 'Something unexpected went wrong. Please try again.',
+    rulerTapHint: 'Tap a word to move the ruler to its line.',
+    focusTapHint: 'One sentence at a time. Tap a faded sentence to move to it.',
   },
 
   api: {

@@ -535,6 +535,8 @@ export const id = {
     styleLabel: (name: string) => `Jelaskan dengan gaya ${name}`,
     chooseStyle: 'Mau Lexi jelasin gimana?',
     unexpectedError: 'Terjadi kesalahan tak terduga. Coba lagi.',
+    rulerTapHint: 'Ketuk kata untuk memindah penggaris ke barisnya.',
+    focusTapHint: 'Satu kalimat dulu. Ketuk kalimat yang redup untuk pindah.',
   },
 
   api: {

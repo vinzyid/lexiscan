@@ -10,11 +10,9 @@ import {
 } from '../data/sample-document';
 import { useT } from '../i18n';
 import { useThemeColors } from '../theme/theme-provider';
-import { DyslexicText } from './dyslexic-text';
-import { FootprintChip } from './footprint-chip';
+import { AnswerReader, LexiBubble } from './answer-reader';
 import { PressableScale } from './pressable-scale';
-import { SpeakButton } from './speak-button';
-import { useAutoSpeak, useStopSpeechOnUnmount } from '../speech/use-speech';
+import { useStopSpeechOnUnmount } from '../speech/use-speech';
 import { LexiMascot } from './illustrations';
 
 export type ExplainTarget = {
@@ -44,18 +42,12 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
   /*
    * Jawaban digabung jadi satu ucapan, bukan satu per paragraf: jeda antar
    * panggilan expo-speech terdengar seperti kalimat yang terputus.
+   *
+   * Pembacaan otomatisnya (masukan dosen PLB: yang belum bisa membaca harus
+   * langsung mendengar jawabannya) sekarang dijalankan `AnswerReader`, karena
+   * di sanalah sorotan kata dan penggaris yang mengikuti suara itu tinggal.
    */
-  const spokenAnswer = paragraphs && paragraphs.length > 0 ? paragraphs.join(' ') : null;
-
   useStopSpeechOnUnmount();
-
-  /*
-   * Inilah jawaban paling langsung atas masukan dosen PLB. Penjelasan tertulis
-   * yang panjang menyulitkan; kalau begitu penjelasannya harus bisa didengar,
-   * dan bagi yang belum bisa membaca sama sekali ia harus berbunyi sendiri
-   * begitu jawabannya siap — tanpa perlu menemukan tombol lebih dulu.
-   */
-  useAutoSpeak(spokenAnswer, `explain:${styleId ?? ''}`, !loading && !error);
 
   const reset = () => {
     setStyleId(null);
@@ -128,61 +120,40 @@ export function ExplainSheet({ target, onClose }: { target: ExplainTarget | null
               <Text className="font-ui-bold text-[14px] text-primary">{active.name}</Text>
             </View>
 
-            <View className="flex-row">
-              <View className="mr-3 h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/10">
-                <LexiMascot size={34} />
-              </View>
-              <View className="flex-1 rounded-3xl rounded-tl-lg border border-border/10 bg-surface p-4">
-                {loading ? (
-                  <View className="flex-row items-center py-1">
-                    <ActivityIndicator size="small" color={colors.primary} />
-                    <Text className="ml-3 font-ui-medium text-sm text-text-muted">
-                      {t.explain.thinking}
-                    </Text>
-                  </View>
-                ) : error ? (
-                  <>
-                    <Text className="mb-3 font-ui-medium text-sm leading-6 text-text-main">
-                      {t.explain.cantAnswer} {error}
-                    </Text>
-                    <PressableScale
-                      onPress={() => ask(active.id)}
-                      accessibilityRole="button"
-                      accessibilityLabel={t.explain.retryLabel}
-                      className="h-11 items-center justify-center self-start rounded-xl bg-primary/10 px-4">
-                      <Text className="font-ui-bold text-sm text-primary">🔄 {t.common.tryAgain}</Text>
-                    </PressableScale>
-                  </>
-                ) : (
-                  /*
-                   * Jawaban Lexi ikut memakai DyslexicText supaya font, spasi
-                   * baris, dan preset ukurannya sama dengan layar Baca.
-                   */
-                  <>
-                    {(paragraphs ?? []).map((para, index, all) => (
-                      <View key={index} className={index < all.length - 1 ? 'mb-4' : ''}>
-                        <DyslexicText>{para}</DyslexicText>
-                      </View>
-                    ))}
-
-                    {spokenAnswer ? (
-                      <View className="mt-3 flex-row items-center" style={{ gap: 10 }}>
-                        <SpeakButton
-                          text={spokenAnswer}
-                          speechKey={`explain:${active.id}`}
-                          size={16}
-                        />
-                        <View className="flex-1">
-                          <FootprintChip />
-                        </View>
-                      </View>
-                    ) : (
-                      <FootprintChip />
-                    )}
-                  </>
-                )}
-              </View>
-            </View>
+            {loading ? (
+              <LexiBubble>
+                <View className="flex-row items-center py-1">
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text className="ml-3 font-ui-medium text-sm text-text-muted">
+                    {t.explain.thinking}
+                  </Text>
+                </View>
+              </LexiBubble>
+            ) : error ? (
+              <LexiBubble>
+                <Text className="mb-3 font-ui-medium text-sm leading-6 text-text-main">
+                  {t.explain.cantAnswer} {error}
+                </Text>
+                <PressableScale
+                  onPress={() => ask(active.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t.explain.retryLabel}
+                  className="h-11 items-center justify-center self-start rounded-xl bg-primary/10 px-4">
+                  <Text className="font-ui-bold text-sm text-primary">🔄 {t.common.tryAgain}</Text>
+                </PressableScale>
+              </LexiBubble>
+            ) : (
+              /*
+               * Jawaban Lexi memakai DyslexicText dan alat baca yang sama
+               * dengan layar Baca. `key` per gaya: jawaban baru mulai dari
+               * kalimat pertama, bukan dari posisi jawaban sebelumnya.
+               */
+              <AnswerReader
+                key={active.id}
+                paragraphs={paragraphs ?? []}
+                speechKey={`explain:${active.id}`}
+              />
+            )}
 
             <PressableScale
               onPress={reset}

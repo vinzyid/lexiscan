@@ -48,6 +48,7 @@ import { regroupParagraphs, splitParagraphs } from '../../src/utils/paragraphs';
 import { PressableScale } from '../../src/components/pressable-scale';
 import { TextSkeleton } from '../../src/components/text-skeleton';
 import { FootprintChip } from '../../src/components/footprint-chip';
+import { FeatureChip } from '../../src/components/feature-chip';
 import { TypographySheet } from '../../src/components/typography-sheet';
 import { ExplainSheet, type ExplainTarget } from '../../src/components/explain-sheet';
 import { WordSheet } from '../../src/components/word-sheet';
@@ -1463,74 +1464,3 @@ const ParagraphBlock = memo(function ParagraphBlock({
     </Animated.View>
   );
 });
-
-function FeatureChip({
-  active,
-  onPress,
-  icon,
-  label,
-  accessibilityLabel,
-  compact,
-  tourId,
-}: {
-  active: boolean;
-  onPress: () => void;
-  icon: React.ReactNode;
-  label: string;
-  /** Nama yang dibacakan, kalau label di layar terlalu singkat untuk menjelaskannya. */
-  accessibilityLabel?: string;
-  /** Selebar isinya saja, tidak ikut membagi rata baris. */
-  compact?: boolean;
-  /** Sasaran tur pendamping. */
-  tourId?: string;
-}) {
-  const content = (
-    <>
-      {icon}
-      <Text className={`font-ui-bold text-xs ${active ? 'text-white' : 'text-text-muted'}`}>
-        {label}
-      </Text>
-    </>
-  );
-
-  /*
-   * Lebar dibagi rata oleh pembungkus sasaran tur, bukan oleh tombolnya, supaya
-   * sorotan tur pas dengan tombol yang terlihat.
-   */
-  return (
-    <TourTarget id={tourId} style={compact ? undefined : { flex: 1 }}>
-      <PressableScale
-        onPress={onPress}
-        accessibilityRole="switch"
-        accessibilityState={{ checked: active }}
-        accessibilityLabel={accessibilityLabel ?? label}
-        scaleTo={0.93}>
-        {active ? (
-          <LinearGradient
-            colors={[...GRADIENTS.activePill.colors]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={{
-              height: 44,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-              paddingHorizontal: compact ? 12 : 8,
-              borderRadius: 16,
-            }}>
-            {content}
-          </LinearGradient>
-        ) : (
-          <View
-            className={`h-11 flex-row items-center justify-center rounded-[16px] bg-primary/[0.07] ${
-              compact ? 'px-3' : 'px-2'
-            }`}
-            style={{ gap: 6 }}>
-            {content}
-          </View>
-        )}
-      </PressableScale>
-    </TourTarget>
-  );
-}
