@@ -23,6 +23,7 @@ import {
 import { ThemeProvider, useThemeColors } from '../src/theme/theme-provider';
 import { BrandSplash } from '../src/components/brand-splash';
 import { Onboarding } from '../src/components/onboarding';
+import { PortalHost } from '../src/components/portal';
 import { useServerDefaults } from '../src/hooks/use-server-defaults';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useOCRStore } from '../src/store/useStore';
@@ -161,6 +162,10 @@ function RootNavigator({ intro, onAdvance }: { intro: Intro; onAdvance: (next: I
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="screening" />
       </Stack>
+
+      {/* Lembar bawah yang berisi kolom isian dirender di sini, di jendela
+          Activity, bukan di dalam Modal. Lihat src/components/portal.tsx. */}
+      <PortalHost />
 
       {intro === 'splash' ? (
         <View style={StyleSheet.absoluteFill}>

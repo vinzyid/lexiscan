@@ -1,10 +1,23 @@
-import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Modal, ScrollView, Switch, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  BackHandler,
+  Keyboard,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronRight, X, type LucideIcon } from 'lucide-react-native';
 
 import { useT } from '../i18n';
 import { useSpeakLabel } from '../speech/use-speech';
 import { useThemeColors } from '../theme/theme-provider';
+import { Portal } from './portal';
 import { PressableScale } from './pressable-scale';
 
 /**
@@ -130,9 +143,11 @@ export function SettingsRow({ Icon, title, value, divider = true, onPress, toggl
 /**
  * Lembar bawah: gagang, judul, tombol tutup, lalu isinya yang bisa digulung.
  *
- * `animationType="slide"` dan bukan animasi sendiri — modal bawaan sudah
- * menaikkannya dari bawah, dan menambah animasi di atasnya membuat gerakannya
- * bertumpuk dan patah di perangkat lambat.
+ * Dirender lewat `Portal`, bukan `Modal`. Lembar ini bisa berisi kolom isian
+ * (Bantuan & Dukungan, Ubah Nama), dan di dalam `Modal` Android papan tiknya
+ * tidak terdeteksi di HP asli sehingga ketikan tertimbun; alasan lengkapnya ada
+ * di `portal.tsx`. Akibatnya animasi naik, tombol kembali Android, dan
+ * penghindaran papan tik diurus sendiri di sini.
  */
 export function SettingsSheet({
   visible,
@@ -145,28 +160,128 @@ export function SettingsSheet({
   onClose: () => void;
   children: ReactNode;
 }) {
-  const colors = useThemeColors();
-  const t = useT();
+  if (!visible) {
+    return null;
+  }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      {/*
-       * Lembar ini bisa berisi kolom isian (Bantuan & Dukungan, Ubah Nama), dan
-       * di Android papan tik muncul menutupi separuh layar bawah. Tanpa
-       * KeyboardAvoidingView, tombol Kirim dan ketikan di baris terakhir
-       * tertimbun papan tik dan tidak bisa dijangkau sama sekali.
-       *
-       * `padding` dipakai di kedua platform, bukan `height` di Android: lembar
-       * ini menempel di bawah (`justify-end`) dan tingginya dibatasi persen,
-       * jadi menyusutkan tinggi wadah membuat isinya justru tetap di tempat
-       * yang sama. Menambah padding di bawah mendorong seluruh lembar naik,
-       * sehingga kolom pesan dan tombol Kirim tetap terlihat di atas papan tik.
-       */}
-      <KeyboardAvoidingView
-        className="flex-1 justify-end bg-black/40"
-        behavior="padding">
-        {/* Area gelap di atas lembar: mengetuknya menutup, seperti lembar lain
-            di aplikasi ini. */}
+    <Portal>
+      <SheetBody title={title} onClose={onClose}>
+        {children}
+      </SheetBody>
+    </Portal>
+  );
+}
+
+/** Jarak antara kolom yang sedang diisi dan tepi atas papan tik. */
+const FOCUS_MARGIN = 16;
+
+function SheetBody({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const colors = useThemeColors();
+  const t = useT();
+  const insets = useSafeAreaInsets();
+
+  const [rootHeight, setRootHeight] = useState(0);
+  const keyboard = useKeyboardFrame();
+
+  /*
+   * Seberapa tinggi papan tik menutupi lapisan ini, dihitung dari tepi atas
+   * papan tiknya. Di Android `height` dari RN sudah dikurangi bilah navigasi,
+   * padahal lembar ini menempel sampai ke dasar layar (edge-to-edge), jadi
+   * yang dipakai adalah yang lebih besar dari keduanya.
+   */
+  const overlap =
+    keyboard && rootHeight > 0
+      ? Math.max(
+          rootHeight - keyboard.screenY,
+          Platform.OS === 'android' ? keyboard.height : 0,
+          0,
+        )
+      : 0;
+  const keyboardOpen = overlap > 0;
+
+  const maxHeight =
+    rootHeight > 0
+      ? keyboardOpen
+        ? rootHeight - overlap - insets.top - 12
+        : rootHeight * 0.85
+      : undefined;
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+
+      return true;
+    });
+
+    return () => sub.remove();
+  }, [onClose]);
+
+  /*
+   * Lembarnya naik dan memendek saat papan tik muncul, tapi gulungannya tidak
+   * ikut berpindah, jadi kolom yang sedang diisi bisa tetap berada di bawah
+   * batas lembar. Kolom itu digulung masuk ke pandangan, termasuk setiap kali
+   * kolom pesan bertambah baris selagi diketik.
+   */
+  const scrollRef = useRef<ScrollView>(null);
+  const contentRef = useRef<View>(null);
+  const scrollY = useRef(0);
+  const [viewportHeight, setViewportHeight] = useState(0);
+
+  const revealFocusedInput = useCallback(() => {
+    const input = TextInput.State.currentlyFocusedInput();
+    const content = contentRef.current;
+    if (!input || !content || viewportHeight === 0) {
+      return;
+    }
+
+    input.measureLayout(
+      content,
+      (_x, y, _width, height) => {
+        const bottom = y + height + FOCUS_MARGIN;
+        const visibleBottom = scrollY.current + viewportHeight;
+
+        if (bottom > visibleBottom) {
+          // Kolom yang lebih tinggi dari lembarnya diratakan ke bawah: di
+          // situlah kursor berada saat mengetik.
+          scrollRef.current?.scrollTo({ y: bottom - viewportHeight, animated: true });
+        } else if (y < scrollY.current) {
+          scrollRef.current?.scrollTo({ y: Math.max(0, y - FOCUS_MARGIN), animated: true });
+        }
+      },
+      () => {},
+    );
+  }, [viewportHeight]);
+
+  useEffect(() => {
+    if (!keyboardOpen) {
+      return;
+    }
+
+    // Satu frame dulu, supaya tinggi lembar yang baru sudah terpasang.
+    const frame = requestAnimationFrame(revealFocusedInput);
+
+    return () => cancelAnimationFrame(frame);
+  }, [keyboardOpen, overlap, revealFocusedInput]);
+
+  return (
+    <View
+      style={StyleSheet.absoluteFill}
+      onLayout={(e) => setRootHeight(e.nativeEvent.layout.height)}>
+      {/* Area gelap di atas lembar: mengetuknya menutup, seperti lembar lain
+          di aplikasi ini. */}
+      <Animated.View
+        entering={FadeIn.duration(200)}
+        exiting={FadeOut.duration(180)}
+        style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
         <PressableScale
           onPress={onClose}
           accessibilityLabel={t.common.close}
@@ -175,34 +290,97 @@ export function SettingsSheet({
           style={{ flex: 1 }}>
           <View style={{ flex: 1 }} />
         </PressableScale>
+      </Animated.View>
 
-        <View className="max-h-[85%] rounded-t-[32px] bg-background px-5 pb-8 pt-3">
-          <View className="mb-4 items-center">
-            <View className="h-1 w-10 rounded-full bg-border/20" />
-          </View>
-
-          <View className="mb-4 flex-row items-center" style={{ gap: 12 }}>
-            <Text className="flex-1 font-ui-bold text-[20px] text-text-main">{title}</Text>
-            <PressableScale
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel={t.common.close}
-              scaleTo={0.9}
-              className="h-10 w-10 items-center justify-center rounded-full bg-surface-alt">
-              <X size={17} color={colors.textMuted} />
-            </PressableScale>
-          </View>
-
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            automaticallyAdjustKeyboardInsets
-            contentContainerStyle={{ paddingBottom: 8 }}>
-            {children}
-          </ScrollView>
+      <Animated.View
+        entering={SlideInDown.duration(280)}
+        exiting={SlideOutDown.duration(220)}
+        accessibilityViewIsModal
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: overlap,
+          maxHeight,
+          borderTopLeftRadius: 32,
+          borderTopRightRadius: 32,
+          backgroundColor: colors.background,
+          paddingHorizontal: 20,
+          paddingTop: 12,
+          paddingBottom: keyboardOpen ? FOCUS_MARGIN : 32 + insets.bottom,
+        }}>
+        <View className="mb-4 items-center">
+          <View className="h-1 w-10 rounded-full bg-border/20" />
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+
+        <View className="mb-4 flex-row items-center" style={{ gap: 12 }}>
+          <Text className="flex-1 font-ui-bold text-[20px] text-text-main">{title}</Text>
+          <PressableScale
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel={t.common.close}
+            scaleTo={0.9}
+            className="h-10 w-10 items-center justify-center rounded-full bg-surface-alt">
+            <X size={17} color={colors.textMuted} />
+          </PressableScale>
+        </View>
+
+        <ScrollView
+          ref={scrollRef}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          scrollEventThrottle={16}
+          onScroll={(e) => {
+            scrollY.current = e.nativeEvent.contentOffset.y;
+          }}
+          onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
+          onContentSizeChange={() => {
+            if (keyboardOpen) {
+              revealFocusedInput();
+            }
+          }}>
+          <View ref={contentRef} collapsable={false} style={{ paddingBottom: 8 }}>
+            {children}
+          </View>
+        </ScrollView>
+      </Animated.View>
+    </View>
   );
+}
+
+type KeyboardFrame = { screenY: number; height: number };
+
+/**
+ * Posisi papan tik selagi terbuka, `null` saat tertutup.
+ *
+ * iOS memakai event "will" supaya lembarnya naik berbarengan dengan papan tik;
+ * Android hanya punya event "did".
+ */
+function useKeyboardFrame() {
+  const [frame, setFrame] = useState<KeyboardFrame | null>(() => {
+    const metrics = Keyboard.isVisible() ? Keyboard.metrics() : undefined;
+
+    return metrics ? { screenY: metrics.screenY, height: metrics.height } : null;
+  });
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const subs = [
+      Keyboard.addListener(showEvent, (e) =>
+        setFrame(
+          e.endCoordinates.height > 0
+            ? { screenY: e.endCoordinates.screenY, height: e.endCoordinates.height }
+            : null,
+        ),
+      ),
+      Keyboard.addListener(hideEvent, () => setFrame(null)),
+    ];
+
+    return () => subs.forEach((sub) => sub.remove());
+  }, []);
+
+  return frame;
 }

@@ -24,6 +24,7 @@ COMMIT_MSG.txt
 
 # Spesifikasi, audit & diagram lokal
 LexiProgress_Spesifikasi_Fitur.md
+lexiscan-perbaikan.md
 audit.md
 diagram-sistem.md
 error-app/
