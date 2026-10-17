@@ -335,6 +335,7 @@ export const id = {
     noTextUpload: 'File ini tampaknya tidak memiliki teks atau gambarnya terlalu buram.',
     scanFailTitle: 'Gagal memindai',
     uploadFailTitle: 'Gagal membaca file',
+    fileTooLarge: 'File ini lebih dari 10 MB. Pilih file yang lebih kecil, atau foto halaman yang ingin dibaca.',
     genericError: 'Terjadi kesalahan.',
     cameraNoImage: 'Kamera tidak mengembalikan gambar.',
     typoWarning: 'Gagal memperbaiki typo via AI, memakai teks asli dari OCR.',

@@ -73,14 +73,76 @@ const requestLanguage = () => useOCRStore.getState().language;
  */
 const requestReadingLevel = () => useOCRStore.getState().readingLevel;
 
+/** Header yang dibawa setiap permintaan ke backend, JSON maupun unggahan. */
+function commonHeaders(deviceId: string | null): Record<string, string> {
+  return {
+    Accept: 'application/json',
+    // Dikirim hanya kalau ada; 'X-Api-Key: undefined' ditolak backend
+    // dengan alasan yang menyesatkan.
+    ...(API_KEY ? { 'X-Api-Key': API_KEY } : {}),
+    ...(deviceId ? { 'X-Device-Id': deviceId } : {}),
+    ...authHeader(),
+  };
+}
+
 /**
- * Satu-satunya jalur POST ke backend; dipakai juga oleh `src/api/feedback.ts`,
+ * Mengunggah berkas sebagai multipart.
+ *
+ * Lewat XMLHttpRequest, bukan fetch. Sejak SDK ini `fetch` global diganti
+ * `expo/fetch`, yang menolak lampiran gaya React Native (`{ uri, name, type }`)
+ * dengan "Unsupported FormDataPart implementation" sebelum satu byte pun
+ * terkirim, dan galat itu tampil sebagai "tidak bisa terhubung ke server".
+ * XMLHttpRequest masih milik React Native dan membaca berkas dari `uri`-nya
+ * sendiri, tanpa modul native tambahan.
+ */
+export async function postForm(path: string, form: FormData): Promise<any> {
+  const t = strings();
+
+  if (!API_BASE_URL) {
+    throw new AiApiError(t.api.noBaseUrl);
+  }
+
+  const deviceId = await currentDeviceId();
+  const url = `${API_BASE_URL}${path}`;
+
+  const { status, text } = await new Promise<{ status: number; text: string }>(
+    (resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      // Content-Type sengaja tidak ditulis: batas multipart-nya diisi sendiri.
+      for (const [key, value] of Object.entries(commonHeaders(deviceId))) {
+        xhr.setRequestHeader(key, value);
+      }
+      xhr.timeout = REQUEST_TIMEOUT_MS;
+      xhr.onload = () => resolve({ status: xhr.status, text: xhr.responseText });
+      xhr.onerror = () => reject(new AiApiError(t.api.unreachable));
+      xhr.ontimeout = () => reject(new AiApiError(t.api.timeout));
+      xhr.send(form);
+    },
+  );
+
+  let json: any = null;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    // Bukan JSON (mis. halaman galat proxy); pesannya diambil dari status.
+  }
+
+  if (status < 200 || status >= 300) {
+    throw new AiApiError(json?.message ?? t.api.httpError(status));
+  }
+
+  return json;
+}
+
+/**
+ * Satu-satunya jalur POST JSON ke backend; dipakai juga oleh `src/api/feedback.ts`,
  * yang bukan endpoint AI tapi memerlukan penanganan kunci, penanda perangkat,
  * timeout, dan pesan galat yang persis sama.
  */
 export async function postJson(
   path: string,
-  body: Record<string, unknown> | FormData,
+  body: Record<string, unknown>,
   options: { method?: 'GET' | 'POST' | 'PATCH' | 'DELETE' } = {},
 ): Promise<any> {
   const t = strings();
@@ -104,20 +166,12 @@ export async function postJson(
   try {
     const method = options.method ?? 'POST';
     const isBodyAllowed = method !== 'GET';
-    // Berkas unggahan dikirim sebagai multipart; batasnya diisi fetch sendiri,
-    // jadi Content-Type tidak boleh ditulis di sini.
-    const isForm = body instanceof FormData;
 
     response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers: {
-        ...(isForm ? {} : { 'Content-Type': 'application/json' }),
-        Accept: 'application/json',
-        // Dikirim hanya kalau ada; 'X-Api-Key: undefined' ditolak backend
-        // dengan alasan yang menyesatkan.
-        ...(API_KEY ? { 'X-Api-Key': API_KEY } : {}),
-        ...(deviceId ? { 'X-Device-Id': deviceId } : {}),
-        ...authHeader(),
+        'Content-Type': 'application/json',
+        ...commonHeaders(deviceId),
       },
       /*
        * `language` menentukan bahasa prompt sekaligus bahasa jawaban AI;
@@ -128,15 +182,13 @@ export async function postJson(
        * baru saja dipilih di formulir belum masuk store, dan menimpanya dengan
        * nilai store berarti menyimpan jawaban yang salah ke akunnya.
        */
-      body: isForm
-        ? body
-        : isBodyAllowed
-          ? JSON.stringify({
-              language: requestLanguage(),
-              reading_level: requestReadingLevel(),
-              ...body,
-            })
-          : undefined,
+      body: isBodyAllowed
+        ? JSON.stringify({
+            language: requestLanguage(),
+            reading_level: requestReadingLevel(),
+            ...body,
+          })
+        : undefined,
       signal: controller.signal,
     });
   } catch {

@@ -1,10 +1,17 @@
-import { postJson } from './ai';
+import { postForm } from './ai';
 
 /** Jenis berkas yang teksnya diambil di server, bukan lewat OCR di HP. */
 export const DOCUMENT_MIME_TYPES = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ] as const;
+
+/**
+ * Menyamai batas validasi di backend (10 MB). Diperiksa sebelum mengunggah:
+ * berkas di atas batas server diputus di tengah unggahan, dan putusnya terlihat
+ * seperti server tidak bisa dihubungi, bukan seperti berkas yang kebesaran.
+ */
+export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 
 export function isDocumentFile(file: { name: string; mimeType?: string | null }) {
   return (
@@ -33,7 +40,7 @@ export async function extractDocumentText(file: {
     type: file.mimeType ?? 'application/octet-stream',
   } as unknown as Blob);
 
-  const json = await postJson('/api/extract-document', form);
+  const json = await postForm('/api/extract-document', form);
 
   return typeof json?.text === 'string' ? json.text.trim() : '';
 }

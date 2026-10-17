@@ -35,7 +35,12 @@ import { useThemeColors } from '../../src/theme/theme-provider';
 import { GRADIENTS, getTypeLevel } from '../../src/theme/palettes';
 import { useT } from '../../src/i18n';
 import { correctTypo } from '../../src/api/ai';
-import { DOCUMENT_MIME_TYPES, extractDocumentText, isDocumentFile } from '../../src/api/document';
+import {
+  DOCUMENT_MIME_TYPES,
+  MAX_DOCUMENT_BYTES,
+  extractDocumentText,
+  isDocumentFile,
+} from '../../src/api/document';
 import { Blob, HexDecor, Ring, ScreenBackdrop, Sparkle } from '../../src/components/figma-decor';
 import { IlluScan } from '../../src/components/illustrations';
 import { cropRectForGuide } from '../../src/utils/crop-frame';
@@ -266,11 +271,17 @@ export default function ScannerScreen() {
       if (result.canceled || !result.assets?.length) return;
 
       const file = result.assets[0];
+      const isDocument = isDocumentFile(file);
+
+      if (isDocument && (file.size ?? 0) > MAX_DOCUMENT_BYTES) {
+        Alert.alert(t.scanner.uploadFailTitle, t.scanner.fileTooLarge);
+        return;
+      }
+
       setPhase('scanning');
 
       // Gambar dibaca ML Kit di HP; PDF dan DOCX sudah berisi teks, jadi
       // teksnya diambil langsung di server tanpa OCR.
-      const isDocument = isDocumentFile(file);
       const rawText = isDocument
         ? await extractDocumentText(file)
         : ((await TextRecognition.recognize(file.uri))?.text?.trim() ?? '');

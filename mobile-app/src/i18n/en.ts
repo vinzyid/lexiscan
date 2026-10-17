@@ -286,6 +286,7 @@ export const en: Translation = {
     noTextUpload: 'This file does not seem to contain text, or the image is too blurry.',
     scanFailTitle: 'Scan failed',
     uploadFailTitle: 'Could not read the file',
+    fileTooLarge: 'This file is larger than 10 MB. Choose a smaller file, or take a photo of the page you want to read.',
     genericError: 'Something went wrong.',
     cameraNoImage: 'The camera did not return an image.',
     typoWarning: 'AI typo correction failed, using the raw OCR text instead.',
