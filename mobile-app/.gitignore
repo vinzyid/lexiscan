@@ -46,6 +46,11 @@ example
 /ios
 /android
 
+# Keluaran build lokal modul native (modulnya sendiri tetap dilacak).
+modules/*/android/build/
+modules/*/android/.gradle/
+modules/*/.expo/
+
 #file
 .mockup v1/*
 

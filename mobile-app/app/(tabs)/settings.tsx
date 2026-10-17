@@ -416,7 +416,11 @@ export default function SettingsScreen() {
             </PressableScale>
           ) : null}
 
-          <Text className="mt-5 text-center font-ui-medium text-[12px] text-text-muted">
+          {/* Tekan lama membuka layar Uji Energi untuk tim (app/energy.tsx).
+              Sengaja tersembunyi: bukan fitur untuk siswa atau pendamping. */}
+          <Text
+            onLongPress={() => router.push('/energy')}
+            className="mt-5 text-center font-ui-medium text-[12px] text-text-muted">
             {t.settings.footer(version)}
           </Text>
         </View>
