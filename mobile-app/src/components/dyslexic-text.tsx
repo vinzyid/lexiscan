@@ -13,7 +13,8 @@ type Props = {
   bicolor?: boolean;
   /** Diredupkan saat paragraf lain sedang aktif di Mode Fokus. */
   dimmed?: boolean;
-  onWordPress?: (word: string) => void;
+  /** Nomor katanya ikut dikirim, dengan penomoran yang sama seperti `activeWordIndex`. */
+  onWordPress?: (word: string, wordIndex: number) => void;
   /** Timpa preset tipografi aktif — dipakai kartu pratinjau di Pengaturan. */
   levelOverride?: TypeLevel;
   /** Timpa pengaturan pemenggalan suku kata — juga untuk kartu pratinjau. */
@@ -26,6 +27,18 @@ type Props = {
    * `wordIndex` pada `toChunks` (spasi tidak dihitung).
    */
   activeWordIndex?: number | null;
+  /**
+   * Suku kata ke berapa dari `activeWordIndex` yang sedang dieja suara. Diisi,
+   * sorotannya menyempit dari satu kata ke satu suku kata itu saja - dan itu
+   * tetap berlaku saat pemenggalan di layar dimatikan, karena mengeja dengan
+   * suara tidak boleh bergantung pada tampilan tanda hubung.
+   */
+  activeSyllableIndex?: number | null;
+  /**
+   * Tekan tahan sebuah kata. Dipakai layar baca saat ketukan biasa sudah
+   * punya tugas lain (memindah penggaris).
+   */
+  onWordLongPress?: (word: string, wordIndex: number) => void;
   /** Posisi tiap baris hasil layout — dipakai Reading Ruler untuk menempatkan penggaris. */
   onTextLayout?: (event: NativeSyntheticEvent<TextLayoutEventData>) => void;
   /**
@@ -66,6 +79,12 @@ type Chunk =
       suffix: string;
       /** Kosong berarti kata ini ditampilkan utuh, tanpa dipenggal. */
       syllables: string[];
+      /**
+       * Suku kata untuk dieja suara, terlepas dari tampilan. Minimal satu
+       * (kata utuh) - kata yang tak bisa dipenggal tanpa mengubah tulisannya
+       * dieja sebagai satu potongan.
+       */
+      pieces: string[];
     };
 
 /**
@@ -84,10 +103,6 @@ function toChunks(text: string, syllableSpacing: boolean, language: LanguageId):
       const wordIndex = counter;
       counter += 1;
 
-      if (!syllableSpacing) {
-        return { kind: 'word', text: chunk, wordIndex, prefix: '', suffix: '', syllables: [] };
-      }
-
       const [, prefix = '', core = '', suffix = ''] = chunk.match(AFFIXES) ?? [];
       const syllables = splitSyllables(core, language);
 
@@ -103,6 +118,7 @@ function toChunks(text: string, syllableSpacing: boolean, language: LanguageId):
        *   adalah kesalahan yang jauh lebih buruk daripada tidak memenggalnya.
        */
       const lossless = syllables.join('') === core;
+      const splittable = syllables.length > 1 && lossless;
 
       return {
         kind: 'word',
@@ -110,9 +126,22 @@ function toChunks(text: string, syllableSpacing: boolean, language: LanguageId):
         wordIndex,
         prefix,
         suffix,
-        syllables: syllables.length > 1 && lossless ? syllables : [],
+        syllables: syllableSpacing && splittable ? syllables : [],
+        pieces: splittable ? syllables : [core || chunk],
       };
     });
+}
+
+/**
+ * Kata-kata sebuah paragraf beserta suku katanya, dengan penomoran yang SAMA
+ * seperti yang dirender `DyslexicText`. Layar baca memakainya untuk mengeja
+ * dengan suara: indeks yang ia sorot harus menunjuk potongan yang sama di
+ * layar.
+ */
+export function spellableWords(text: string, language: LanguageId): { text: string; pieces: string[] }[] {
+  return toChunks(text, false, language).flatMap((chunk) =>
+    chunk.kind === 'word' ? [{ text: chunk.text, pieces: chunk.pieces }] : [],
+  );
 }
 
 /**
@@ -133,6 +162,8 @@ export function DyslexicText({
   levelOverride,
   syllableOverride,
   activeWordIndex,
+  activeSyllableIndex,
+  onWordLongPress,
   onTextLayout,
   rulerLineIndex,
 }: Props) {
@@ -273,27 +304,69 @@ export function DyslexicText({
          * dijamin kontras dengan `wordHighlight` di setiap tema.
          */
         const isActive = !dimmed && activeWordIndex === chunk.wordIndex;
+        const spelling = isActive && activeSyllableIndex != null;
 
-        const press = onWordPress ? () => onWordPress(stripPunctuation(chunk.text)) : undefined;
+        const press = onWordPress
+          ? () => onWordPress(stripPunctuation(chunk.text), chunk.wordIndex)
+          : undefined;
+        const longPress = onWordLongPress
+          ? () => onWordLongPress(stripPunctuation(chunk.text), chunk.wordIndex)
+          : undefined;
+
+        const highlight = { color: colors.textMain, backgroundColor: colors.wordHighlight };
 
         return (
           <Text
             key={index}
-            style={
-              isActive
-                ? { color: colors.textMain, backgroundColor: colors.wordHighlight }
-                : color
-                  ? { color }
-                  : undefined
-            }
-            onPress={press}>
-            {chunk.syllables.length > 0
-              ? renderSyllables(chunk, level.bodyBold)
-              : renderWhole(chunk.text, level.bodyBold)}
+            // Saat dieja, yang disorot hanya suku katanya; lihat `renderSpelling`.
+            style={isActive && !spelling ? highlight : color ? { color } : undefined}
+            onPress={press}
+            onLongPress={longPress}>
+            {spelling
+              ? renderSpelling(chunk, level.bodyBold, activeSyllableIndex, highlight)
+              : chunk.syllables.length > 0
+                ? renderSyllables(chunk, level.bodyBold)
+                : renderWhole(chunk.text, level.bodyBold)}
           </Text>
         );
       })}
     </Text>
+  );
+}
+
+/**
+ * Kata yang sedang dieja suara: hanya suku kata ke-`active` yang disorot.
+ *
+ * Tanda hubung ikut tampil hanya kalau pemenggalan di layar memang menyala
+ * (`chunk.syllables` terisi). Saat mati, katanya tetap tertulis utuh seperti di
+ * buku; sorotannya saja yang berpindah dari suku kata ke suku kata.
+ */
+function renderSpelling(
+  chunk: Extract<Chunk, { kind: 'word' }>,
+  bodyBold: boolean,
+  active: number,
+  highlight: { color: string; backgroundColor: string },
+) {
+  // Kata yang tak terpenggal dieja sebagai satu potongan: sorot katanya utuh.
+  if (chunk.pieces.length === 1) {
+    return <Text style={highlight}>{renderWhole(chunk.text, bodyBold)}</Text>;
+  }
+
+  const shown = chunk.syllables.length > 0;
+
+  return (
+    <>
+      {chunk.prefix}
+      {chunk.pieces.map((piece, index) => (
+        <Text key={index}>
+          {shown && index > 0 && !chunk.pieces[index - 1].endsWith(HYPHEN) ? HYPHEN : null}
+          <Text style={index === active ? highlight : undefined}>
+            {index === 0 ? renderWhole(piece, bodyBold) : piece}
+          </Text>
+        </Text>
+      ))}
+      {chunk.suffix}
+    </>
   );
 }
 

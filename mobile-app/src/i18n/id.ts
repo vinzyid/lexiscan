@@ -245,7 +245,7 @@ export const id = {
         desc: 'Warna berganti tiap kata supaya matamu tidak kehilangan baris',
         label: 'Kata Dua Warna, buka layar baca',
       },
-      ruler: { title: 'Penggaris Baca', desc: 'Seret garisnya dengan jari' },
+      ruler: { title: 'Penggaris Baca', desc: 'Ketuk baris untuk memindahkannya' },
       isolation: { title: 'Sorot Satu Kata', desc: 'Ketuk kata saat membaca' },
     },
   },
@@ -273,13 +273,21 @@ export const id = {
     sampleLabel: 'Pindai dokumenmu sendiri',
     retryLink: 'Ketuk untuk coba lagi.',
     retryLabel: 'Coba sederhanakan lagi',
-    rulerHintLead: 'Seret garis kuning dengan jarimu, atau\npakai tombol ini. Baris ',
+    rulerHintLead: 'Penggaris di baris ',
     rulerLineOf: (line: number, total: number) => `${line} dari ${total}`,
     rulerUp: 'Penggaris naik satu baris',
     rulerDown: 'Penggaris turun satu baris',
     explainButton: 'Jelaskan Teks Ini',
     explainButtonLabel: 'Minta Lexi menjelaskan paragraf ini',
     tapWordHint: 'Ketuk kata untuk melihat suku kata',
+    rulerTapHint: 'Ketuk baris untuk memindah penggaris. Tekan tahan kata untuk suku katanya.',
+    spellTapHint: 'Ketuk kata untuk mendengar suku katanya',
+    /** Sorot oranye hanya ada selama suara berbunyi; ini yang menjelaskannya. */
+    highlightFollowsVoice: 'Kotak oranye mengikuti suara yang sedang membaca',
+    spell: 'Eja',
+    spellLabel: 'Eja per suku kata',
+    slow: 'Pelan',
+    slowLabel: 'Suara pelan sekali',
     unexpectedError: 'Terjadi kesalahan tak terduga.',
   },
 
@@ -386,6 +394,39 @@ export const id = {
     rowName: 'Ubah Nama',
     rowHelp: 'Bantuan & Dukungan',
     rowHelpDesc: 'FAQ, lapor masalah',
+    rowGuide: 'Panduan Pendamping',
+    rowGuideDesc: 'Untuk guru dan orang tua',
+    /** Isi lembar Panduan Pendamping: tiap bagian satu judul dan beberapa poin. */
+    guideSections: [
+      {
+        title: 'Sebelum mulai',
+        items: [
+          'Pilih kemampuan membaca anak di Atur, Kemampuan Membaca. Pilihan ini mengatur ukuran huruf, suara, dan panjang paragraf sekaligus.',
+          'Anak yang baru mulai mendapat paragraf pendek. Pilih tingkat berikutnya kalau ia sudah nyaman.',
+          'Semua pengaturan tetap bisa diubah satu per satu sesuai kebutuhan anak.',
+        ],
+      },
+      {
+        title: 'Di layar Baca',
+        items: [
+          'Penggaris: garis kuning menandai baris yang sedang dibaca. Ketuk sebuah baris untuk memindahkannya, atau pakai tombol naik-turun di bawah.',
+          'Ketuk kata untuk melihat suku katanya. Saat penggaris menyala, tekan tahan katanya.',
+          'Eja: ketuk kata untuk mendengar suku katanya satu per satu langsung di teks. Tombol Eja di bawah mengeja seluruh paragraf.',
+          'Pelan: memperlambat suara. Suara bisa diulang sesering yang dibutuhkan.',
+          'Kotak oranye hanya muncul saat suara menyala, mengikuti kata atau suku kata yang sedang dibacakan.',
+          'Fokus meredupkan paragraf lain, Dua Warna membedakan kata bergantian, Su-ku menampilkan tanda hubung antar suku kata.',
+        ],
+      },
+      {
+        title: 'Mendampingi di rumah',
+        items: [
+          'Sesi singkat lebih baik daripada sesi panjang. Berhenti sebelum anak lelah.',
+          'Beri anak kesempatan mencoba membaca sendiri dulu, baru gunakan suara atau Eja saat ia mentok.',
+          'Puji usahanya, bukan hanya hasilnya. Kesalahan adalah bagian dari belajar.',
+          'Pindai bacaan yang ia sukai, misalnya buku cerita atau buku pelajaran sekolahnya.',
+        ],
+      },
+    ],
     nameSheetTitle: 'Ubah Nama',
     nameSave: 'Simpan',
     logoutTitle: 'Keluar dari Akun?',
@@ -438,7 +479,7 @@ export const id = {
     voiceNetwork: 'Paling jernih — butuh internet',
     voiceStandard: 'Kualitas standar',
     rateTitle: 'Kecepatan suara',
-    rates: { slow: 'Pelan', medium: 'Sedang', normal: 'Normal' },
+    rates: { verySlow: 'Pelan sekali', slow: 'Pelan', medium: 'Sedang', normal: 'Normal' },
     switchOn: 'nyala',
     switchOff: 'mati',
     voicePickerHint: 'Ketuk untuk mendengarkan. Pilih yang paling enak didengar.',
@@ -514,7 +555,7 @@ export const id = {
     bicolorTitle: 'Kata Dua Warna',
     bicolorDesc: 'Warna berganti tiap kata supaya matamu tidak kehilangan baris',
     rulerTitle: 'Penggaris Baca',
-    rulerDesc: 'Garis penanda baris yang bisa kamu seret dengan jari',
+    rulerDesc: 'Garis penanda baris, ketuk baris untuk memindahkannya',
   },
 
   wordSheet: {
@@ -639,7 +680,7 @@ export const id = {
   dailyTips: [
     'Cahaya hangat lebih nyaman dari layar putih terang.',
     'Di layar Baca, geser ke kiri atau kanan untuk pindah paragraf.',
-    'Nyalakan Penggaris, lalu seret garisnya dengan jarimu mengikuti baris.',
+    'Nyalakan Penggaris, lalu ketuk baris berikutnya atau pakai tombol naik-turun.',
     'Dua Warna membantu matamu melacak posisi dalam kalimat.',
     'Kalau satu kalimat terasa berat, naikkan level penyederhanaan satu tingkat.',
     'Mode Fokus meredupkan paragraf lain supaya matamu tidak melompat.',

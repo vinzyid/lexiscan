@@ -38,6 +38,8 @@ import { correctTypo } from '../../src/api/ai';
 import { Blob, HexDecor, Ring, ScreenBackdrop, Sparkle } from '../../src/components/figma-decor';
 import { IlluScan } from '../../src/components/illustrations';
 import { cropRectForGuide } from '../../src/utils/crop-frame';
+import { regroupParagraphs, splitParagraphs } from '../../src/utils/paragraphs';
+import { getReadingLevel } from '../../src/theme/reading-levels';
 
 type Phase = 'idle' | 'scanning' | 'done';
 
@@ -115,6 +117,7 @@ export default function ScannerScreen() {
   const saveDocument = useOCRStore((s) => s.saveDocument);
   const removeDocument = useOCRStore((s) => s.removeDocument);
   const typeLevel = getTypeLevel(useOCRStore((s) => s.typeLevelId));
+  const paragraphMaxWords = getReadingLevel(useOCRStore((s) => s.readingLevel)).paragraphMaxWords;
 
   const [isCorrectingTypo, setIsCorrectingTypo] = useState(false);
 
@@ -316,7 +319,8 @@ export default function ScannerScreen() {
     );
   }
 
-  const paragraphCount = detected.split(/\n{2,}|\n/).filter((line) => line.trim().length > 0).length;
+  // Dihitung persis seperti layar Baca membaginya, supaya angkanya tidak berubah begitu dibuka.
+  const paragraphCount = regroupParagraphs(splitParagraphs(detected), paragraphMaxWords).length;
   const busy = phase === 'scanning' || isCorrectingTypo;
 
   /*

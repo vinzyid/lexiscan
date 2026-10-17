@@ -24,13 +24,18 @@ import { PressableScale } from './pressable-scale';
  * dengan membaca nama berkas.
  */
 /**
- * Tiga kecepatan yang ditawarkan.
+ * Kecepatan yang ditawarkan.
  *
- * Angkanya menyamai `speechRate` di ketiga preset kemampuan membaca, jadi
- * memilih di sini berarti memindahkan diri ke kecepatan preset lain — bukan
- * memasukkan nilai yang belum pernah diuji ke siapa pun.
+ * Tiga yang terakhir menyamai `speechRate` di ketiga preset kemampuan membaca,
+ * jadi memilihnya berarti memindahkan diri ke kecepatan preset lain. "Pelan
+ * sekali" ditambahkan setelah uji coba bersama siswa: 0,75 masih terlalu cepat
+ * untuk mencocokkan bunyi dengan suku kata. Angkanya sama dengan tombol kura-
+ * kura di layar Baca (`VERY_SLOW_RATE`).
  */
+export const VERY_SLOW_RATE = 0.6;
+
 const SPEECH_RATES = [
+  { id: 'verySlow', value: VERY_SLOW_RATE },
   { id: 'slow', value: 0.75 },
   { id: 'medium', value: 0.85 },
   { id: 'normal', value: 1 },

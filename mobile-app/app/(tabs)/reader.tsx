@@ -14,6 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import {
+  AudioLines,
   BookOpen,
   Camera,
   ChevronDown,
@@ -25,6 +26,7 @@ import {
   Palette,
   Ruler,
   Sparkles,
+  Turtle,
   Type,
   Volume2,
   Square,
@@ -38,7 +40,10 @@ import { GRADIENTS } from '../../src/theme/palettes';
 import { SIMPLIFY_LEVEL_IDS, type SimplifyLevelId } from '../../src/data/sample-document';
 import { useT } from '../../src/i18n';
 import { simplifyText, AiApiError } from '../../src/api/ai';
-import { DyslexicText } from '../../src/components/dyslexic-text';
+import { DyslexicText, spellableWords } from '../../src/components/dyslexic-text';
+import { VERY_SLOW_RATE } from '../../src/components/voice-picker';
+import { getReadingLevel } from '../../src/theme/reading-levels';
+import { regroupParagraphs, splitParagraphs } from '../../src/utils/paragraphs';
 import { PressableScale } from '../../src/components/pressable-scale';
 import { TextSkeleton } from '../../src/components/text-skeleton';
 import { FootprintChip } from '../../src/components/footprint-chip';
@@ -68,6 +73,13 @@ const RULER_ANCHOR = 110;
 /* Jeda setelah guliran terakhir sebelum baris penggaris dipasang ulang. */
 const REANCHOR_DELAY = 220;
 
+/*
+ * Ketukan yang datang sesingkat ini setelah guliran berhenti dianggap bagian
+ * dari guliran, bukan ketukan ke kata. Dari uji coba: anak menyentuh layar
+ * untuk menghentikan guliran, dan sentuhan itu membuka popup kata.
+ */
+const TAP_AFTER_SCROLL_GUARD = 250;
+
 export default function ReaderScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
@@ -92,7 +104,20 @@ export default function ReaderScreen() {
     setSyllableSpacing,
     activeParagraphIndex,
     setActiveParagraphIndex,
+    readingLevel,
+    language,
+    speechRate,
+    setSpeechRate,
   } = useOCRStore();
+
+  /*
+   * Mode Eja: ketuk kata = dengar suku katanya langsung di teks, dan tombol
+   * Bacakan mengeja paragraf per suku kata. Sengaja tidak disimpan: ini alat
+   * bantu sesaat saat anak mentok, bukan cara membaca sehari-hari.
+   */
+  const [spellMode, setSpellMode] = useState(false);
+  /** Suku kata ke berapa dari `activeWordIndex` yang sedang dieja; `null` = bukan mengeja. */
+  const [activeSyllableIndex, setActiveSyllableIndex] = useState<number | null>(null);
 
   const [typographyOpen, setTypographyOpen] = useState(false);
   const [explainTarget, setExplainTarget] = useState<ExplainTarget | null>(null);
@@ -182,21 +207,12 @@ export default function ReaderScreen() {
    */
   const activeParagraphRef = useRef<string>('');
 
-  const handleSpeechBoundary = useCallback(
+  /**
+   * Turunkan penggaris ke baris yang memuat karakter ke-`charIndex` dari teks
+   * ucapan. Dipakai bacaan biasa (`onBoundary`) maupun mode Eja.
+   */
+  const followRuler = useCallback(
     (charIndex: number) => {
-      /*
-       * Sorot kata yang sedang diucapkan — hidup sendiri, tanpa menunggu
-       * penggaris. Teksnya dinormalisasi dengan fungsi yang SAMA seperti yang
-       * dipakai mesin TTS, karena `charIndex` relatif terhadap teks itu,
-       * bukan terhadap teks mentah di layar.
-       */
-      const spoken = normalizeSpeechText(activeParagraphRef.current);
-      const wordIndex = alignWordIndex(
-        wordIndexAtChar(spoken, charIndex),
-        speechWordCount(activeParagraphRef.current),
-      );
-      setActiveWordIndex(wordIndex);
-
       if (!rulerMode) return;
 
       const lines = lineTexts.current;
@@ -229,6 +245,28 @@ export default function ReaderScreen() {
     [rulerMode, rulerIndex, rulerFollowingSpeech],
   );
 
+  const handleSpeechBoundary = useCallback(
+    (charIndex: number) => {
+      /*
+       * Sorot kata yang sedang diucapkan — hidup sendiri, tanpa menunggu
+       * penggaris. Teksnya dinormalisasi dengan fungsi yang SAMA seperti yang
+       * dipakai mesin TTS, karena `charIndex` relatif terhadap teks itu,
+       * bukan terhadap teks mentah di layar.
+       */
+      const spoken = normalizeSpeechText(activeParagraphRef.current);
+      const wordIndex = alignWordIndex(
+        wordIndexAtChar(spoken, charIndex),
+        speechWordCount(activeParagraphRef.current),
+      );
+      setActiveWordIndex(wordIndex);
+      // Bacaan biasa menyorot kata utuh; sisa sorotan suku kata dari mode Eja dilepas.
+      setActiveSyllableIndex(null);
+
+      followRuler(charIndex);
+    },
+    [followRuler],
+  );
+
   /**
    * Setelah bacaan tamat, penggaris ditempatkan ke baris terakhir. `onBoundary`
    * untuk kata terakhir datang sebelum baris terakhir terbaca penuh, jadi
@@ -238,6 +276,7 @@ export default function ReaderScreen() {
     // Sorotan kata dilepas di akhir ucapan; membiarkannya menyala setelah suara
     // berhenti menandai posisi yang tidak lagi benar-benar dibacakan.
     setActiveWordIndex(null);
+    setActiveSyllableIndex(null);
 
     if (!rulerMode) return;
 
@@ -260,17 +299,23 @@ export default function ReaderScreen() {
   // Judul bagian tidak ikut disambung supaya tidak mengulang judul di kartu atas.
   const textToSimplify = isScanned ? rawText : t.sampleDoc.paragraphs.join('\n\n');
 
+  /*
+   * Panjang paragraf mengikuti kemampuan membaca: pemula mendapat potongan
+   * pendek (lihat `paragraphMaxWords`), dan berlaku juga untuk hasil AI.
+   */
+  const paragraphMaxWords = getReadingLevel(readingLevel).paragraphMaxWords;
+
   const scannedParagraphs = useMemo(
-    () =>
-      textToSimplify
-        .split(/\n{2,}|\n/)
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0),
-    [textToSimplify],
+    () => regroupParagraphs(splitParagraphs(textToSimplify), paragraphMaxWords),
+    [textToSimplify, paragraphMaxWords],
   );
 
   const needsAi = simplifyLevel !== 'L1';
-  const aiResult = needsAi ? aiParagraphs[simplifyLevel] : undefined;
+  const storedAiResult = needsAi ? aiParagraphs[simplifyLevel] : undefined;
+  const aiResult = useMemo(
+    () => (storedAiResult ? regroupParagraphs(storedAiResult, paragraphMaxWords) : undefined),
+    [storedAiResult, paragraphMaxWords],
+  );
 
   const fetchSimplified = useCallback(() => {
     if (simplifyLevel === 'L1') return;
@@ -314,9 +359,18 @@ export default function ReaderScreen() {
 
   const showSkeleton = needsAi && simplifyLoading && !aiResult;
 
-  const { enabled: ttsEnabled, toggle: toggleSpeech, speakingKey } = useSpeech();
+  const {
+    enabled: ttsEnabled,
+    toggle: toggleSpeech,
+    speakSequence,
+    stop: stopSpeech,
+    speakingKey,
+  } = useSpeech();
 
   useStopSpeechOnBlur();
+
+  const spelling = spellMode && ttsEnabled;
+  const slowVoice = speechRate !== null && speechRate <= VERY_SLOW_RATE + 0.01;
 
   /*
    * Sorotan kata hanya berlaku selama suara paragraf AKTIF yang berbunyi.
@@ -324,8 +378,103 @@ export default function ReaderScreen() {
    * atau paragraf berganti, `speakingKey` tidak lagi cocok dan sorotannya hilang
    * dengan sendirinya — tanpa setState di efek yang memicu render berantai.
    */
-  const visibleActiveWordIndex =
-    speakingKey === `paragraph:${activeIndex}` ? activeWordIndex : null;
+  const speakingActive = speakingKey === `paragraph:${activeIndex}`;
+  const visibleActiveWordIndex = speakingActive ? activeWordIndex : null;
+  const visibleActiveSyllableIndex = speakingActive ? activeSyllableIndex : null;
+
+  /**
+   * Eja kata-kata paragraf aktif suku kata demi suku kata, dengan sorot oranye
+   * di suku kata yang sedang berbunyi. `wordIndex` diisi = satu kata saja (kata
+   * yang diketuk); kosong = seluruh paragraf (tombol Bacakan di mode Eja).
+   *
+   * Key-nya sama dengan bacaan paragraf, jadi tombol Bacakan ikut menjadi
+   * tombol berhenti dan sorotannya hilang sendiri begitu suaranya berhenti.
+   */
+  const spell = useCallback(
+    (wordIndex?: number) => {
+      const paragraph = shownParagraphs[activeIndex] ?? '';
+      const words = spellableWords(paragraph, language);
+
+      // Awal tiap kata di teks ucapan, untuk menurunkan penggaris mengikuti ejaan.
+      const starts: number[] = [];
+      let at = 0;
+      for (const token of normalizeSpeechText(paragraph).split(' ')) {
+        starts.push(at);
+        at += token.length + 1;
+      }
+
+      const chosen = wordIndex === undefined ? words.map((_, i) => i) : [wordIndex];
+      const plan = chosen.flatMap((w) =>
+        (words[w]?.pieces ?? []).map((piece, s) => ({ word: w, syllable: s, piece })),
+      );
+
+      speakSequence(
+        plan.map((step) => step.piece),
+        `paragraph:${activeIndex}`,
+        {
+          onPart: (i) => {
+            const step = plan[i];
+            setActiveWordIndex(step.word);
+            setActiveSyllableIndex(step.syllable);
+            if (starts.length > 0) followRuler(starts[Math.min(step.word, starts.length - 1)]);
+          },
+          onDone:
+            wordIndex === undefined
+              ? handleSpeechDone
+              : () => {
+                  setActiveWordIndex(null);
+                  setActiveSyllableIndex(null);
+                },
+        },
+      );
+    },
+    [shownParagraphs, activeIndex, language, speakSequence, followRuler, handleSpeechDone],
+  );
+
+  /*
+   * Penjaga ketukan saat menggulir. `scrollingRef` menyala selama jari menyeret
+   * atau halaman masih meluncur; `touchDuringScrollRef` mencatat apakah sentuhan
+   * yang sedang berlangsung DIMULAI saat itu, yaitu sentuhan untuk menghentikan
+   * luncuran, yang tidak boleh terbaca sebagai ketukan ke kata.
+   */
+  const scrollingRef = useRef(false);
+  const scrollEndedAtRef = useRef(0);
+  const touchDuringScrollRef = useRef(false);
+
+  const tapIsScroll = useCallback(
+    () =>
+      touchDuringScrollRef.current ||
+      scrollingRef.current ||
+      Date.now() - scrollEndedAtRef.current < TAP_AFTER_SCROLL_GUARD,
+    [],
+  );
+
+  const markScrollStart = useCallback(() => {
+    scrollingRef.current = true;
+  }, []);
+
+  const markScrollEnd = useCallback(() => {
+    scrollingRef.current = false;
+    scrollEndedAtRef.current = Date.now();
+  }, []);
+
+  /** Ketuk kata: mode Eja langsung mengeja di teks, selain itu buka popup "Satu kata saja". */
+  const handleWordPress = useCallback(
+    (word: string, wordIndex: number, paragraphIndex: number) => {
+      if (tapIsScroll()) return;
+
+      if (spelling && paragraphIndex === activeIndex) {
+        spell(wordIndex);
+        return;
+      }
+
+      setSelectedWord(word);
+    },
+    [tapIsScroll, spelling, activeIndex, spell],
+  );
+
+  /** Tekan tahan selalu membuka popup, termasuk saat ketukan dipakai penggaris. */
+  const handleWordLongPress = useCallback((word: string) => setSelectedWord(word), []);
 
   /*
    * Jejak teks paragraf aktif untuk `handleSpeechBoundary`. Ditulis di efek,
@@ -487,9 +636,37 @@ export default function ReaderScreen() {
   const moveRuler = (delta: number) => {
     const maxLine = Math.max(0, lineCount - 1);
     const next = Math.min(maxLine, Math.max(0, rulerIndex.value + delta));
+    // Tombol = kendali pengguna, bukan suara: guliran dan spring halus berlaku lagi.
+    rulerFollowingSpeech.value = false;
     rulerIndex.value = next;
     setRulerLine(next);
   };
+
+  /**
+   * Ketuk sebuah baris di paragraf aktif untuk memindah penggaris ke sana.
+   *
+   * Dulu penggaris dipindah begitu jari MENYENTUH (`Pan.onBegin`), sehingga
+   * setiap awal guliran ikut melompatkannya, dan seretannya merebut guliran
+   * halaman. Sekarang hanya ketukan sungguhan yang dihitung, dan ketukan untuk
+   * menghentikan guliran disaring `tapIsScroll`.
+   */
+  const handleRulerTap = useCallback(
+    (y: number) => {
+      if (tapIsScroll()) return;
+
+      const metrics = lineMetrics.value;
+      if (metrics.length === 0) return;
+
+      let found = 0;
+      for (let i = 0; i < metrics.length; i += 1) {
+        if (y >= metrics[i].y) found = i;
+      }
+
+      rulerFollowingSpeech.value = false;
+      rulerIndex.value = found;
+    },
+    [tapIsScroll, lineMetrics, rulerFollowingSpeech, rulerIndex],
+  );
 
   /*
    * Menggulir halaman tanpa memindahkan penggaris tak boleh membuat penggaris
@@ -792,6 +969,13 @@ export default function ReaderScreen() {
             ref={scrollViewRef}
             className="flex-1"
             onScroll={handleScroll}
+            onTouchStart={() => {
+              touchDuringScrollRef.current = scrollingRef.current;
+            }}
+            onScrollBeginDrag={markScrollStart}
+            onScrollEndDrag={markScrollEnd}
+            onMomentumScrollBegin={markScrollStart}
+            onMomentumScrollEnd={markScrollEnd}
             scrollEventThrottle={80}
             contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
             {/* Tanpa penanda ini, dokumen contoh terlihat seperti hasil pindaian sendiri. */}
@@ -858,6 +1042,7 @@ export default function ReaderScreen() {
                     rulerMode={rulerMode}
                     bicolor={bicolorMode}
                     activeWordIndex={index === activeIndex ? visibleActiveWordIndex : null}
+                    activeSyllableIndex={index === activeIndex ? visibleActiveSyllableIndex : null}
                     lineMetrics={lineMetrics}
                     rulerIndex={rulerIndex}
                     rulerFollowingSpeech={rulerFollowingSpeech}
@@ -869,7 +1054,9 @@ export default function ReaderScreen() {
                     rulerLine={index === activeIndex ? rulerLine : null}
                     positions={paragraphPositions}
                     bodyOffsets={paragraphBodyOffsets}
-                    onWordPress={setSelectedWord}
+                    onWordPress={handleWordPress}
+                    onWordLongPress={handleWordLongPress}
+                    onRulerTap={handleRulerTap}
                     onSyncLines={syncLines}
                     onSpeechBoundary={handleSpeechBoundary}
                     onSpeechDone={handleSpeechDone}
@@ -881,36 +1068,6 @@ export default function ReaderScreen() {
             {/* Hanya untuk level yang benar-benar memanggil AI: di L1 teksnya
                 asli, jadi menampilkan jejak karbon di sana akan menyesatkan. */}
             {needsAi && !showSkeleton ? <FootprintChip /> : null}
-
-            {rulerMode && !showSkeleton && lineCount > 0 ? (
-              <View
-                className="mt-5 flex-row items-center rounded-2xl bg-primary/[0.06] p-3"
-                style={{ gap: 8 }}>
-                <GripHorizontal size={16} color={colors.primary} />
-                <Text className="flex-1 font-ui-medium text-xs leading-[19px] text-text-muted">
-                  {t.reader.rulerHintLead}
-                  <Text className="font-ui-bold text-primary">
-                    {t.reader.rulerLineOf(Math.min(rulerLine, lineCount - 1) + 1, lineCount)}
-                  </Text>
-                </Text>
-                <PressableScale
-                  onPress={() => moveRuler(-1)}
-                  accessibilityRole="button"
-                  accessibilityLabel={t.reader.rulerUp}
-                  scaleTo={0.9}
-                  className="h-11 w-11 items-center justify-center rounded-[16px] bg-primary/10">
-                  <ChevronUp size={18} color={colors.primary} />
-                </PressableScale>
-                <PressableScale
-                  onPress={() => moveRuler(1)}
-                  accessibilityRole="button"
-                  accessibilityLabel={t.reader.rulerDown}
-                  scaleTo={0.9}
-                  className="h-11 w-11 items-center justify-center rounded-[16px] bg-primary/10">
-                  <ChevronDown size={18} color={colors.primary} />
-                </PressableScale>
-              </View>
-            ) : null}
           </ScrollView>
         </GestureDetector>
 
@@ -919,6 +1076,41 @@ export default function ReaderScreen() {
           colors={['rgba(0,0,0,0)', colors.background]}
           locations={[0, 0.45]}
           style={{ paddingHorizontal: 16, paddingTop: 24, paddingBottom: 12 }}>
+          {/*
+            Kontrol penggaris dipaku di sini, bukan di ujung isi bacaan. Di
+            sana tombolnya baru terlihat setelah menggulir ke bawah, padahal
+            menggulir itulah yang mengganggu membaca.
+          */}
+          {rulerMode && !showSkeleton && lineCount > 0 ? (
+            <View
+              className="mb-2.5 flex-row items-center rounded-2xl bg-primary/[0.06] px-3 py-1.5"
+              style={{ gap: 8 }}>
+              <GripHorizontal size={16} color={colors.primary} />
+              <Text className="flex-1 font-ui-medium text-xs text-text-muted">
+                {t.reader.rulerHintLead}
+                <Text className="font-ui-bold text-primary">
+                  {t.reader.rulerLineOf(Math.min(rulerLine, lineCount - 1) + 1, lineCount)}
+                </Text>
+              </Text>
+              <PressableScale
+                onPress={() => moveRuler(-1)}
+                accessibilityRole="button"
+                accessibilityLabel={t.reader.rulerUp}
+                scaleTo={0.9}
+                className="h-11 w-11 items-center justify-center rounded-[16px] bg-primary/10">
+                <ChevronUp size={18} color={colors.primary} />
+              </PressableScale>
+              <PressableScale
+                onPress={() => moveRuler(1)}
+                accessibilityRole="button"
+                accessibilityLabel={t.reader.rulerDown}
+                scaleTo={0.9}
+                className="h-11 w-11 items-center justify-center rounded-[16px] bg-primary/10">
+                <ChevronDown size={18} color={colors.primary} />
+              </PressableScale>
+            </View>
+          ) : null}
+
           <View className="flex-row" style={{ gap: 10 }}>
             {/*
               Tombol besar, bukan hanya ikon kecil di samping nomor paragraf.
@@ -928,14 +1120,24 @@ export default function ReaderScreen() {
             */}
             {ttsEnabled ? (
               <PressableScale
-                onPress={() =>
+                onPress={() => {
+                  if (spelling) {
+                    if (speakingActive) stopSpeech();
+                    else spell();
+                    return;
+                  }
+
                   toggleSpeech(shownParagraphs[activeIndex], `paragraph:${activeIndex}`, {
                     onBoundary: handleSpeechBoundary,
                     onDone: handleSpeechDone,
-                  })
-                }
+                  });
+                }}
                 accessibilityRole="button"
-                accessibilityLabel={t.speech.readParagraph(activeIndex + 1)}
+                accessibilityLabel={
+                  spelling
+                    ? `${t.reader.spellLabel}, ${t.reader.paragraphOf(activeIndex + 1, shownParagraphs.length)}`
+                    : t.speech.readParagraph(activeIndex + 1)
+                }
                 scaleTo={0.97}
                 wrapperStyle={{ flex: 1 }}>
                 <LinearGradient
@@ -950,12 +1152,16 @@ export default function ReaderScreen() {
                     gap: 8,
                     borderRadius: 16,
                   }}>
-                  {speakingKey === `paragraph:${activeIndex}` ? (
+                  {speakingActive ? (
                     <Square size={15} color="#ffffff" fill="#ffffff" />
+                  ) : spelling ? (
+                    <AudioLines size={18} color="#ffffff" />
                   ) : (
                     <Volume2 size={18} color="#ffffff" />
                   )}
-                  <Text className="font-ui-bold text-base text-white">{t.speech.readAloud}</Text>
+                  <Text className="font-ui-bold text-base text-white">
+                    {spelling ? t.reader.spell : t.speech.readAloud}
+                  </Text>
                 </LinearGradient>
               </PressableScale>
             ) : null}
@@ -995,13 +1201,56 @@ export default function ReaderScreen() {
             </PressableScale>
           </View>
 
-          <View
-            className="mt-3 h-10 flex-row items-center justify-center rounded-[14px] bg-primary/[0.04]"
-            style={{ gap: 8 }}>
-            <Lightbulb size={14} color={colors.textMuted} />
-            <Text className="font-ui-medium text-xs text-text-muted">
-              {t.reader.tapWordHint}
-            </Text>
+          <View className="mt-3 flex-row items-center" style={{ gap: 8 }}>
+            {/*
+              Eja dan Pelan ditaruh di layar baca, bukan di Atur: yang
+              membutuhkannya sedang membaca, dan keluar ke Pengaturan di tengah
+              bacaan memutus anak dari teksnya.
+            */}
+            {ttsEnabled ? (
+              <>
+                <FeatureChip
+                  compact
+                  active={spellMode}
+                  onPress={() => {
+                    if (speakingActive) stopSpeech();
+                    setSpellMode((value) => !value);
+                  }}
+                  icon={<AudioLines size={16} color={spellMode ? '#ffffff' : colors.textMuted} />}
+                  label={t.reader.spell}
+                  accessibilityLabel={t.reader.spellLabel}
+                />
+                <FeatureChip
+                  compact
+                  active={slowVoice}
+                  onPress={() => setSpeechRate(slowVoice ? null : VERY_SLOW_RATE)}
+                  icon={<Turtle size={16} color={slowVoice ? '#ffffff' : colors.textMuted} />}
+                  label={t.reader.slow}
+                  accessibilityLabel={t.reader.slowLabel}
+                />
+              </>
+            ) : null}
+
+            <View
+              className="h-11 flex-1 flex-row items-center justify-center rounded-[14px] bg-primary/[0.04] px-2"
+              style={{ gap: 8 }}>
+              <Lightbulb size={14} color={colors.textMuted} />
+              {/*
+                Petunjuknya mengikuti apa yang sebenarnya terjadi saat kata
+                diketuk sekarang, dan saat suara berbunyi menjelaskan kotak
+                oranye: sorot itu hanya ada selama suara menyala, dan tanpa
+                keterangan terlihat seperti fitur yang kadang hilang.
+              */}
+              <Text className="flex-1 font-ui-medium text-xs text-text-muted" numberOfLines={2}>
+                {speakingActive
+                  ? t.reader.highlightFollowsVoice
+                  : rulerMode
+                    ? t.reader.rulerTapHint
+                    : spelling
+                      ? t.reader.spellTapHint
+                      : t.reader.tapWordHint}
+              </Text>
+            </View>
           </View>
         </LinearGradient>
       </View>
@@ -1040,6 +1289,7 @@ const ParagraphBlock = memo(function ParagraphBlock({
   rulerMode,
   bicolor,
   activeWordIndex,
+  activeSyllableIndex,
   lineMetrics,
   rulerIndex,
   rulerFollowingSpeech,
@@ -1047,6 +1297,8 @@ const ParagraphBlock = memo(function ParagraphBlock({
   positions,
   bodyOffsets,
   onWordPress,
+  onWordLongPress,
+  onRulerTap,
   onSyncLines,
   onSpeechBoundary,
   onSpeechDone,
@@ -1060,6 +1312,8 @@ const ParagraphBlock = memo(function ParagraphBlock({
   bicolor: boolean;
   /** Nomor kata yang sedang dibacakan; hanya diisi untuk paragraf aktif. */
   activeWordIndex: number | null;
+  /** Suku kata yang sedang dieja di dalam `activeWordIndex`; `null` = sorot kata utuh. */
+  activeSyllableIndex: number | null;
   lineMetrics: SharedValue<LineMetric[]>;
   rulerIndex: SharedValue<number>;
   rulerFollowingSpeech: SharedValue<boolean>;
@@ -1073,7 +1327,10 @@ const ParagraphBlock = memo(function ParagraphBlock({
   positions: React.RefObject<{ [key: number]: number }>;
   /** Jarak blok teks dari puncak paragraf; dipakai menghitung guliran penggaris. */
   bodyOffsets: React.RefObject<{ [key: number]: number }>;
-  onWordPress: (word: string) => void;
+  onWordPress: (word: string, wordIndex: number, paragraphIndex: number) => void;
+  onWordLongPress: (word: string) => void;
+  /** Ketukan di paragraf aktif saat penggaris menyala; `y` relatif ke blok teks. */
+  onRulerTap: (y: number) => void;
   onSyncLines: (index: number, lines: TextLayoutLine[]) => void;
   onSpeechBoundary: (charIndex: number) => void;
   onSpeechDone: () => void;
@@ -1100,38 +1357,23 @@ const ParagraphBlock = memo(function ParagraphBlock({
     };
   });
 
-  /** Indeks baris dihitung di UI thread supaya garisnya mengikuti jari tanpa melewati React. */
+  /*
+   * Ketuk, bukan seret. Seretan (Pan) dulu aktif sejak jari menyentuh, jadi
+   * setiap awal guliran ikut memindah penggaris dan merebut guliran halaman.
+   * Tap gagal sendiri begitu jari bergeser lebih dari `maxDistance`, sehingga
+   * guliran tetap guliran. Batas durasinya di bawah tekan tahan, yang dipakai
+   * untuk membuka popup kata.
+   */
   const rulerGesture = useMemo(
     () =>
-      Gesture.Pan()
-        .onBegin((event) => {
-          const metrics = lineMetrics.value;
-          if (metrics.length === 0) return;
-
-          /*
-           * Seret jari = kendali pengguna, bukan suara. Spring halus (SPRING)
-           * yang berlaku lagi, supaya penggarisnya tidak terasa kaku saat
-           * digeser.
-           */
-          rulerFollowingSpeech.value = false;
-
-          let found = 0;
-          for (let i = 0; i < metrics.length; i += 1) {
-            if (event.y >= metrics[i].y) found = i;
-          }
-          rulerIndex.value = found;
-        })
-        .onUpdate((event) => {
-          const metrics = lineMetrics.value;
-          if (metrics.length === 0) return;
-
-          let found = 0;
-          for (let i = 0; i < metrics.length; i += 1) {
-            if (event.y >= metrics[i].y) found = i;
-          }
-          rulerIndex.value = found;
+      Gesture.Tap()
+        .maxDistance(10)
+        .maxDuration(400)
+        .runOnJS(true)
+        .onEnd((event, success) => {
+          if (success) onRulerTap(event.y);
         }),
-    [lineMetrics, rulerIndex, rulerFollowingSpeech],
+    [onRulerTap],
   );
 
   const body = (
@@ -1151,9 +1393,18 @@ const ParagraphBlock = memo(function ParagraphBlock({
         bicolor={bicolor}
         dimmed={dimmed}
         activeWordIndex={activeWordIndex}
+        activeSyllableIndex={activeSyllableIndex}
         /* Bicolor dimatikan di baris penggaris; lihat `rulerLineIndex`. */
         rulerLineIndex={showRuler ? rulerLine : null}
-        onWordPress={dimmed ? undefined : onWordPress}
+        /*
+         * Saat penggaris menyala, ketukan di paragraf aktif milik penggaris;
+         * popup kata pindah ke tekan tahan supaya ketukan asal saat membaca
+         * tidak membukanya.
+         */
+        onWordPress={
+          dimmed || showRuler ? undefined : (word, wordIndex) => onWordPress(word, wordIndex, index)
+        }
+        onWordLongPress={dimmed ? undefined : onWordLongPress}
         onTextLayout={
           rulerMode && isActive ? (event) => onSyncLines(index, event.nativeEvent.lines) : undefined
         }>
@@ -1205,11 +1456,17 @@ function FeatureChip({
   onPress,
   icon,
   label,
+  accessibilityLabel,
+  compact,
 }: {
   active: boolean;
   onPress: () => void;
   icon: React.ReactNode;
   label: string;
+  /** Nama yang dibacakan, kalau label di layar terlalu singkat untuk menjelaskannya. */
+  accessibilityLabel?: string;
+  /** Selebar isinya saja, tidak ikut membagi rata baris. */
+  compact?: boolean;
 }) {
   const content = (
     <>
@@ -1225,9 +1482,9 @@ function FeatureChip({
       onPress={onPress}
       accessibilityRole="switch"
       accessibilityState={{ checked: active }}
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       scaleTo={0.93}
-      wrapperStyle={{ flex: 1 }}>
+      wrapperStyle={compact ? undefined : { flex: 1 }}>
       {active ? (
         <LinearGradient
           colors={[...GRADIENTS.activePill.colors]}
@@ -1239,14 +1496,16 @@ function FeatureChip({
             alignItems: 'center',
             justifyContent: 'center',
             gap: 6,
-            paddingHorizontal: 8,
+            paddingHorizontal: compact ? 12 : 8,
             borderRadius: 16,
           }}>
           {content}
         </LinearGradient>
       ) : (
         <View
-          className="h-11 flex-row items-center justify-center rounded-[16px] bg-primary/[0.07] px-2"
+          className={`h-11 flex-row items-center justify-center rounded-[16px] bg-primary/[0.07] ${
+            compact ? 'px-3' : 'px-2'
+          }`}
           style={{ gap: 6 }}>
           {content}
         </View>

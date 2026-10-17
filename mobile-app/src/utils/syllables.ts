@@ -13,28 +13,50 @@ const isDigraphAt = (word: string, index: number) =>
  * untuk kata Inggris, padahal yang benar "read-ing".
  */
 /**
- * Kata yang kaidah IMBUHANNYA mengalahkan kaidah bunyi.
+ * Kata dasar berawal vokal yang lazim mendapat awalan meng-/peng-.
  *
- * Pemenggalan resmi memisahkan imbuhan dari kata dasarnya lebih dulu:
- * "mengubah" adalah meng+ubah, jadi "meng-u-bah" — bukan "me-ngu-bah" yang
+ * Pemenggalan resmi (PUEBI) memisahkan imbuhan dari kata dasarnya lebih dulu:
+ * "mengorbit" adalah meng+orbit, jadi "meng-or-bit" - bukan "me-ngor-bit" yang
  * dihasilkan aturan bunyi di bawah.
  *
- * KENAPA DAFTAR, BUKAN ATURAN. Aturan imbuhan tidak bisa diterapkan tanpa tahu
- * apakah katanya memang berimbuhan, dan itu butuh kamus. "mengubah" (meng+ubah)
- * dan "pengaruh" (kata dasar utuh) berbentuk sama persis, tapi dipenggal
- * berbeda: "meng-u-bah" lawan "pe-nga-ruh". Aturan yang menebak akan
- * memperbaiki satu dan merusak yang lain.
+ * KENAPA DAFTAR, BUKAN ATURAN. "meng" + vokal tidak selalu berarti kata dasar
+ * berawal vokal: "mengirim" adalah meng+kirim yang huruf k-nya luluh, dan
+ * dipenggal "me-ngi-rim". Bentuk tulisannya sama persis dengan "mengikuti"
+ * (meng+ikut), jadi aturan yang menebak akan memperbaiki satu dan merusak yang
+ * lain. Kata dasar yang tidak ada di sini tetap memakai aturan bunyi.
  *
  * Ditulis huruf kecil semua; pencocokannya mengabaikan besar-kecil huruf.
  */
-const OVERRIDES: Record<string, string[]> = {
-  mengubah: ['meng', 'u', 'bah'],
-  mengajar: ['meng', 'a', 'jar'],
-  mengambil: ['meng', 'am', 'bil'],
-  mengikuti: ['meng', 'i', 'ku', 'ti'],
-  mengisi: ['meng', 'i', 'si'],
-  mengurangi: ['meng', 'u', 'ra', 'ngi'],
-};
+const VOWEL_ROOTS = new Set([
+  'abai', 'abdi', 'ada', 'adu', 'ajak', 'ajar', 'aju', 'akhir', 'aku', 'alam',
+  'alih', 'alir', 'amat', 'ambil', 'amuk', 'ancam', 'anggap', 'angkat', 'angkut',
+  'antar', 'anjur', 'arah', 'asuh', 'atur', 'awas', 'ayun', 'edar', 'elak', 'elus',
+  'embus', 'ikat', 'ikut', 'ingat', 'inap', 'intip', 'iris', 'isi', 'isap', 'obat',
+  'obrol', 'olah', 'oles', 'orbit', 'ubah', 'ucap', 'ukur', 'ulang', 'umpat',
+  'undang', 'unduh', 'unggah', 'unggul', 'urai', 'urang', 'urus', 'usap', 'usir',
+  'utus',
+]);
+
+/** Akhiran yang boleh menempel di belakang kata dasar pada `VOWEL_ROOTS`. */
+const ROOT_SUFFIXES = ['', 'i', 'an', 'kan', 'nya', 'inya', 'kannya', 'lah', 'kah'];
+
+/**
+ * Pisahkan awalan meng-/peng- kalau sisanya kata dasar berawal vokal yang
+ * dikenal. `null` berarti bukan kasus ini, dan aturan bunyi yang berlaku.
+ */
+function splitVowelRootPrefix(clean: string): string[] | null {
+  const lower = clean.toLowerCase();
+  if (!lower.startsWith('meng') && !lower.startsWith('peng')) return null;
+
+  const rest = lower.slice(4);
+  const known = ROOT_SUFFIXES.some(
+    (suffix) => rest.endsWith(suffix) && VOWEL_ROOTS.has(rest.slice(0, rest.length - suffix.length)),
+  );
+  if (!known) return null;
+
+  // Huruf aslinya yang dipakai, supaya "Mengorbit" di awal kalimat tetap kapital.
+  return [clean.slice(0, 4), ...splitIndonesian(clean.slice(4))];
+}
 
 export function splitSyllables(word: string, language: LanguageId = 'id'): string[] {
   const clean = word.replace(/[^\p{L}\p{N}-]/gu, '');
@@ -46,11 +68,8 @@ export function splitSyllables(word: string, language: LanguageId = 'id'): strin
    * ejaannya tidak boleh ikut terkena.
    */
   if (language === 'id') {
-    const override = OVERRIDES[clean.toLowerCase()];
-
-    // Besar-kecil huruf aslinya dipertahankan: yang disimpan cuma letak
-    // potongannya, bukan bentuk tulisannya.
-    if (override) return sliceLike(clean, override);
+    const prefixed = splitVowelRootPrefix(clean);
+    if (prefixed) return prefixed;
   }
 
   if (clean.includes(HYPHEN)) return splitHyphenated(clean, language);
@@ -59,28 +78,6 @@ export function splitSyllables(word: string, language: LanguageId = 'id'): strin
 }
 
 const HYPHEN = '-';
-
-/**
- * Potong `word` mengikuti panjang tiap bagian di `pattern`.
- *
- * Yang dikembalikan huruf aslinya, bukan huruf dari daftar pengecualian —
- * supaya "Mengubah" di awal kalimat tidak berubah jadi "meng u bah".
- */
-function sliceLike(word: string, pattern: string[]): string[] {
-  const parts: string[] = [];
-  let at = 0;
-
-  for (const piece of pattern) {
-    parts.push(word.slice(at, at + piece.length));
-    at += piece.length;
-  }
-
-  // Sisa huruf yang tak tercakup pola ditempelkan, bukan dibuang: lebih baik
-  // satu suku kata kepanjangan daripada kata yang hilang sebagian.
-  if (at < word.length) parts[parts.length - 1] += word.slice(at);
-
-  return parts;
-}
 
 /**
  * Kata bertanda hubung dipenggal per bagian, lalu tanda hubungnya ditempelkan

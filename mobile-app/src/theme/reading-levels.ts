@@ -57,6 +57,13 @@ export type ReadingLevelPreset = {
    * mencocokkan bunyi dengan huruf yang dilihatnya.
    */
   speechRate: number;
+
+  /**
+   * Panjang paragraf paling banyak, dalam kata; `null` berarti paragraf asli
+   * dibiarkan. Pemula mulai dari paragraf pendek (kira-kira 3-4 baris di layar)
+   * lalu makin panjang di tingkat berikutnya. Lihat `regroupParagraphs`.
+   */
+  paragraphMaxWords: number | null;
 };
 
 /**
@@ -79,6 +86,7 @@ export const READING_LEVELS: ReadingLevelPreset[] = [
     speakButtonLabels: true,
     bicolorWords: true,
     speechRate: 0.75,
+    paragraphMaxWords: 20,
   },
   {
     id: 'mengeja',
@@ -97,6 +105,7 @@ export const READING_LEVELS: ReadingLevelPreset[] = [
     speakButtonLabels: false,
     bicolorWords: true,
     speechRate: 0.85,
+    paragraphMaxWords: 40,
   },
   {
     id: 'lancar',
@@ -107,6 +116,7 @@ export const READING_LEVELS: ReadingLevelPreset[] = [
     speakButtonLabels: false,
     bicolorWords: false,
     speechRate: 1,
+    paragraphMaxWords: null,
   },
 ];
 

@@ -9,6 +9,7 @@ import {
   BookOpen,
   Check,
   GraduationCap,
+  HandHelping,
   Languages,
   Leaf,
   LifeBuoy,
@@ -55,7 +56,16 @@ import { disableDailyTip, enableDailyTip } from '../../src/notifications/daily-t
  * tidak menampilkannya.
  */
 
-type Sheet = 'theme' | 'type' | 'voice' | 'language' | 'reading' | 'footprint' | 'help' | 'name';
+type Sheet =
+  | 'theme'
+  | 'type'
+  | 'voice'
+  | 'language'
+  | 'reading'
+  | 'footprint'
+  | 'guide'
+  | 'help'
+  | 'name';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -349,10 +359,17 @@ export default function SettingsScreen() {
               />
             ) : null}
             <SettingsRow
+              Icon={HandHelping}
+              title={t.settings.rowGuide}
+              value={t.settings.rowGuideDesc}
+              divider={Boolean(reader)}
+              onPress={() => setSheet('guide')}
+            />
+            <SettingsRow
               Icon={LifeBuoy}
               title={t.settings.rowHelp}
               value={t.settings.rowHelpDesc}
-              divider={Boolean(reader)}
+              divider
               onPress={() => setSheet('help')}
             />
           </SettingsGroup>
@@ -592,6 +609,11 @@ export default function SettingsScreen() {
         <FootprintCard />
       </SettingsSheet>
 
+      {/* ── Lembar: Panduan pendamping ─────────────────────────────────────── */}
+      <SettingsSheet visible={sheet === 'guide'} title={t.settings.rowGuide} onClose={close}>
+        <GuideSheetBody />
+      </SettingsSheet>
+
       {/* ── Lembar: Bantuan ────────────────────────────────────────────────── */}
       <SettingsSheet visible={sheet === 'help'} title={t.settings.rowHelp} onClose={close}>
         <FeedbackForm />
@@ -673,6 +695,37 @@ export default function SettingsScreen() {
           </PressableScale>
         </View>
       </SettingsSheet>
+    </View>
+  );
+}
+
+/**
+ * Isi lembar Panduan Pendamping.
+ *
+ * Untuk guru dan orang tua, bukan untuk anak: dari uji coba, pendamping tidak
+ * tahu fitur apa yang ada di layar Baca dan kapan memakainya. Teks biasa, tanpa
+ * slide, supaya bisa dibaca ulang kapan saja dari Atur.
+ */
+function GuideSheetBody() {
+  const t = useT();
+
+  return (
+    <View style={{ gap: 20 }}>
+      {t.settings.guideSections.map((section) => (
+        <View key={section.title}>
+          <Text className="mb-2 font-ui-bold text-[16px] text-text-main">{section.title}</Text>
+          <View style={{ gap: 8 }}>
+            {section.items.map((item) => (
+              <View key={item} className="flex-row" style={{ gap: 8 }}>
+                <Text className="font-ui-bold text-[14px] leading-5 text-primary">•</Text>
+                <Text className="flex-1 font-ui-medium text-[14px] leading-5 text-text-muted">
+                  {item}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ))}
     </View>
   );
 }

@@ -4,7 +4,7 @@ import { create } from 'zustand';
 
 import { getReadingLevel } from '../theme/reading-levels';
 import { useOCRStore } from '../store/useStore';
-import { speak as speakOut, stop as stopOut } from './speech-service';
+import { normalizeSpeechText, speak as speakOut, stop as stopOut } from './speech-service';
 
 /**
  * Apa yang sedang berbunyi, disimpan global.
@@ -26,6 +26,16 @@ const useSpeechState = create<SpeechState>()((set) => ({
   speakingKey: null,
   setSpeakingKey: (key) => set({ speakingKey: key }),
 }));
+
+/**
+ * Nomor urutan `speakSequence` yang masih berhak berlanjut. Dinaikkan setiap
+ * urutan baru dimulai, jadi urutan lama yang masih menunggu jeda berhenti
+ * sendiri meski key-nya sama (mis. kata yang sama diketuk dua kali).
+ */
+let sequenceToken = 0;
+
+/** Jeda antar suku kata: cukup untuk terdengar terpisah, tidak sampai putus. */
+const SEQUENCE_GAP_MS = 180;
 
 /**
  * Membacakan teks dengan pengaturan yang berlaku bagi pengguna saat ini.
@@ -85,6 +95,73 @@ export function useSpeech() {
     [enabled, language, rate, voice, setSpeakingKey],
   );
 
+  /**
+   * Bacakan potongan teks satu per satu, mis. suku kata "Nep", "tu", "nus".
+   *
+   * KENAPA SATU UCAPAN PER POTONGAN. Mesin TTS bawaan menerima teks utuh dan
+   * tidak mengenal penanda suku kata; `onBoundary`-nya hanya per kata. Satu-
+   * satunya cara agar tiap suku kata terdengar terpisah dan bisa disorot adalah
+   * mengucapkannya sendiri-sendiri, lalu menyambung ke potongan berikutnya
+   * setelah yang sebelumnya selesai.
+   *
+   * `speakingKey` dipegang sampai urutannya habis, bukan dilepas tiap potongan
+   * selesai: kalau dilepas, sorotan dan tombol berhenti berkedip di setiap jeda.
+   */
+  const speakSequence = useCallback(
+    (
+      parts: string[],
+      key: string,
+      options?: { onPart?: (index: number) => void; onDone?: () => void; rate?: number },
+    ) => {
+      if (!enabled || parts.length === 0) return;
+
+      sequenceToken += 1;
+      const token = sequenceToken;
+      setSpeakingKey(key);
+
+      const stillMine = () =>
+        token === sequenceToken && useSpeechState.getState().speakingKey === key;
+
+      const finish = () => {
+        if (!stillMine()) return;
+        setSpeakingKey(null);
+        options?.onDone?.();
+      };
+
+      const playAt = (index: number) => {
+        if (!stillMine()) return;
+        if (index >= parts.length) {
+          finish();
+          return;
+        }
+
+        /*
+         * Potongan yang tak berbunyi (tanda baca saja) dilompati. `speakOut`
+         * tidak memanggil `onDone` untuk teks kosong, jadi tanpa ini urutannya
+         * macet di situ.
+         */
+        if (normalizeSpeechText(parts[index]).length === 0) {
+          playAt(index + 1);
+          return;
+        }
+
+        options?.onPart?.(index);
+
+        void speakOut(parts[index], {
+          language,
+          rate: options?.rate ?? rate,
+          voice,
+          // Hanya selesai wajar yang menyambung; dihentikan berarti urutannya putus.
+          onDone: () => setTimeout(() => playAt(index + 1), SEQUENCE_GAP_MS),
+          onSettled: () => {},
+        });
+      };
+
+      playAt(0);
+    },
+    [enabled, language, rate, voice, setSpeakingKey],
+  );
+
   /** Tekan untuk membacakan, tekan lagi untuk berhenti. */
   const toggle = useCallback(
     (
@@ -103,7 +180,7 @@ export function useSpeech() {
     [speakingKey, speak, stop],
   );
 
-  return { enabled, speak, stop, toggle, speakingKey };
+  return { enabled, speak, speakSequence, stop, toggle, speakingKey };
 }
 
 /**
