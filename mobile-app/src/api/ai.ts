@@ -80,7 +80,7 @@ const requestReadingLevel = () => useOCRStore.getState().readingLevel;
  */
 export async function postJson(
   path: string,
-  body: Record<string, unknown>,
+  body: Record<string, unknown> | FormData,
   options: { method?: 'GET' | 'POST' | 'PATCH' | 'DELETE' } = {},
 ): Promise<any> {
   const t = strings();
@@ -104,11 +104,14 @@ export async function postJson(
   try {
     const method = options.method ?? 'POST';
     const isBodyAllowed = method !== 'GET';
+    // Berkas unggahan dikirim sebagai multipart; batasnya diisi fetch sendiri,
+    // jadi Content-Type tidak boleh ditulis di sini.
+    const isForm = body instanceof FormData;
 
     response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers: {
-        'Content-Type': 'application/json',
+        ...(isForm ? {} : { 'Content-Type': 'application/json' }),
         Accept: 'application/json',
         // Dikirim hanya kalau ada; 'X-Api-Key: undefined' ditolak backend
         // dengan alasan yang menyesatkan.
@@ -125,13 +128,15 @@ export async function postJson(
        * baru saja dipilih di formulir belum masuk store, dan menimpanya dengan
        * nilai store berarti menyimpan jawaban yang salah ke akunnya.
        */
-      body: isBodyAllowed
-        ? JSON.stringify({
-            language: requestLanguage(),
-            reading_level: requestReadingLevel(),
-            ...body,
-          })
-        : undefined,
+      body: isForm
+        ? body
+        : isBodyAllowed
+          ? JSON.stringify({
+              language: requestLanguage(),
+              reading_level: requestReadingLevel(),
+              ...body,
+            })
+          : undefined,
       signal: controller.signal,
     });
   } catch {

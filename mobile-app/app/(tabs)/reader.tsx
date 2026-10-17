@@ -38,6 +38,7 @@ import { useAuthStore } from '../../src/store/useAuthStore';
 import { useThemeColors } from '../../src/theme/theme-provider';
 import { GRADIENTS } from '../../src/theme/palettes';
 import { SIMPLIFY_LEVEL_IDS, type SimplifyLevelId } from '../../src/data/sample-document';
+import { TourTarget } from '../../src/components/spotlight-tour';
 import { useT } from '../../src/i18n';
 import { simplifyText, AiApiError } from '../../src/api/ai';
 import { DyslexicText, spellableWords } from '../../src/components/dyslexic-text';
@@ -820,54 +821,56 @@ export default function ReaderScreen() {
           className="border-b bg-surface/60 px-4 py-3"
           style={{ borderBottomColor: colors.border }}>
           {/* Level penyederhanaan */}
-          <View className="flex-row items-center" style={{ gap: 8 }}>
-            <View
-              className="h-12 flex-row items-center rounded-[16px] border border-primary/20 bg-primary/[0.12] px-3"
-              style={{ gap: 6 }}>
-              <Sparkles size={14} color={colors.primary} />
-              <Text className="font-ui-bold text-xs text-primary">{t.reader.aiBadge}</Text>
-            </View>
+          <TourTarget id="reader.simplify">
+            <View className="flex-row items-center" style={{ gap: 8 }}>
+              <View
+                className="h-12 flex-row items-center rounded-[16px] border border-primary/20 bg-primary/[0.12] px-3"
+                style={{ gap: 6 }}>
+                <Sparkles size={14} color={colors.primary} />
+                <Text className="font-ui-bold text-xs text-primary">{t.reader.aiBadge}</Text>
+              </View>
 
-            <View
-              className="h-12 flex-1 flex-row rounded-[16px] bg-primary/[0.06] p-1"
-              style={{ gap: 4 }}>
-              {SIMPLIFY_LEVEL_IDS.map((levelId: SimplifyLevelId) => {
-                const item = t.simplifyLevels[levelId];
-                const selected = levelId === simplifyLevel;
+              <View
+                className="h-12 flex-1 flex-row rounded-[16px] bg-primary/[0.06] p-1"
+                style={{ gap: 4 }}>
+                {SIMPLIFY_LEVEL_IDS.map((levelId: SimplifyLevelId) => {
+                  const item = t.simplifyLevels[levelId];
+                  const selected = levelId === simplifyLevel;
 
-                return (
-                  <PressableScale
-                    key={levelId}
-                    onPress={() => setSimplifyLevel(levelId)}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected }}
-                    accessibilityLabel={`${t.reader.levelLabel} ${item.name}. ${item.tagline}`}
-                    scaleTo={0.93}
-                    wrapperStyle={{ flex: 1 }}
-                    style={{ flex: 1 }}>
-                    {selected ? (
-                      <LinearGradient
-                        colors={[...GRADIENTS.activePill.colors]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={{
-                          flex: 1,
-                          borderRadius: 12,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}>
-                        <Text className="font-ui-bold text-xs text-white">{item.short}</Text>
-                      </LinearGradient>
-                    ) : (
-                      <View className="flex-1 items-center justify-center rounded-xl">
-                        <Text className="font-ui-bold text-xs text-text-muted">{item.short}</Text>
-                      </View>
-                    )}
-                  </PressableScale>
-                );
-              })}
+                  return (
+                    <PressableScale
+                      key={levelId}
+                      onPress={() => setSimplifyLevel(levelId)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={`${t.reader.levelLabel} ${item.name}. ${item.tagline}`}
+                      scaleTo={0.93}
+                      wrapperStyle={{ flex: 1 }}
+                      style={{ flex: 1 }}>
+                      {selected ? (
+                        <LinearGradient
+                          colors={[...GRADIENTS.activePill.colors]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={{
+                            flex: 1,
+                            borderRadius: 12,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}>
+                          <Text className="font-ui-bold text-xs text-white">{item.short}</Text>
+                        </LinearGradient>
+                      ) : (
+                        <View className="flex-1 items-center justify-center rounded-xl">
+                          <Text className="font-ui-bold text-xs text-text-muted">{item.short}</Text>
+                        </View>
+                      )}
+                    </PressableScale>
+                  );
+                })}
+              </View>
             </View>
-          </View>
+          </TourTarget>
 
           <Text className="mt-2 font-ui-medium text-xs text-text-muted">
             <Text className="font-ui-bold text-primary">{activeLevel.name}</Text>
@@ -882,18 +885,21 @@ export default function ReaderScreen() {
               onPress={toggleFocusMode}
               icon={<Focus size={16} color={focusMode ? '#ffffff' : colors.textMuted} />}
               label={t.reader.focus}
+              tourId="reader.focus"
             />
             <FeatureChip
               active={rulerMode}
               onPress={toggleRulerMode}
               icon={<Ruler size={16} color={rulerMode ? '#ffffff' : colors.textMuted} />}
               label={t.reader.ruler}
+              tourId="reader.ruler"
             />
             <FeatureChip
               active={bicolorMode}
               onPress={toggleBicolorMode}
               icon={<Palette size={16} color={bicolorMode ? '#ffffff' : colors.textMuted} />}
               label={t.reader.bicolor}
+              tourId="reader.bicolor"
             />
             {/*
               Pemenggalan suku kata, dulu hanya bisa diubah lewat layar Atur.
@@ -910,6 +916,7 @@ export default function ReaderScreen() {
               }}
               icon={<WholeWord size={16} color={syllableSpacing ? '#ffffff' : colors.textMuted} />}
               label={t.reader.syllables}
+              tourId="reader.syllables"
             />
           </View>
 
@@ -1119,29 +1126,69 @@ export default function ReaderScreen() {
               tempat ibu jari sudah berada.
             */}
             {ttsEnabled ? (
-              <PressableScale
-                onPress={() => {
-                  if (spelling) {
-                    if (speakingActive) stopSpeech();
-                    else spell();
-                    return;
-                  }
+              <TourTarget id="reader.readAloud" style={{ flex: 1 }}>
+                <PressableScale
+                  onPress={() => {
+                    if (spelling) {
+                      if (speakingActive) stopSpeech();
+                      else spell();
+                      return;
+                    }
 
-                  toggleSpeech(shownParagraphs[activeIndex], `paragraph:${activeIndex}`, {
-                    onBoundary: handleSpeechBoundary,
-                    onDone: handleSpeechDone,
-                  });
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  spelling
-                    ? `${t.reader.spellLabel}, ${t.reader.paragraphOf(activeIndex + 1, shownParagraphs.length)}`
-                    : t.speech.readParagraph(activeIndex + 1)
+                    toggleSpeech(shownParagraphs[activeIndex], `paragraph:${activeIndex}`, {
+                      onBoundary: handleSpeechBoundary,
+                      onDone: handleSpeechDone,
+                    });
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    spelling
+                      ? `${t.reader.spellLabel}, ${t.reader.paragraphOf(activeIndex + 1, shownParagraphs.length)}`
+                      : t.speech.readParagraph(activeIndex + 1)
+                  }
+                  scaleTo={0.97}>
+                  <LinearGradient
+                    colors={[...GRADIENTS.activePill.colors]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{
+                      height: 56,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      borderRadius: 16,
+                    }}>
+                    {speakingActive ? (
+                      <Square size={15} color="#ffffff" fill="#ffffff" />
+                    ) : spelling ? (
+                      <AudioLines size={18} color="#ffffff" />
+                    ) : (
+                      <Volume2 size={18} color="#ffffff" />
+                    )}
+                    <Text className="font-ui-bold text-base text-white">
+                      {spelling ? t.reader.spell : t.speech.readAloud}
+                    </Text>
+                  </LinearGradient>
+                </PressableScale>
+              </TourTarget>
+            ) : null}
+
+            <TourTarget id="reader.explain" style={{ flex: 1 }}>
+              <PressableScale
+                onPress={() =>
+                  setExplainTarget({
+                    term: shownParagraphs[activeIndex],
+                    context: shownParagraphs[activeIndex],
+                    // Dokumen contoh punya jawaban kurasi; teks pindaian dijelaskan AI beneran.
+                    useStaticAnswers: !isScanned,
+                  })
                 }
-                scaleTo={0.97}
-                wrapperStyle={{ flex: 1 }}>
+                accessibilityRole="button"
+                accessibilityLabel={t.reader.explainButtonLabel}
+                scaleTo={0.97}>
                 <LinearGradient
-                  colors={[...GRADIENTS.activePill.colors]}
+                  colors={['rgba(124,58,237,0.12)', 'rgba(79,70,229,0.12)']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={{
@@ -1151,54 +1198,16 @@ export default function ReaderScreen() {
                     justifyContent: 'center',
                     gap: 8,
                     borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: 'rgba(124,58,237,0.2)',
                   }}>
-                  {speakingActive ? (
-                    <Square size={15} color="#ffffff" fill="#ffffff" />
-                  ) : spelling ? (
-                    <AudioLines size={18} color="#ffffff" />
-                  ) : (
-                    <Volume2 size={18} color="#ffffff" />
-                  )}
-                  <Text className="font-ui-bold text-base text-white">
-                    {spelling ? t.reader.spell : t.speech.readAloud}
+                  <Lightbulb size={18} color={colors.primary} />
+                  <Text className="font-ui-bold text-base text-primary">
+                    {t.reader.explainButton}
                   </Text>
                 </LinearGradient>
               </PressableScale>
-            ) : null}
-
-            <PressableScale
-              onPress={() =>
-                setExplainTarget({
-                  term: shownParagraphs[activeIndex],
-                  context: shownParagraphs[activeIndex],
-                  // Dokumen contoh punya jawaban kurasi; teks pindaian dijelaskan AI beneran.
-                  useStaticAnswers: !isScanned,
-                })
-              }
-              accessibilityRole="button"
-              accessibilityLabel={t.reader.explainButtonLabel}
-              scaleTo={0.97}
-              wrapperStyle={{ flex: 1 }}>
-              <LinearGradient
-                colors={['rgba(124,58,237,0.12)', 'rgba(79,70,229,0.12)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={{
-                  height: 56,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  borderRadius: 16,
-                  borderWidth: 1,
-                  borderColor: 'rgba(124,58,237,0.2)',
-                }}>
-                <Lightbulb size={18} color={colors.primary} />
-                <Text className="font-ui-bold text-base text-primary">
-                  {t.reader.explainButton}
-                </Text>
-              </LinearGradient>
-            </PressableScale>
+            </TourTarget>
           </View>
 
           <View className="mt-3 flex-row items-center" style={{ gap: 8 }}>
@@ -1218,6 +1227,7 @@ export default function ReaderScreen() {
                   }}
                   icon={<AudioLines size={16} color={spellMode ? '#ffffff' : colors.textMuted} />}
                   label={t.reader.spell}
+                  tourId="reader.spell"
                   accessibilityLabel={t.reader.spellLabel}
                 />
                 <FeatureChip
@@ -1226,31 +1236,34 @@ export default function ReaderScreen() {
                   onPress={() => setSpeechRate(slowVoice ? null : VERY_SLOW_RATE)}
                   icon={<Turtle size={16} color={slowVoice ? '#ffffff' : colors.textMuted} />}
                   label={t.reader.slow}
+                  tourId="reader.slow"
                   accessibilityLabel={t.reader.slowLabel}
                 />
               </>
             ) : null}
 
-            <View
-              className="h-11 flex-1 flex-row items-center justify-center rounded-[14px] bg-primary/[0.04] px-2"
-              style={{ gap: 8 }}>
-              <Lightbulb size={14} color={colors.textMuted} />
-              {/*
-                Petunjuknya mengikuti apa yang sebenarnya terjadi saat kata
-                diketuk sekarang, dan saat suara berbunyi menjelaskan kotak
-                oranye: sorot itu hanya ada selama suara menyala, dan tanpa
-                keterangan terlihat seperti fitur yang kadang hilang.
-              */}
-              <Text className="flex-1 font-ui-medium text-xs text-text-muted" numberOfLines={2}>
-                {speakingActive
-                  ? t.reader.highlightFollowsVoice
-                  : rulerMode
-                    ? t.reader.rulerTapHint
-                    : spelling
-                      ? t.reader.spellTapHint
-                      : t.reader.tapWordHint}
-              </Text>
-            </View>
+            <TourTarget id="reader.hint" style={{ flex: 1 }}>
+              <View
+                className="h-11 flex-row items-center justify-center rounded-[14px] bg-primary/[0.04] px-2"
+                style={{ gap: 8 }}>
+                <Lightbulb size={14} color={colors.textMuted} />
+                {/*
+                  Petunjuknya mengikuti apa yang sebenarnya terjadi saat kata
+                  diketuk sekarang, dan saat suara berbunyi menjelaskan kotak
+                  oranye: sorot itu hanya ada selama suara menyala, dan tanpa
+                  keterangan terlihat seperti fitur yang kadang hilang.
+                */}
+                <Text className="flex-1 font-ui-medium text-xs text-text-muted" numberOfLines={2}>
+                  {speakingActive
+                    ? t.reader.highlightFollowsVoice
+                    : rulerMode
+                      ? t.reader.rulerTapHint
+                      : spelling
+                        ? t.reader.spellTapHint
+                        : t.reader.tapWordHint}
+                </Text>
+              </View>
+            </TourTarget>
           </View>
         </LinearGradient>
       </View>
@@ -1458,6 +1471,7 @@ function FeatureChip({
   label,
   accessibilityLabel,
   compact,
+  tourId,
 }: {
   active: boolean;
   onPress: () => void;
@@ -1467,6 +1481,8 @@ function FeatureChip({
   accessibilityLabel?: string;
   /** Selebar isinya saja, tidak ikut membagi rata baris. */
   compact?: boolean;
+  /** Sasaran tur pendamping. */
+  tourId?: string;
 }) {
   const content = (
     <>
@@ -1477,39 +1493,44 @@ function FeatureChip({
     </>
   );
 
+  /*
+   * Lebar dibagi rata oleh pembungkus sasaran tur, bukan oleh tombolnya, supaya
+   * sorotan tur pas dengan tombol yang terlihat.
+   */
   return (
-    <PressableScale
-      onPress={onPress}
-      accessibilityRole="switch"
-      accessibilityState={{ checked: active }}
-      accessibilityLabel={accessibilityLabel ?? label}
-      scaleTo={0.93}
-      wrapperStyle={compact ? undefined : { flex: 1 }}>
-      {active ? (
-        <LinearGradient
-          colors={[...GRADIENTS.activePill.colors]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={{
-            height: 44,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            paddingHorizontal: compact ? 12 : 8,
-            borderRadius: 16,
-          }}>
-          {content}
-        </LinearGradient>
-      ) : (
-        <View
-          className={`h-11 flex-row items-center justify-center rounded-[16px] bg-primary/[0.07] ${
-            compact ? 'px-3' : 'px-2'
-          }`}
-          style={{ gap: 6 }}>
-          {content}
-        </View>
-      )}
-    </PressableScale>
+    <TourTarget id={tourId} style={compact ? undefined : { flex: 1 }}>
+      <PressableScale
+        onPress={onPress}
+        accessibilityRole="switch"
+        accessibilityState={{ checked: active }}
+        accessibilityLabel={accessibilityLabel ?? label}
+        scaleTo={0.93}>
+        {active ? (
+          <LinearGradient
+            colors={[...GRADIENTS.activePill.colors]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{
+              height: 44,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              paddingHorizontal: compact ? 12 : 8,
+              borderRadius: 16,
+            }}>
+            {content}
+          </LinearGradient>
+        ) : (
+          <View
+            className={`h-11 flex-row items-center justify-center rounded-[16px] bg-primary/[0.07] ${
+              compact ? 'px-3' : 'px-2'
+            }`}
+            style={{ gap: 6 }}>
+            {content}
+          </View>
+        )}
+      </PressableScale>
+    </TourTarget>
   );
 }

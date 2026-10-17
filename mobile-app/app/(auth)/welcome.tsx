@@ -13,6 +13,7 @@ import { PressableScale } from '../../src/components/pressable-scale';
 import { ReadingChoicePicker } from '../../src/components/reading-choice-picker';
 import { SchoolLevelPicker } from '../../src/components/school-level-picker';
 import { SpeakButton } from '../../src/components/speak-button';
+import { useTourStore } from '../../src/components/spotlight-tour';
 import { useT } from '../../src/i18n';
 import { useStopSpeechOnUnmount } from '../../src/speech/use-speech';
 import { useAuthStore } from '../../src/store/useAuthStore';
@@ -116,6 +117,11 @@ export default function AuthScreen() {
 
     try {
       await signUp({ name, username, password, readingLevel, schoolLevel });
+      /*
+       * Akun didaftarkan bersama pendamping, jadi tur pendamping langsung
+       * dimulai: saat inilah guru atau orang tuanya masih duduk di samping.
+       */
+      useTourStore.getState().start();
       // replace, bukan push: layar ini tidak boleh bisa dikunjungi lagi dengan
       // tombol kembali setelah akunnya jadi.
       router.replace('/(tabs)');

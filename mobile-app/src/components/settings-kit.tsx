@@ -325,8 +325,14 @@ function SheetBody({
           </PressableScale>
         </View>
 
+        {/*
+          flexShrink eksplisit: tanpa itu gulungan bisa memakai tinggi isinya
+          sendiri, melewati batas tinggi lembar, sehingga baris terakhirnya
+          berada di bawah bilah navigasi dan tidak pernah bisa dijangkau.
+        */}
         <ScrollView
           ref={scrollRef}
+          style={{ flexGrow: 0, flexShrink: 1 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"

@@ -298,7 +298,7 @@ export const id = {
     camera: 'Kamera',
     upload: 'Unggah File',
     aimAtDocument: 'Arahkan ke dokumen',
-    fileTypes: 'PDF, JPG, atau PNG',
+    fileTypes: 'PDF, Word (DOCX), JPG, atau PNG',
     tipsTitle: 'Tips agar hasil pindai bagus',
     tips: [
       'Pastikan cahaya cukup terang',
@@ -325,16 +325,16 @@ export const id = {
     scanAnother: '← Pindai dokumen lain',
     startScan: 'Mulai Pindai',
     startScanLabel: 'Mulai memindai',
-    pickImage: 'Pilih Gambar',
-    pickImageLabel: 'Pilih gambar',
+    pickImage: 'Pilih File',
+    pickImageLabel: 'Pilih gambar atau dokumen',
     processing: 'Memproses…',
     permissionText: 'LexiScan butuh izin kamera untuk memindai dokumen fisikmu.',
     permissionButton: 'Berikan Izin Kamera',
     noTextTitle: 'Tidak ada teks',
     noTextCamera: 'Coba dekatkan kamera dan pastikan cahaya cukup terang.',
-    noTextUpload: 'Gambar ini tampaknya tidak memiliki teks atau terlalu buram.',
+    noTextUpload: 'File ini tampaknya tidak memiliki teks atau gambarnya terlalu buram.',
     scanFailTitle: 'Gagal memindai',
-    uploadFailTitle: 'Gagal membaca gambar',
+    uploadFailTitle: 'Gagal membaca file',
     genericError: 'Terjadi kesalahan.',
     cameraNoImage: 'Kamera tidak mengembalikan gambar.',
     typoWarning: 'Gagal memperbaiki typo via AI, memakai teks asli dari OCR.',
@@ -395,38 +395,8 @@ export const id = {
     rowHelp: 'Bantuan & Dukungan',
     rowHelpDesc: 'FAQ, lapor masalah',
     rowGuide: 'Panduan Pendamping',
-    rowGuideDesc: 'Untuk guru dan orang tua',
+    rowGuideDesc: 'Tur fitur untuk guru dan orang tua',
     /** Isi lembar Panduan Pendamping: tiap bagian satu judul dan beberapa poin. */
-    guideSections: [
-      {
-        title: 'Sebelum mulai',
-        items: [
-          'Pilih kemampuan membaca anak di Atur, Kemampuan Membaca. Pilihan ini mengatur ukuran huruf, suara, dan panjang paragraf sekaligus.',
-          'Anak yang baru mulai mendapat paragraf pendek. Pilih tingkat berikutnya kalau ia sudah nyaman.',
-          'Semua pengaturan tetap bisa diubah satu per satu sesuai kebutuhan anak.',
-        ],
-      },
-      {
-        title: 'Di layar Baca',
-        items: [
-          'Penggaris: garis kuning menandai baris yang sedang dibaca. Ketuk sebuah baris untuk memindahkannya, atau pakai tombol naik-turun di bawah.',
-          'Ketuk kata untuk melihat suku katanya. Saat penggaris menyala, tekan tahan katanya.',
-          'Eja: ketuk kata untuk mendengar suku katanya satu per satu langsung di teks. Tombol Eja di bawah mengeja seluruh paragraf.',
-          'Pelan: memperlambat suara. Suara bisa diulang sesering yang dibutuhkan.',
-          'Kotak oranye hanya muncul saat suara menyala, mengikuti kata atau suku kata yang sedang dibacakan.',
-          'Fokus meredupkan paragraf lain, Dua Warna membedakan kata bergantian, Su-ku menampilkan tanda hubung antar suku kata.',
-        ],
-      },
-      {
-        title: 'Mendampingi di rumah',
-        items: [
-          'Sesi singkat lebih baik daripada sesi panjang. Berhenti sebelum anak lelah.',
-          'Beri anak kesempatan mencoba membaca sendiri dulu, baru gunakan suara atau Eja saat ia mentok.',
-          'Puji usahanya, bukan hanya hasilnya. Kesalahan adalah bagian dari belajar.',
-          'Pindai bacaan yang ia sukai, misalnya buku cerita atau buku pelajaran sekolahnya.',
-        ],
-      },
-    ],
     nameSheetTitle: 'Ubah Nama',
     nameSave: 'Simpan',
     logoutTitle: 'Keluar dari Akun?',
@@ -591,6 +561,80 @@ export const id = {
     noSimplifyResult: 'Server tidak mengembalikan hasil penyederhanaan.',
     noExplainResult: 'Server tidak mengembalikan penjelasan.',
     noCorrectionResult: 'Server tidak mengembalikan teks hasil koreksi.',
+  },
+
+  tour: {
+    counter: (step: number, total: number) => `Langkah ${step} dari ${total}`,
+    skip: 'Lewati',
+    next: 'Lanjut',
+    back: 'Kembali',
+    done: 'Selesai',
+    steps: {
+      welcome: {
+        title: 'Mode Pendamping',
+        body: 'Tur singkat untuk guru atau orang tua yang mendampingi. Tiap tombol penting akan disorot beserta kegunaannya.',
+      },
+      scanner: {
+        title: 'Pindai',
+        body: 'Foto halaman buku, atau unggah PDF, Word, dan gambar. Teksnya diubah jadi bacaan yang ramah disleksia.',
+      },
+      documents: {
+        title: 'Dokumen',
+        body: 'Semua hasil pindaian tersimpan di sini, jadi bacaan yang sama bisa dibuka lagi kapan saja.',
+      },
+      settings: {
+        title: 'Atur',
+        body: 'Ubah kemampuan membaca anak, suara, warna, dan huruf. Tur ini bisa diulang dari sini lewat Panduan Pendamping.',
+      },
+      reader: {
+        title: 'Baca',
+        body: 'Di sinilah anak membaca. Ketuk Lanjut untuk melihat alat bantunya satu per satu.',
+      },
+      simplify: {
+        title: 'Sederhanakan dengan AI',
+        body: 'Mempermudah kalimat yang sulit. Mulai dari teks asli, naikkan tingkatnya kalau anak belum paham isinya.',
+      },
+      focus: {
+        title: 'Fokus',
+        body: 'Meredupkan paragraf lain supaya mata anak tidak melompat ke bagian yang belum dibaca.',
+      },
+      ruler: {
+        title: 'Penggaris',
+        body: 'Garis kuning menandai baris yang sedang dibaca. Ketuk sebuah baris untuk memindahkannya.',
+      },
+      bicolor: {
+        title: 'Dua Warna',
+        body: 'Kata diberi warna bergantian supaya batas antarkata lebih mudah dilihat.',
+      },
+      syllables: {
+        title: 'Su-ku',
+        body: 'Menampilkan tanda hubung di antara suku kata, membantu anak yang masih mengeja.',
+      },
+      readAloud: {
+        title: 'Bacakan',
+        body: 'Membacakan paragraf yang aktif. Kotak oranye mengikuti kata yang sedang dibacakan, jadi anak bisa mengikutinya dengan mata.',
+      },
+      explain: {
+        title: 'Jelaskan',
+        body: 'Menjelaskan isi paragraf dengan bahasa yang mudah, untuk anak yang sudah bisa membaca tapi belum paham artinya.',
+      },
+      spell: {
+        title: 'Eja',
+        body: 'Saat menyala, kata yang diketuk dibacakan per suku kata langsung di teks. Cocok untuk anak yang baru belajar mengeja.',
+      },
+      slow: {
+        title: 'Pelan',
+        body: 'Memperlambat suara supaya anak sempat mencocokkan bunyi dengan tulisannya.',
+      },
+      hint: {
+        title: 'Ketuk kata',
+        body: 'Ketuk kata di teks untuk melihat suku kata dan artinya. Petunjuk ini selalu memberi tahu apa yang terjadi saat kata diketuk.',
+      },
+      finish: {
+        title: 'Siap mendampingi!',
+        body: 'Biarkan anak mencoba membaca sendiri dulu, lalu pakai suara atau Eja saat ia mentok. Tur ini bisa diulang dari Atur, Panduan Pendamping.',
+      },
+    },
   },
 
   themes: {

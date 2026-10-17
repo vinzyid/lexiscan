@@ -139,6 +139,50 @@ export function VoicePicker() {
 
   return (
     <View style={{ gap: 8 }}>
+      {/*
+        Kecepatan ditaruh di sini, bukan di seksi terpisah, karena ia dan pilihan
+        suara di bawah menjawab keluhan yang sama, "suaranya kurang jelas", dan
+        jawabannya sering ada di salah satu dari keduanya. Mengubahnya langsung
+        membunyikan contoh, sama seperti memilih suara.
+
+        Letaknya DI ATAS daftar suara: daftar itu bisa sampai belasan baris, dan
+        saat kecepatan ditaruh di ujungnya, tombolnya tertimbun bilah navigasi
+        HP dan nyaris tidak pernah ditemukan.
+      */}
+      <Text className="font-ui-bold text-[16px] text-text-main">{t.settings.rateTitle}</Text>
+
+      <View className="mb-4 mt-2 flex-row" style={{ gap: 8 }}>
+        {SPEECH_RATES.map((option) => {
+          const active = Math.abs(rate - option.value) < 0.01;
+
+          return (
+            <PressableScale
+              key={option.id}
+              onPress={() => {
+                setSpeechRate(option.value);
+                preview(selected ?? null, option.value);
+              }}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={t.settings.rates[option.id]}
+              scaleTo={0.97}
+              wrapperStyle={{ flex: 1 }}
+              className={`h-11 items-center justify-center rounded-2xl border ${
+                active ? 'border-primary/30 bg-primary/[0.08]' : 'border-border/10 bg-surface'
+              }`}>
+              <Text
+                className={`font-ui-bold text-[14px] ${
+                  active ? 'text-primary' : 'text-text-muted'
+                }`}>
+                {t.settings.rates[option.id]}
+              </Text>
+            </PressableScale>
+          );
+        })}
+      </View>
+
+      <Text className="font-ui-bold text-[16px] text-text-main">{t.settings.voicePickerTitle}</Text>
+
       {[null, ...voices.map((voice) => voice.identifier)].map((identifier, index) => {
         const voice = identifier === null ? null : voices[index - 1];
         const active = identifier === null ? selected === undefined : selected === identifier;
@@ -215,43 +259,6 @@ export function VoicePicker() {
         {t.settings.voicePickerHint}
       </Text>
 
-      {/*
-        Kecepatan ditaruh di sini, bukan di seksi terpisah, karena ia dan pilihan
-        suara di atas menjawab keluhan yang sama — "suaranya kurang jelas" — dan
-        jawabannya sering ada di salah satu dari keduanya. Mengubahnya langsung
-        membunyikan contoh, sama seperti memilih suara.
-      */}
-      <Text className="mt-4 font-ui-bold text-[16px] text-text-main">{t.settings.rateTitle}</Text>
-
-      <View className="mt-2 flex-row" style={{ gap: 8 }}>
-        {SPEECH_RATES.map((option) => {
-          const active = Math.abs(rate - option.value) < 0.01;
-
-          return (
-            <PressableScale
-              key={option.id}
-              onPress={() => {
-                setSpeechRate(option.value);
-                preview(selected ?? null, option.value);
-              }}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={t.settings.rates[option.id]}
-              scaleTo={0.97}
-              wrapperStyle={{ flex: 1 }}
-              className={`h-11 items-center justify-center rounded-2xl border ${
-                active ? 'border-primary/30 bg-primary/[0.08]' : 'border-border/10 bg-surface'
-              }`}>
-              <Text
-                className={`font-ui-bold text-[14px] ${
-                  active ? 'text-primary' : 'text-text-muted'
-                }`}>
-                {t.settings.rates[option.id]}
-              </Text>
-            </PressableScale>
-          );
-        })}
-      </View>
     </View>
   );
 }

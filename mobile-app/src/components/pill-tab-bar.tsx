@@ -6,6 +6,7 @@ import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { useThemeColors } from '../theme/theme-provider';
 import { GRADIENTS } from '../theme/palettes';
 import { PressableScale } from './pressable-scale';
+import { TourTarget } from './spotlight-tour';
 import { useT } from '../i18n';
 
 const TABS = {
@@ -59,58 +60,58 @@ export function PillTabBar({ state, navigation, insets }: BottomTabBarProps) {
         };
 
         return (
-          <PressableScale
-            key={route.key}
-            accessibilityRole="button"
-            accessibilityState={isFocused ? { selected: true } : {}}
-            accessibilityLabel={label}
-            onPress={onPress}
-            scaleTo={0.92}
-            wrapperStyle={{ flex: 1 }}>
-            {isFocused ? (
-              <LinearGradient
-                colors={[...GRADIENTS.navPill.colors]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={{
-                  height: 48,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 5,
-                  /*
-                   * Padding dikecilkan dari 10. Pada baris flex, padding kiri
-                   * dan kanan ikut memakan lebar 1/5 layar; pada tab seperti
-                   * "Beranda" sisanya jadi terlalu sempit untuk ikon + label,
-                   * sehingga teksnya pecah per huruf dan tampak tegak seperti
-                   * ditulis menyamping.
-                   */
-                  paddingHorizontal: 6,
-                  borderRadius: 24,
-                }}>
-                <Icon size={17} color="#ffffff" strokeWidth={1.8} />
-                {/*
-                 * `numberOfLines={1}` + `flexShrink` WAJIB: tanpa keduanya,
-                 * label yang tidak muat akan dipotong per karakter alih-alih
-                 * mengecil, dan pilnya jadi setinggi beberapa baris.
-                 */}
-                <Text
-                  numberOfLines={1}
-                  style={{ flexShrink: 1 }}
-                  className="font-ui-bold text-[13px] text-white">
-                  {label}
-                </Text>
-              </LinearGradient>
-            ) : (
-              /* Tab tidak aktif tetap menampilkan namanya: ikon sendirian memaksa menebak. */
-              <View className="h-12 items-center justify-center rounded-3xl px-1">
-                <Icon size={19} color={colors.textMuted} strokeWidth={1.8} />
-                <Text className="mt-0.5 font-ui-medium text-[12px] text-text-muted" numberOfLines={1}>
-                  {label}
-                </Text>
-              </View>
-            )}
-          </PressableScale>
+          <TourTarget key={route.key} id={`tab.${route.name}`} style={{ flex: 1 }}>
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityState={isFocused ? { selected: true } : {}}
+              accessibilityLabel={label}
+              onPress={onPress}
+              scaleTo={0.92}>
+              {isFocused ? (
+                <LinearGradient
+                  colors={[...GRADIENTS.navPill.colors]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={{
+                    height: 48,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 5,
+                    /*
+                     * Padding dikecilkan dari 10. Pada baris flex, padding kiri
+                     * dan kanan ikut memakan lebar 1/5 layar; pada tab seperti
+                     * "Beranda" sisanya jadi terlalu sempit untuk ikon + label,
+                     * sehingga teksnya pecah per huruf dan tampak tegak seperti
+                     * ditulis menyamping.
+                     */
+                    paddingHorizontal: 6,
+                    borderRadius: 24,
+                  }}>
+                  <Icon size={17} color="#ffffff" strokeWidth={1.8} />
+                  {/*
+                   * `numberOfLines={1}` + `flexShrink` WAJIB: tanpa keduanya,
+                   * label yang tidak muat akan dipotong per karakter alih-alih
+                   * mengecil, dan pilnya jadi setinggi beberapa baris.
+                   */}
+                  <Text
+                    numberOfLines={1}
+                    style={{ flexShrink: 1 }}
+                    className="font-ui-bold text-[13px] text-white">
+                    {label}
+                  </Text>
+                </LinearGradient>
+              ) : (
+                /* Tab tidak aktif tetap menampilkan namanya: ikon sendirian memaksa menebak. */
+                <View className="h-12 items-center justify-center rounded-3xl px-1">
+                  <Icon size={19} color={colors.textMuted} strokeWidth={1.8} />
+                  <Text className="mt-0.5 font-ui-medium text-[12px] text-text-muted" numberOfLines={1}>
+                    {label}
+                  </Text>
+                </View>
+              )}
+            </PressableScale>
+          </TourTarget>
         );
       })}
     </View>

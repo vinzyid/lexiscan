@@ -15,9 +15,11 @@ const isDigraphAt = (word: string, index: number) =>
 /**
  * Kata dasar berawal vokal yang lazim mendapat awalan meng-/peng-.
  *
- * Pemenggalan resmi (PUEBI) memisahkan imbuhan dari kata dasarnya lebih dulu:
- * "mengorbit" adalah meng+orbit, jadi "meng-or-bit" - bukan "me-ngor-bit" yang
- * dihasilkan aturan bunyi di bawah.
+ * Mengikuti EYD Edisi V (pengganti PUEBI): imbuhan dipisahkan dari kata
+ * dasarnya lebih dulu. "mengorbit" adalah meng+orbit, jadi "meng-or-bit", bukan
+ * "me-ngor-bit" yang dihasilkan aturan bunyi di bawah. Kata dasar yang huruf
+ * awalnya luluh dipenggal seperti kata dasar biasa ("me-nu-lis"), dan itu sudah
+ * ditangani aturan bunyi. Bentuk kata dasarnya mengikuti KBBI.
  *
  * KENAPA DAFTAR, BUKAN ATURAN. "meng" + vokal tidak selalu berarti kata dasar
  * berawal vokal: "mengirim" adalah meng+kirim yang huruf k-nya luluh, dan
@@ -28,17 +30,34 @@ const isDigraphAt = (word: string, index: number) =>
  * Ditulis huruf kecil semua; pencocokannya mengabaikan besar-kecil huruf.
  */
 const VOWEL_ROOTS = new Set([
-  'abai', 'abdi', 'ada', 'adu', 'ajak', 'ajar', 'aju', 'akhir', 'aku', 'alam',
-  'alih', 'alir', 'amat', 'ambil', 'amuk', 'ancam', 'anggap', 'angkat', 'angkut',
-  'antar', 'anjur', 'arah', 'asuh', 'atur', 'awas', 'ayun', 'edar', 'elak', 'elus',
-  'embus', 'ikat', 'ikut', 'ingat', 'inap', 'intip', 'iris', 'isi', 'isap', 'obat',
-  'obrol', 'olah', 'oles', 'orbit', 'ubah', 'ucap', 'ukur', 'ulang', 'umpat',
-  'undang', 'unduh', 'unggah', 'unggul', 'urai', 'urang', 'urus', 'usap', 'usir',
-  'utus',
+  'abai', 'abdi', 'acu', 'ada', 'adu', 'aduk', 'ajak', 'ajar', 'aju', 'akhir', 'aku',
+  'alam', 'alih', 'alir', 'amal', 'amat', 'ambil', 'ampun', 'amuk', 'ancam',
+  'anggap', 'angkat', 'angkut', 'antar', 'anjur', 'anyam', 'apung', 'arah', 'asah',
+  'asing', 'asuh', 'atur', 'awas', 'awet', 'ayun', 'edar', 'eja', 'ejek', 'ekor',
+  'elak', 'elus', 'embun', 'embus', 'endap', 'enyah', 'erti', 'ikat', 'ikut',
+  'imbang', 'inap', 'incar', 'ingat', 'injak', 'intai', 'intip', 'iris', 'iring',
+  'isi', 'isap', 'izin', 'obat', 'obrol', 'olah', 'oles', 'olok', 'orbit', 'ubah',
+  'ucap', 'ukir', 'ukur', 'ulang', 'ulas', 'umpat', 'umum', 'undang', 'unduh',
+  'undur', 'unggah', 'unggul', 'ungkap', 'ungsi', 'untung', 'upah', 'urai', 'urang',
+  'urus', 'urut', 'usap', 'usir', 'utus',
 ]);
 
-/** Akhiran yang boleh menempel di belakang kata dasar pada `VOWEL_ROOTS`. */
-const ROOT_SUFFIXES = ['', 'i', 'an', 'kan', 'nya', 'inya', 'kannya', 'lah', 'kah'];
+/**
+ * Akhiran yang boleh menempel di belakang kata dasar pada `VOWEL_ROOTS`, sudah
+ * dalam potongannya. EYD juga memisahkan akhiran sebagai satu kesatuan:
+ * "pengumuman" dipenggal "peng-u-mum-an", bukan "peng-u-mu-man".
+ */
+const ROOT_SUFFIXES = [
+  [],
+  ['i'],
+  ['an'],
+  ['kan'],
+  ['nya'],
+  ['i', 'nya'],
+  ['kan', 'nya'],
+  ['lah'],
+  ['kah'],
+];
 
 /**
  * Pisahkan awalan meng-/peng- kalau sisanya kata dasar berawal vokal yang
@@ -49,13 +68,23 @@ function splitVowelRootPrefix(clean: string): string[] | null {
   if (!lower.startsWith('meng') && !lower.startsWith('peng')) return null;
 
   const rest = lower.slice(4);
-  const known = ROOT_SUFFIXES.some(
-    (suffix) => rest.endsWith(suffix) && VOWEL_ROOTS.has(rest.slice(0, rest.length - suffix.length)),
-  );
-  if (!known) return null;
+  const suffix = ROOT_SUFFIXES.find((pieces) => {
+    const joined = pieces.join('');
+
+    return rest.endsWith(joined) && VOWEL_ROOTS.has(rest.slice(0, rest.length - joined.length));
+  });
+  if (!suffix) return null;
 
   // Huruf aslinya yang dipakai, supaya "Mengorbit" di awal kalimat tetap kapital.
-  return [clean.slice(0, 4), ...splitIndonesian(clean.slice(4))];
+  const rootEnd = clean.length - suffix.join('').length;
+  const pieces = [clean.slice(0, 4), ...splitIndonesian(clean.slice(4, rootEnd))];
+  let at = rootEnd;
+  for (const piece of suffix) {
+    pieces.push(clean.slice(at, at + piece.length));
+    at += piece.length;
+  }
+
+  return pieces;
 }
 
 export function splitSyllables(word: string, language: LanguageId = 'id'): string[] {

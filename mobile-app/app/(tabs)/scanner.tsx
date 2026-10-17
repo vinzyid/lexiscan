@@ -35,6 +35,7 @@ import { useThemeColors } from '../../src/theme/theme-provider';
 import { GRADIENTS, getTypeLevel } from '../../src/theme/palettes';
 import { useT } from '../../src/i18n';
 import { correctTypo } from '../../src/api/ai';
+import { DOCUMENT_MIME_TYPES, extractDocumentText, isDocumentFile } from '../../src/api/document';
 import { Blob, HexDecor, Ring, ScreenBackdrop, Sparkle } from '../../src/components/figma-decor';
 import { IlluScan } from '../../src/components/illustrations';
 import { cropRectForGuide } from '../../src/utils/crop-frame';
@@ -258,15 +259,21 @@ export default function ScannerScreen() {
   const handleUpload = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['image/jpeg', 'image/png', 'image/webp'],
+        type: ['image/jpeg', 'image/png', 'image/webp', ...DOCUMENT_MIME_TYPES],
         copyToCacheDirectory: true,
       });
 
       if (result.canceled || !result.assets?.length) return;
 
+      const file = result.assets[0];
       setPhase('scanning');
-      const recognitionResult = await TextRecognition.recognize(result.assets[0].uri);
-      const rawText = recognitionResult?.text?.trim() ?? '';
+
+      // Gambar dibaca ML Kit di HP; PDF dan DOCX sudah berisi teks, jadi
+      // teksnya diambil langsung di server tanpa OCR.
+      const isDocument = isDocumentFile(file);
+      const rawText = isDocument
+        ? await extractDocumentText(file)
+        : ((await TextRecognition.recognize(file.uri))?.text?.trim() ?? '');
 
       if (!rawText) {
         setPhase('idle');
@@ -279,7 +286,9 @@ export default function ScannerScreen() {
       setStepsDone(0);
       setPhase('done');
       savedDocumentIdRef.current = saveDocument({ text: rawText });
-      correctTypoInBackground(rawText);
+      // Teks PDF/DOCX tidak melewati OCR, jadi tidak ada salah baca yang perlu
+      // dikoreksi AI.
+      if (!isDocument) correctTypoInBackground(rawText);
     } catch (error) {
       setPhase('idle');
       Alert.alert(

@@ -249,7 +249,7 @@ export const en: Translation = {
     camera: 'Camera',
     upload: 'Upload File',
     aimAtDocument: 'Point at the document',
-    fileTypes: 'PDF, JPG, or PNG',
+    fileTypes: 'PDF, Word (DOCX), JPG, or PNG',
     tipsTitle: 'Tips for a good scan',
     tips: [
       'Make sure the light is bright enough',
@@ -276,16 +276,16 @@ export const en: Translation = {
     scanAnother: '← Scan another document',
     startScan: 'Start Scan',
     startScanLabel: 'Start scanning',
-    pickImage: 'Choose Image',
-    pickImageLabel: 'Choose an image',
+    pickImage: 'Choose File',
+    pickImageLabel: 'Choose an image or document',
     processing: 'Processing…',
     permissionText: 'LexiScan needs camera permission to scan your printed documents.',
     permissionButton: 'Grant Camera Permission',
     noTextTitle: 'No text found',
     noTextCamera: 'Try moving the camera closer and make sure the light is bright enough.',
-    noTextUpload: 'This image does not seem to contain text, or it is too blurry.',
+    noTextUpload: 'This file does not seem to contain text, or the image is too blurry.',
     scanFailTitle: 'Scan failed',
-    uploadFailTitle: 'Could not read the image',
+    uploadFailTitle: 'Could not read the file',
     genericError: 'Something went wrong.',
     cameraNoImage: 'The camera did not return an image.',
     typoWarning: 'AI typo correction failed, using the raw OCR text instead.',
@@ -338,37 +338,7 @@ export const en: Translation = {
     rowHelp: 'Help & Support',
     rowHelpDesc: 'FAQ, report a problem',
     rowGuide: 'Companion Guide',
-    rowGuideDesc: 'For teachers and parents',
-    guideSections: [
-      {
-        title: 'Before you start',
-        items: [
-          "Choose the child's reading ability in Settings, Reading Ability. It sets the text size, voice, and paragraph length all at once.",
-          'Beginners get short paragraphs. Move to the next level once the child is comfortable.',
-          "Every setting can still be changed one by one to suit the child.",
-        ],
-      },
-      {
-        title: 'On the Read screen',
-        items: [
-          'Ruler: the yellow bar marks the line being read. Tap a line to move it, or use the up and down buttons at the bottom.',
-          'Tap a word to see its syllables. While the ruler is on, press and hold the word instead.',
-          'Spell: tap a word to hear its syllables one by one right in the text. The Spell button at the bottom spells the whole paragraph.',
-          'Slow: slows the voice down. The voice can be replayed as often as needed.',
-          'The orange box only appears while the voice is on, following the word or syllable being read.',
-          'Focus dims the other paragraphs, Two Colours alternates word colours, Syl-la-ble shows hyphens between syllables.',
-        ],
-      },
-      {
-        title: 'Reading together at home',
-        items: [
-          'Short sessions work better than long ones. Stop before the child gets tired.',
-          'Let the child try reading alone first, then use the voice or Spell when they get stuck.',
-          'Praise the effort, not only the result. Mistakes are part of learning.',
-          'Scan things the child enjoys, such as storybooks or their school textbooks.',
-        ],
-      },
-    ],
+    rowGuideDesc: 'Feature tour for teachers and parents',
     nameSheetTitle: 'Change Name',
     nameSave: 'Save',
     logoutTitle: 'Sign out?',
@@ -523,6 +493,80 @@ export const en: Translation = {
     noSimplifyResult: 'The server returned no simplified text.',
     noExplainResult: 'The server returned no explanation.',
     noCorrectionResult: 'The server returned no corrected text.',
+  },
+
+  tour: {
+    counter: (step: number, total: number) => `Step ${step} of ${total}`,
+    skip: 'Skip',
+    next: 'Next',
+    back: 'Back',
+    done: 'Done',
+    steps: {
+      welcome: {
+        title: 'Companion Mode',
+        body: 'A short tour for the teacher or parent helping out. Each important button is highlighted along with what it is for.',
+      },
+      scanner: {
+        title: 'Scan',
+        body: 'Take a photo of a book page, or upload a PDF, Word file, or image. The text becomes dyslexia-friendly reading.',
+      },
+      documents: {
+        title: 'Documents',
+        body: 'Every scan is saved here, so the same text can be opened again any time.',
+      },
+      settings: {
+        title: 'Settings',
+        body: "Change the child's reading level, voice, colours, and font. This tour can be replayed from here under Companion Guide.",
+      },
+      reader: {
+        title: 'Read',
+        body: 'This is where the child reads. Tap Next to see the reading tools one by one.',
+      },
+      simplify: {
+        title: 'Simplify with AI',
+        body: "Makes hard sentences easier. Start with the original text and raise the level if the child doesn't understand it yet.",
+      },
+      focus: {
+        title: 'Focus',
+        body: "Dims the other paragraphs so the child's eyes don't jump ahead.",
+      },
+      ruler: {
+        title: 'Ruler',
+        body: 'The yellow line marks the line being read. Tap a line to move it there.',
+      },
+      bicolor: {
+        title: 'Two Colours',
+        body: 'Words alternate colours so the gaps between words are easier to see.',
+      },
+      syllables: {
+        title: 'Syl-la-bles',
+        body: 'Shows hyphens between syllables, helping a child who is still sounding words out.',
+      },
+      readAloud: {
+        title: 'Read Aloud',
+        body: 'Reads the active paragraph aloud. The orange box follows the word being spoken, so the child can follow along.',
+      },
+      explain: {
+        title: 'Explain',
+        body: "Explains the paragraph in simple words, for a child who can read it but doesn't understand it yet.",
+      },
+      spell: {
+        title: 'Spell',
+        body: 'When on, a tapped word is read syllable by syllable right in the text. Good for a child just learning to spell.',
+      },
+      slow: {
+        title: 'Slow',
+        body: 'Slows the voice down so the child has time to match sounds to letters.',
+      },
+      hint: {
+        title: 'Tap a word',
+        body: 'Tap a word in the text to see its syllables and meaning. This hint always says what tapping a word will do.',
+      },
+      finish: {
+        title: 'Ready to help!',
+        body: 'Let the child try reading alone first, then use the voice or Spell when they get stuck. Replay this tour from Settings, Companion Guide.',
+      },
+    },
   },
 
   themes: {
