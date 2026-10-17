@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AiController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Middleware\RequireActiveReader;
 use Illuminate\Support\Facades\Route;
@@ -55,4 +56,5 @@ Route::middleware(['throttle:20,1', 'api.key', 'device'])->group(function (): vo
     // Tidak memakai kuota LLM, tapi tetap dijaga: tanpa itu endpoint ini jadi
     // jalur termudah untuk membanjiri database dari luar.
     Route::post('/feedback', [FeedbackController::class, 'store']);
+    Route::post('/extract-document', [DocumentController::class, 'extract']);
 });
