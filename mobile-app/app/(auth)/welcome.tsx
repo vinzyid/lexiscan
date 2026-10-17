@@ -11,7 +11,6 @@ import { Blob, Sparkle } from '../../src/components/figma-decor';
 import { LexiMascot } from '../../src/components/illustrations';
 import { PressableScale } from '../../src/components/pressable-scale';
 import { ReadingChoicePicker } from '../../src/components/reading-choice-picker';
-import { SchoolLevelPicker } from '../../src/components/school-level-picker';
 import { SpeakButton } from '../../src/components/speak-button';
 import { useTourStore } from '../../src/components/spotlight-tour';
 import { useT } from '../../src/i18n';
@@ -20,28 +19,31 @@ import { useAuthStore } from '../../src/store/useAuthStore';
 import { useOCRStore } from '../../src/store/useStore';
 import { GRADIENTS } from '../../src/theme/palettes';
 import type { ReadingLevelId } from '../../src/theme/reading-levels';
-import type { SchoolLevelId } from '../../src/theme/school-levels';
 
 /**
- * Pendaftaran & masuk — satu layar, tiga langkah (Figma: frame "AuthScreen").
+ * Pendaftaran & masuk — satu layar, dua langkah (Figma: frame "AuthScreen").
  *
  * KENAPA MENGGANTIKAN DUA LAYAR TERPISAH. Versi sebelumnya memakai layar Masuk
  * dan layar Daftar yang saling bertaut lewat tautan teks di bagian bawah;
  * seluruh pertanyaan pendaftaran menumpuk di satu halaman panjang. Yang paling
  * mungkin tersesat di sana justru penggunanya: nama, nama pengguna, kata sandi,
- * jenjang, dan kemampuan membaca tampil sekaligus, padahal tiga yang terakhir
- * adalah pertanyaan tentang dirinya, bukan isian formulir.
+ * dan kemampuan membaca tampil sekaligus, padahal yang terakhir adalah
+ * pertanyaan tentang dirinya, bukan isian formulir.
+ *
+ * Pertanyaan jenjang sekolah (SD atau Umum) sudah dihapus: tampilan dan bantuan
+ * baca hanya ditentukan oleh kemampuan membaca, jadi jenjang cuma menambah satu
+ * layar yang tidak mengubah apa pun.
  *
  * Bentuk barunya memecahnya jadi satu pertanyaan per layar — dan menaruh
  * pilihan "Pengguna Baru / Sudah Punya Akun" di langkah pertama, sehingga yang
- * sudah punya akun berhenti di situ dan tidak pernah melihat dua langkah
+ * sudah punya akun berhenti di situ dan tidak pernah melihat langkah
  * sisanya.
  */
 
 type Mode = 'new' | 'existing';
 
-/** Jumlah langkah untuk pengguna baru; dipakai juga di label "LANGKAH x / 3". */
-const TOTAL_STEPS = 3;
+/** Jumlah langkah untuk pengguna baru; dipakai juga di label "LANGKAH x / 2". */
+const TOTAL_STEPS = 2;
 
 export default function AuthScreen() {
   const insets = useSafeAreaInsets();
@@ -57,7 +59,6 @@ export default function AuthScreen() {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [schoolLevel, setSchoolLevel] = useState<SchoolLevelId | null>(null);
   const [readingLevel, setReadingLevel] = useState<ReadingLevelId | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -68,8 +69,8 @@ export default function AuthScreen() {
   const switchMode = (next: Mode) => {
     setMode(next);
     // Kembali ke langkah pertama, kalau tidak orang yang menekan "Sudah Punya
-    // Akun" di langkah 3 akan melihat formulir masuk dengan titik langkah
-    // ketiga menyala.
+    // Akun" di langkah 2 akan melihat formulir masuk dengan titik langkah
+    // kedua menyala.
     setStep(0);
     setError(null);
   };
@@ -90,18 +91,6 @@ export default function AuthScreen() {
       }
 
       setStep(1);
-
-      return;
-    }
-
-    if (step === 1) {
-      if (schoolLevel === null) {
-        setError(t.auth.needSchool);
-
-        return;
-      }
-
-      setStep(2);
     }
   };
 
@@ -116,7 +105,7 @@ export default function AuthScreen() {
     setError(null);
 
     try {
-      await signUp({ name, username, password, readingLevel, schoolLevel });
+      await signUp({ name, username, password, readingLevel });
       /*
        * Akun didaftarkan bersama pendamping, jadi tur pendamping langsung
        * dimulai: saat inilah guru atau orang tuanya masih duduk di samping.
@@ -131,7 +120,7 @@ export default function AuthScreen() {
       /*
        * Dikembalikan ke langkah pertama HANYA untuk galat yang isiannya ada di
        * sana — nama pengguna terpakai, misalnya. Tanpa ini pesannya muncul di
-       * langkah 3, di layar yang tidak punya satu pun kolom untuk memperbaikinya.
+       * langkah 2, di layar yang tidak punya satu pun kolom untuk memperbaikinya.
        */
       if (e instanceof AiApiError && /pengguna|username/i.test(e.message)) {
         setStep(0);
@@ -167,14 +156,13 @@ export default function AuthScreen() {
     router.replace('/(tabs)');
   };
 
-  const stepName = [t.auth.stepHalo, t.auth.stepJenjang, t.auth.stepMembaca][step];
+  const stepName = [t.auth.stepHalo, t.auth.stepMembaca][step];
 
   const heading =
     mode === 'existing'
       ? { title: t.auth.welcomeBackTitle, subtitle: t.auth.welcomeBackSubtitle }
       : [
           { title: t.auth.askNameTitle, subtitle: t.auth.askNameSubtitle },
-          { title: t.auth.askSchoolTitle, subtitle: t.auth.askSchoolSubtitle },
           { title: t.auth.askReadingTitle, subtitle: t.auth.askReadingSubtitle },
         ][step];
 
@@ -183,7 +171,7 @@ export default function AuthScreen() {
       ? loading
         ? t.auth.loginLoading
         : t.auth.loginAction
-      : step === 2
+      : step === 1
         ? loading
           ? t.auth.registerLoading
           : t.auth.finish
@@ -196,7 +184,7 @@ export default function AuthScreen() {
       return;
     }
 
-    if (step === 2) {
+    if (step === 1) {
       void submitRegister();
 
       return;
@@ -246,14 +234,14 @@ export default function AuthScreen() {
           {/*
             Titik langkah hanya untuk pengguna baru. Yang sudah punya akun cuma
             melewati satu layar, dan memperlihatkan "LANGKAH 1 / 3" kepadanya
-            menjanjikan dua langkah yang tidak akan pernah datang.
+            menjanjikan langkah yang tidak akan pernah datang.
           */}
           {mode === 'new' ? (
             <>
               <View className="mt-6 flex-row items-center" style={{ gap: 8 }}>
                 {/* Tiga keadaan, bukan dua: yang sudah dilewati lebih terang
                     daripada yang belum, supaya kemajuannya terlihat. */}
-                {[0, 1, 2].map((index) => (
+                {[0, 1].map((index) => (
                   <View
                     key={index}
                     className={
@@ -393,11 +381,6 @@ export default function AuthScreen() {
 
             {/* ── Langkah 2 ───────────────────────────────────────────── */}
             {step === 1 ? (
-              <SchoolLevelPicker value={schoolLevel} onChange={setSchoolLevel} />
-            ) : null}
-
-            {/* ── Langkah 3 ───────────────────────────────────────────── */}
-            {step === 2 ? (
               <ReadingChoicePicker value={readingLevel} onChange={setReadingLevel} />
             ) : null}
 

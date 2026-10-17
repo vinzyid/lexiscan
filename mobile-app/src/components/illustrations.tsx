@@ -11,12 +11,8 @@ import IlluExplainSvg from '../../assets/figma/illu-explain.svg';
 import ArtRulerSvg from '../../assets/figma/art-ruler.svg';
 import ArtIsolationSvg from '../../assets/figma/art-isolation.svg';
 import ArtBicolorSvg from '../../assets/figma/art-bicolor.svg';
-import IlluGradeSdSvg from '../../assets/figma/illu-grade-sd1.svg';
-import IlluGradeUmumSvg from '../../assets/figma/illu-grade-umum.svg';
 import IlluCanReadSvg from '../../assets/figma/illu-can-read.svg';
 import IlluNeedVoiceSvg from '../../assets/figma/illu-need-voice.svg';
-
-import type { SchoolLevelId } from '../theme/school-levels';
 
 /** Maskot burung hantu "Lexi" (Figma: frame "Lexi", 120x120). */
 export function LexiMascot({ size = 120 }: { size?: number }) {
@@ -68,24 +64,6 @@ export function ArtBicolorWords({ width = 322 }: { width?: number }) {
 }
 
 /* ── Kartu pilihan di pendaftaran ────────────────────────────────────────── */
-
-/**
- * Ilustrasi 64x64 tiap kartu jenjang (Figma: IlluGradeSD1 … IlluGradeUmum).
- *
- * Dipetakan lewat tabel, bukan satu komponen per jenjang, karena pemanggilnya
- * memang mengulang `SCHOOL_LEVELS` — dan tabel inilah yang membuat menambah
- * jenjang baru gagal di TypeScript kalau gambarnya belum ada.
- */
-const GRADE_SVGS: Record<SchoolLevelId, typeof IlluGradeSdSvg> = {
-  sd: IlluGradeSdSvg,
-  umum: IlluGradeUmumSvg,
-};
-
-export function IlluSchoolLevel({ id, size = 64 }: { id: SchoolLevelId; size?: number }) {
-  const Svg = GRADE_SVGS[id];
-
-  return <Svg width={size} height={size} />;
-}
 
 /** Buku bertanda centang — "Aku bisa membaca sendiri" (Figma: 60x60). */
 export function IlluCanRead({ size = 60 }: { size?: number }) {

@@ -85,26 +85,14 @@ export const id = {
     },
   },
 
-  /**
-   * Jenjang sekolah di langkah 2 pendaftaran.
-   *
-   * Sengaja tidak ada deskripsi usia di bawah nama: yang ditanyakan di sini
-   * jenjangnya, bukan umurnya.
-   */
-  schoolLevels: {
-    sd: { name: 'SD Kelas 1–3' },
-    umum: { name: 'Umum' },
-  },
-
   auth: {
-    /* ── Wizard 3 langkah (Figma: AuthScreen) ───────────────────────────── */
+    /* ── Wizard 2 langkah (Figma: AuthScreen) ───────────────────────────── */
     appTagline: 'Teman belajar ramah disleksia',
 
     /** Judul kecil di bawah titik langkah, mis. "LANGKAH 1 / 3 — HALO!". */
     stepLabel: (step: number, total: number, name: string) =>
       `LANGKAH ${step} / ${total} — ${name}`,
     stepHalo: 'HALO!',
-    stepJenjang: 'JENJANG',
     stepMembaca: 'MEMBACA',
 
     tabNew: 'Pengguna Baru',
@@ -118,8 +106,6 @@ export const id = {
     welcomeBackSubtitle: 'Masukkan namamu untuk melanjutkan.',
 
     /* Langkah 2 */
-    askSchoolTitle: 'Kamu sekolah di mana?',
-    askSchoolSubtitle: 'Lexi akan menyesuaikan teks untukmu.',
 
     /* Langkah 3 */
     askReadingTitle: 'Membaca teks itu…',
@@ -205,7 +191,6 @@ export const id = {
      * sendiri sebabnya.
      */
     needName: 'Tulis namamu dulu ya.',
-    needSchool: 'Pilih dulu salah satu ya.',
     needReading: 'Pilih dulu yang paling cocok denganmu ya.',
   },
 

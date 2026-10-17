@@ -79,17 +79,11 @@ export const en: Translation = {
     },
   },
 
-  schoolLevels: {
-    sd: { name: 'Primary 1–3' },
-    umum: { name: 'Anyone' },
-  },
-
   auth: {
     appTagline: 'A dyslexia-friendly study buddy',
 
     stepLabel: (step: number, total: number, name: string) => `STEP ${step} / ${total} — ${name}`,
     stepHalo: 'HELLO!',
-    stepJenjang: 'SCHOOL',
     stepMembaca: 'READING',
 
     tabNew: 'New here',
@@ -101,8 +95,6 @@ export const en: Translation = {
     welcomeBackTitle: 'Welcome back!',
     welcomeBackSubtitle: 'Enter your name to continue.',
 
-    askSchoolTitle: 'Where do you go to school?',
-    askSchoolSubtitle: 'Lexi will tune the text for you.',
 
     askReadingTitle: 'Reading text is…',
     askReadingSubtitle: 'Lexi will get the right help ready for you.',
@@ -164,7 +156,6 @@ export const en: Translation = {
     unexpectedError: 'Something unexpected went wrong. Please try again.',
 
     needName: 'Write your name first.',
-    needSchool: 'Pick one first.',
     needReading: 'Pick the one that fits you best first.',
   },
 

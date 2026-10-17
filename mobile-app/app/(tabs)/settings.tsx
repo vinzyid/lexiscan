@@ -105,21 +105,10 @@ export default function SettingsScreen() {
   const activeTheme = THEMES.find((theme) => theme.id === themeId) ?? THEMES[0];
 
   /**
-   * Baris kedua di kartu profil: jenjang sekolah, persis seperti Figma
-   * ("Kelas 10 · SMA Negeri 1"). Nama sekolahnya tidak pernah ditanyakan
-   * aplikasi ini, jadi yang ditampilkan hanya yang benar-benar diketahui.
+   * Baris kedua di kartu profil: kemampuan membaca. Jenjang sekolah tidak lagi
+   * ditanyakan, jadi `school_level` akun lama sengaja tidak ditampilkan.
    */
-  /*
-   * `school_level` datang dari server, dan bisa saja berisi id lama yang tidak
-   * lagi dikenal aplikasi ini (mis. 'sma' dari sebelum jenjang disederhanakan
-   * jadi SD & Umum). Membacanya langsung lewat `t.schoolLevels[id].name` akan
-   * melempar begitu id-nya tidak ada — dan layar Atur gagal terbuka karenanya.
-   * Jadi nilainya diperiksa dulu; yang tak dikenal jatuh ke nama kemampuan
-   * membaca, bukan crash.
-   */
-  const schoolLine = reader?.school_level
-    ? (t.schoolLevels[reader.school_level]?.name ?? t.readingLevels[readingLevel].name)
-    : t.readingLevels[readingLevel].name;
+  const readingLine = t.readingLevels[readingLevel].name;
 
   const changeReadingLevel = (id: ReadingLevelId) => {
     applyReadingLevelPreset(id);
@@ -249,7 +238,7 @@ export default function SettingsScreen() {
                 {reader ? reader.name : t.settings.guestName}
               </Text>
               <Text className="mt-0.5 font-ui text-[14px] text-white/55" numberOfLines={1}>
-                {reader ? schoolLine : t.settings.guestSubtitle}
+                {reader ? readingLine : t.settings.guestSubtitle}
               </Text>
             </View>
 

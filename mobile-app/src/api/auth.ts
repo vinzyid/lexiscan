@@ -1,5 +1,4 @@
 import type { ReadingLevelId } from '../theme/reading-levels';
-import type { SchoolLevelId } from '../theme/school-levels';
 import type { LanguageId } from '../store/useStore';
 import { postJson } from './ai';
 
@@ -11,11 +10,10 @@ export type ReaderProfile = {
   reading_level: ReadingLevelId;
 
   /**
-   * Sejajar dengan reading_level, bukan di dalam `preferences` — jenjang bukan
-   * pilihan tampilan yang boleh dipasang ulang oleh preset. `null` untuk akun
-   * yang mendaftar sebelum pertanyaan ini ada.
+   * Jenjang sekolah dari pendaftaran versi lama. Aplikasi tidak lagi
+   * menanyakan atau menampilkannya; akun baru selalu `null`.
    */
-  school_level: SchoolLevelId | null;
+  school_level: string | null;
 
   /**
    * Preferensi yang pernah diubah sendiri oleh penggunanya.
@@ -42,8 +40,6 @@ export type RegisterInput = {
   username: string;
   password: string;
   readingLevel: ReadingLevelId;
-  /** Boleh dilewati — backend menerimanya null. */
-  schoolLevel: SchoolLevelId | null;
 };
 
 /** POST /api/auth/register */
@@ -53,7 +49,6 @@ export async function register(input: RegisterInput): Promise<AuthResult> {
     username: input.username.trim(),
     password: input.password,
     reading_level: input.readingLevel,
-    school_level: input.schoolLevel,
   });
 }
 
@@ -79,7 +74,6 @@ export async function savePreferences(
     /** Nama panggilan; boleh diganti, tidak boleh dikosongkan. */
     name: string;
     reading_level: ReadingLevelId;
-    school_level: SchoolLevelId | null;
     /*
      * Boleh null — dan itu bukan sekadar "kosongkan". null mengembalikan kolom
      * ke keadaan "belum pernah diubah sendiri", sehingga preset kemampuan
