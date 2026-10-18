@@ -11,11 +11,13 @@
 # diturunkan dari EXPO_PUBLIC_API_URL) tidak pernah diterapkan.
 
 node_modules/
-/android
-/ios
+android/
+ios/
 .expo/
 dist/
 web-build/
+modules/*/android/build/
+modules/*/android/.gradle/
 
 # Dump logcat hasil debugging — besar dan hanya relevan di mesin lokal.
 logcat*.txt
