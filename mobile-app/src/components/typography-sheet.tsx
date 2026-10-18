@@ -83,7 +83,7 @@ export function TypographySheet({ visible, onClose }: { visible: boolean; onClos
             })}
 
             <ToggleRow
-              emoji="🌈"
+              emoji="🎨"
               title={t.typography.bicolorTitle}
               desc={t.typography.bicolorDesc}
               value={bicolorMode}
