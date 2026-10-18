@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ScrollView, Share, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Device from 'expo-device';
@@ -21,6 +21,7 @@ import {
 } from '../src/energy/power';
 import { speak, stop } from '../src/speech/speech-service';
 import { useThemeColors } from '../src/theme/theme-provider';
+import { fileStamp, shareTextFile } from '../src/utils/share-file';
 
 /**
  * Uji energi di HP: layar tersembunyi untuk tim, bukan untuk pengguna.
@@ -35,10 +36,17 @@ import { useThemeColors } from '../src/theme/theme-provider';
  *
  *   1. diam, sebagai garis dasar yang dikurangkan dari semua keadaan lain;
  *   2. OCR berulang pada satu foto halaman;
- *   3. suara yang terus membacakan;
- *   4. AI baru: Sederhanakan dengan teks yang selalu berbeda, jadi server
- *      pasti memanggil model;
- *   5. AI dari cache: teks yang sama terus, jadi server menjawab dari simpanan.
+ *   3. suara yang terus membacakan teks halaman itu;
+ *   4. AI baru: Sederhanakan teks halaman itu dengan penanda yang selalu
+ *      berbeda, jadi server pasti memanggil model;
+ *   5. AI dari cache: teks halaman yang sama terus, jadi server menjawab dari
+ *      simpanan.
+ *
+ * Tahap 3-5 memakai teks hasil OCR dari foto yang sama, dibaca sekali saat
+ * foto dipilih. Fotonya tetap untuk semua putaran, jadi bebannya tetap
+ * identik antarputaran tanpa teks buatan. Tidak ada teks cadangan: foto yang
+ * teksnya terlalu sedikit ditolak, supaya hasilnya tidak pernah diam-diam
+ * berasal dari campuran teks halaman dan teks contoh.
  *
  * Selisih 4 dan 5 adalah penghematan cache yang terukur di HP. Energi di pusat
  * data penyedia AI tidak bisa diukur dari luar, jadi bagian itu tetap diambil
@@ -73,11 +81,14 @@ const DURATIONS = [30, 60, 120] as const;
  */
 const AI_PERIOD_MS = 6_000;
 
-/** Teks tetap untuk suara dan AI, supaya beban tiap putaran sama persis. */
-const SAMPLE_TEXT =
-  'Matahari adalah bintang yang paling dekat dengan Bumi. Cahayanya membantu tumbuhan membuat makanan. ' +
-  'Tanpa matahari, Bumi akan menjadi sangat dingin dan gelap. Planet-planet bergerak mengelilingi matahari ' +
-  'dalam jalurnya masing-masing. Bumi adalah planet ketiga dan satu-satunya yang dihuni makhluk hidup.';
+/**
+ * Batas panjang teks halaman. Di bawah 200 karakter (kira-kira satu paragraf
+ * pendek) beban suara dan AI terlalu kecil untuk mewakili halaman buku. Di
+ * atas 3.900 karakter Android menolak teksnya untuk TTS (batasnya 4.000), dan
+ * sisa ruangnya untuk penanda unik tahap AI baru.
+ */
+const MIN_PAGE_CHARS = 200;
+const MAX_PAGE_CHARS = 3_900;
 
 /** Hasil satu permintaan AI, untuk membuktikan ia memang baru atau dari cache. */
 type AiCall = { cached: boolean | null; serverWh: number; failed: boolean };
@@ -117,6 +128,9 @@ export default function EnergyTestScreen() {
   const colors = useThemeColors();
 
   const [imageUri, setImageUri] = useState<string | null>(null);
+  // null selama foto belum dipilih atau masih dibaca.
+  const [pageText, setPageText] = useState<string | null>(null);
+  const [readingPage, setReadingPage] = useState(false);
   const [duration, setDuration] = useState<(typeof DURATIONS)[number]>(60);
   const [status, setStatus] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
@@ -142,8 +156,14 @@ export default function EnergyTestScreen() {
       : probe?.plugged
         ? 'Cabut charger dulu. Saat mengisi daya, sensor membaca arus pengisian, bukan pemakaian.'
         : !imageUri
-          ? 'Pilih satu foto halaman buku untuk beban OCR.'
-          : null;
+          ? 'Pilih satu foto halaman buku. Fotonya dipakai untuk tahap OCR, dan teksnya untuk tahap suara dan AI.'
+          : readingPage || pageText === null
+            ? 'Membaca teks foto...'
+            : pageText.length < MIN_PAGE_CHARS
+              ? `Teks di foto ini hanya ${pageText.length} karakter. Pilih halaman dengan minimal ${MIN_PAGE_CHARS} karakter (sekitar satu paragraf).`
+              : pageText.length > MAX_PAGE_CHARS
+                ? `Teks di foto ini ${pageText.length} karakter, melebihi batas suara Android. Pilih halaman yang lebih pendek atau potong fotonya.`
+                : null;
 
   useEffect(
     () => () => {
@@ -159,7 +179,20 @@ export default function EnergyTestScreen() {
       type: 'image/*',
       copyToCacheDirectory: true,
     });
-    if (!result.canceled) setImageUri(result.assets[0].uri);
+    if (result.canceled) return;
+
+    const uri = result.assets[0].uri;
+    setImageUri(uri);
+    setPageText(null);
+    setReadingPage(true);
+
+    try {
+      setPageText((await TextRecognition.recognize(uri))?.text?.trim() ?? '');
+    } catch {
+      setPageText('');
+    } finally {
+      setReadingPage(false);
+    }
   };
 
   /** Mencatat sensor selama durasi terpilih sambil `work` berjalan berulang. */
@@ -205,7 +238,8 @@ export default function EnergyTestScreen() {
   };
 
   const runRound = async () => {
-    if (!imageUri || blocker) return;
+    if (!imageUri || !pageText || blocker) return;
+    const text = pageText;
 
     cancelled.current = false;
     setRunning(true);
@@ -220,7 +254,7 @@ export default function EnergyTestScreen() {
         'tts',
         () =>
           new Promise<void>((resolve) => {
-            void speak(SAMPLE_TEXT, { language: 'id', rate: 1, onSettled: resolve });
+            void speak(text, { language: 'id', rate: 1, onSettled: resolve });
           }),
       );
 
@@ -230,16 +264,16 @@ export default function EnergyTestScreen() {
       let missIndex = 0;
       const aiMiss = await measure(
         'aiMiss',
-        pacedCall(() => `${SAMPLE_TEXT} (Uji ${roundId}-${(missIndex += 1)})`),
+        pacedCall(() => `${text} (Uji ${roundId}-${(missIndex += 1)})`),
       );
 
       // Satu permintaan pemanasan di luar pengukuran, supaya teksnya sudah ada di
       // cache server sebelum tahap cache dimulai.
       setStatus('Mengisi cache server...');
-      await simplifyOnce(SAMPLE_TEXT);
+      await simplifyOnce(text);
       const aiHit = await measure(
         'aiHit',
-        pacedCall(() => SAMPLE_TEXT),
+        pacedCall(() => text),
       );
 
       if (cancelled.current) return;
@@ -365,6 +399,7 @@ export default function EnergyTestScreen() {
     const lines = [
       `# Uji energi LexiScan, ${deviceLine}, ${new Date().toISOString()}`,
       `# durasi per keadaan ${duration} detik, jeda ${SETTLE_MS / 1000} detik, sampel tiap ${SAMPLE_INTERVAL_MS} ms, AI tiap ${AI_PERIOD_MS / 1000} detik`,
+      `# teks halaman dari OCR foto, ${pageText?.length ?? 0} karakter, dipakai untuk tahap suara dan AI: ${JSON.stringify(pageText ?? '')}`,
       `# kolom *_mW dan *_mJ terukur dari sensor baterai HP; kolom taksiran_server dari faktor energi di server`,
       ['putaran', ...columns.map(([name]) => name)].join(','),
       ...perRound.map((r, i) =>
@@ -390,7 +425,7 @@ export default function EnergyTestScreen() {
       ),
     ];
 
-    void Share.share({ message: lines.join('\n') });
+    void shareTextFile(`uji-energi_${fileStamp()}.csv`, lines.join('\n'), 'text/csv');
   };
 
   const row = (label: string, value: { mean: number; sd: number }, unit: string, digits = 1) => (
@@ -452,13 +487,19 @@ export default function EnergyTestScreen() {
         <View className="mt-5 rounded-3xl bg-surface p-4" style={{ gap: 12 }}>
           <PressableScale
             onPress={pickImage}
-            disabled={running}
+            disabled={running || readingPage}
             accessibilityRole="button"
             className="h-12 items-center justify-center rounded-2xl bg-surface-alt">
             <Text className="font-ui-bold text-[15px] text-text-main">
               {imageUri ? 'Ganti foto halaman' : 'Pilih foto halaman'}
             </Text>
           </PressableScale>
+
+          {pageText ? (
+            <Text className="font-ui-medium text-[13px] leading-5 text-text-muted" numberOfLines={3}>
+              Teks halaman ({pageText.length} karakter): {pageText}
+            </Text>
+          ) : null}
 
           <View className="flex-row" style={{ gap: 8 }}>
             {DURATIONS.map((seconds) => (

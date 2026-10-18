@@ -27,6 +27,7 @@ import { PortalHost } from '../src/components/portal';
 import { useServerDefaults } from '../src/hooks/use-server-defaults';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useOCRStore } from '../src/store/useStore';
+import { TEST_TOOLS_ENABLED } from '../src/utils/test-tools';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -161,9 +162,12 @@ function RootNavigator({ intro, onAdvance }: { intro: Intro; onAdvance: (next: I
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="screening" />
-        <Stack.Screen name="energy" />
-        <Stack.Screen name="lafal" />
-        <Stack.Screen name="ocr-test" />
+        {/* Layar uji tim; tertutup di APK rilis, termasuk lewat deep link. */}
+        <Stack.Protected guard={TEST_TOOLS_ENABLED}>
+          <Stack.Screen name="energy" />
+          <Stack.Screen name="lafal" />
+          <Stack.Screen name="ocr-test" />
+        </Stack.Protected>
       </Stack>
 
       {/* Lembar bawah yang berisi kolom isian dirender di sini, di jendela

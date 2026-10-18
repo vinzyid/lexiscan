@@ -23,6 +23,7 @@ import {
 } from 'lucide-react-native';
 
 import { useOCRStore } from '../../src/store/useStore';
+import { TEST_TOOLS_ENABLED } from '../../src/utils/test-tools';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { GRADIENTS, THEMES, TYPE_LEVELS } from '../../src/theme/palettes';
 import type { ReadingLevelId } from '../../src/theme/reading-levels';
@@ -417,9 +418,10 @@ export default function SettingsScreen() {
           ) : null}
 
           {/* Tekan lama membuka layar Uji Energi untuk tim (app/energy.tsx).
-              Sengaja tersembunyi: bukan fitur untuk siswa atau pendamping. */}
+              Sengaja tersembunyi: bukan fitur untuk siswa atau pendamping, dan
+              mati sama sekali di APK rilis (lihat src/utils/test-tools.ts). */}
           <Text
-            onLongPress={() => router.push('/energy')}
+            onLongPress={TEST_TOOLS_ENABLED ? () => router.push('/energy') : undefined}
             className="mt-5 text-center font-ui-medium text-[12px] text-text-muted">
             {t.settings.footer(version)}
           </Text>

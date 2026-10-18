@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ScrollView, Share, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Device from 'expo-device';
@@ -12,6 +12,7 @@ import { correctTypo } from '../src/api/ai';
 import { PressableScale } from '../src/components/pressable-scale';
 import { meanSd } from '../src/energy/power';
 import { useThemeColors } from '../src/theme/theme-provider';
+import { fileStamp, shareTextFile } from '../src/utils/share-file';
 
 /**
  * Uji akurasi dan kecepatan OCR: layar tersembunyi untuk tim, dibuka dari
@@ -187,7 +188,7 @@ export default function OcrTestScreen() {
       })),
     };
 
-    void Share.share({ message: JSON.stringify(payload, null, 2) });
+    void shareTextFile(`uji-ocr_${fileStamp()}.json`, JSON.stringify(payload, null, 2), 'application/json');
   };
 
   const chip = (selected: boolean) =>
