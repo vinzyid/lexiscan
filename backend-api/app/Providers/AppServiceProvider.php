@@ -7,7 +7,6 @@ use App\Services\Ai\ApinexProvider;
 use App\Services\Ai\FallbackProvider;
 use App\Services\Ai\GeminiProvider;
 use App\Services\Ai\GriphubProvider;
-use App\Services\Ai\GrokProvider;
 use App\Services\Ai\MistralProvider;
 use App\Services\Ai\OpenRouterProvider;
 use App\Services\Ai\ProviderSelector;
@@ -63,13 +62,12 @@ class AppServiceProvider extends ServiceProvider
     {
         return match ($name) {
             'gemini' => new GeminiProvider,
-            'grok' => new GrokProvider,
             'mistral' => new MistralProvider,
             'openrouter' => new OpenRouterProvider,
             'griphub' => new GriphubProvider,
             'apinex' => new ApinexProvider,
             default => throw new InvalidArgumentException(
-                "{$setting} tidak dikenal: '{$name}'. Pilihannya: " . implode(', ', ProviderSelector::SUPPORTED) . '.'
+                "{$setting} tidak dikenal: '{$name}'. Pilihannya: ".implode(', ', ProviderSelector::SUPPORTED).'.'
             ),
         };
     }

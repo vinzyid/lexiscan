@@ -24,8 +24,10 @@
 |   (500 x 0,00004 + 400 x 0,0005) x 1,09        = 0,240 Wh
 |   0,240 Wh = 0,000240 kWh x 125 gCO2e/kWh      = 0,030 gCO2e
 |
-| PENTING SEBELUM DIPAKAI DI DOKUMEN RESMI: verifikasi sendiri angka rujukan
-| Google yang terbaru dan cantumkan sitasinya. Taksiran seperti ini punya
+| Rujukan: Elsworth dkk. (2025), "Measuring the environmental impact of
+| delivering AI at Google Scale", arXiv:2508.15734 (0,24 Wh dan 0,03 gCO2e per
+| prompt median). Token keluar dibuat lebih mahal daripada token masuk
+| mengikuti Wilkins dkk. (2024), HotCarbon '24, arXiv:2407.04014. Taksiran seperti ini punya
 | ketidakpastian besar — pembagian antara token masuk dan keluar, jenis
 | akselerator, tingkat utilisasi, dan lokasi datacenter semuanya berpengaruh
 | dan tidak satupun terlihat dari sisi klien. Sajikan sebagai TAKSIRAN dengan
@@ -59,11 +61,14 @@ return [
      * kWh. Ini variabel yang paling berpengaruh sekaligus paling sering salah
      * dipakai orang.
      *
-     * Nilai bawaan 125 mengikuti campuran listrik Google (mereka membeli
-     * energi terbarukan dalam jumlah besar, jadi jauh di bawah rata-rata).
+     * Nilai bawaan 125 diturunkan dari angka median prompt Gemini milik
+     * Elsworth dkk. (2025, arXiv:2508.15734): 0,03 gCO2e / 0,24 Wh. Itu angka
+     * menyeluruh versi Google, yaitu listrik market-based 94 gCO2e/kWh
+     * ditambah Scope 1 dan 3, bukan intensitas jaringan listrik biasa.
      *
      * Pembanding yang berguna untuk pembahasan:
-     *   ~125  campuran Google (market-based)
+     *   ~125  Google menyeluruh (market-based + Scope 1 dan 3)
+     *   ~345  Google berbasis lokasi (makalah yang sama)
      *   ~480  rata-rata dunia
      *   ~650  jaringan listrik Indonesia, yang masih didominasi batu bara
      *

@@ -38,7 +38,7 @@ class GeminiProvider implements AiProvider
 
         $response = LlmHttp::client($this->name(), $timeoutSeconds)
             ->withHeaders(['x-goog-api-key' => (string) config('services.gemini.key')])
-            ->post(self::ENDPOINT . '/' . $this->model() . ':generateContent', [
+            ->post(self::ENDPOINT.'/'.$this->model().':generateContent', [
                 'contents' => [
                     ['parts' => [['text' => $prompt]]],
                 ],

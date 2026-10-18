@@ -60,7 +60,7 @@ final class TokenUsage
     }
 
     /**
-     * Blok `usage` milik API bergaya OpenAI — dipakai Grok, Mistral, dan
+     * Blok `usage` milik API bergaya OpenAI — dipakai Mistral dan
      * OpenRouter. Token penalaran sudah termasuk di completion_tokens.
      *
      * @param  mixed  $usage

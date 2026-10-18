@@ -9,7 +9,6 @@ use App\Services\Ai\FallbackProvider;
 use App\Services\Ai\FootprintEstimator;
 use App\Services\Ai\LlmResult;
 use App\Services\Ai\TokenUsage;
-use App\Services\SystemSettings;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -280,7 +279,7 @@ class AiTextService
 
         if (count($chunks) === 1) {
             return $this->remember(
-                "simplify:{$language}:{$level}:{$readingLevel}:" . md5($text),
+                "simplify:{$language}:{$level}:{$readingLevel}:".md5($text),
                 $this->simplifyPrompt($chunks[0], $rule, $language, $readingLevel),
             );
         }
@@ -323,7 +322,7 @@ class AiTextService
 
         foreach ($chunks as $index => $chunk) {
             $prompt = $this->simplifyPrompt($chunk, $rule, $language, $readingLevel);
-            $suffix = "simplify:{$language}:{$level}:{$readingLevel}:part{$index}:" . md5($chunk);
+            $suffix = "simplify:{$language}:{$level}:{$readingLevel}:part{$index}:".md5($chunk);
             $keys[$index] = $this->cacheKey($suffix, $prompt);
             $prompts[$index] = $prompt;
 
@@ -453,7 +452,7 @@ class AiTextService
         $current = '';
 
         foreach ($units as $unit) {
-            $candidate = $current === '' ? $unit : $current . "\n\n" . $unit;
+            $candidate = $current === '' ? $unit : $current."\n\n".$unit;
 
             if ($current !== '' && mb_strlen($candidate) > self::SIMPLIFY_CHUNK_CHARS) {
                 $chunks[] = $current;
@@ -570,7 +569,7 @@ class AiTextService
         }
 
         return $this->remember(
-            "explain:{$language}:{$style}:{$readingLevel}:" . md5($term . '|' . $context),
+            "explain:{$language}:{$style}:{$readingLevel}:".md5($term.'|'.$context),
             $prompt,
         );
     }

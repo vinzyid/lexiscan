@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\FakesGemini;
 use Tests\TestCase;
 
@@ -19,7 +20,7 @@ class SimplifyTextTest extends TestCase
         return [['L2'], ['L3'], ['L4'], ['L5']];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('supportedLevels')]
+    #[DataProvider('supportedLevels')]
     public function test_it_returns_paragraphs_for_a_supported_level(string $level): void
     {
         $this->fakeGeminiParagraphs(["Hasil untuk {$level}."]);

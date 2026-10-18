@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\FakesGemini;
 use Tests\TestCase;
 
@@ -16,7 +17,7 @@ class ExplainWordTest extends TestCase
         return [['sederhana'], ['analogi'], ['nyata']];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('supportedStyles')]
+    #[DataProvider('supportedStyles')]
     public function test_it_explains_a_term_in_each_supported_style(string $style): void
     {
         $this->fakeGeminiParagraphs(["Penjelasan gaya {$style}."]);

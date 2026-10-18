@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Middleware\IdentifyDevice;
+use App\Models\Device;
 use App\Models\Feedback;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -72,7 +73,7 @@ class FeedbackTest extends TestCase
     {
         $id = (string) Str::uuid();
 
-        \App\Models\Device::create([
+        Device::create([
             'id' => $id,
             'first_seen_at' => now(),
             'last_seen_at' => now(),

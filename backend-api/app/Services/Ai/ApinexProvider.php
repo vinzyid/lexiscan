@@ -97,7 +97,7 @@ class ApinexProvider implements AiProvider
 
         return str_ends_with($base, '/chat/completions')
             ? $base
-            : $base . '/chat/completions';
+            : $base.'/chat/completions';
     }
 
     public function paragraphsFor(string $prompt, ?float $timeoutSeconds = null): LlmResult
@@ -329,7 +329,7 @@ class ApinexProvider implements AiProvider
         return match (true) {
             $status === 401 => 'APINEX_API_KEY tidak valid. Periksa kembali kunci dari apinex.bond.',
             $status === 402 => 'Saldo APINEX tidak cukup untuk model ini. Pakai model berawalan "free/".',
-            $status === 404 => 'Model "' . $model . '" tidak ditemukan di APINEX. Periksa ejaan namanya.',
+            $status === 404 => 'Model "'.$model.'" tidak ditemukan di APINEX. Periksa ejaan namanya.',
             $status === 429 => 'Jatah APINEX sedang habis. Tunggu sebentar lalu coba lagi.',
             $status >= 500 => 'Server APINEX sedang bermasalah. Coba beberapa saat lagi.',
             default => $detail ?? 'Permintaan ke APINEX gagal.',

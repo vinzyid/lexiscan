@@ -24,7 +24,6 @@ use Illuminate\Support\Facades\Log;
  */
 class FallbackProvider implements AiProvider
 {
-
     /**
      * Waktu yang disisakan untuk penyedia cadangan, dalam detik.
      *
@@ -103,7 +102,7 @@ class FallbackProvider implements AiProvider
 
         try {
             return $this->primary->paragraphsFor($prompt, $primaryBudget);
-        } catch (ProviderExhaustedException | ProviderResponseException | ConnectionException $e) {
+        } catch (ProviderExhaustedException|ProviderResponseException|ConnectionException $e) {
             /*
              * ConnectionException ikut memicu perpindahan, dan itu penting untuk
              * keandalan: penyedia utama yang lambat atau tidak terjangkau
@@ -155,7 +154,7 @@ class FallbackProvider implements AiProvider
 
         try {
             return $this->primary->paragraphsForMany($prompts, $primaryBudget);
-        } catch (ProviderExhaustedException | ProviderResponseException | ConnectionException $e) {
+        } catch (ProviderExhaustedException|ProviderResponseException|ConnectionException $e) {
             if (! $this->fallback->isConfigured()) {
                 throw $e;
             }

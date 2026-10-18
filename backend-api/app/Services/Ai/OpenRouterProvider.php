@@ -108,7 +108,7 @@ class OpenRouterProvider implements AiProvider
             $status === 401 => 'OPENROUTER_API_KEY tidak valid. Periksa kembali kunci di openrouter.ai/keys.',
             $status === 402 => 'Saldo OpenRouter tidak cukup untuk model ini. Pakai model berakhiran ":free".',
             $status === 429 => 'Rate limit model gratis OpenRouter tercapai. Tunggu sebentar lalu coba lagi.',
-            $status === 404 => 'Model "' . $this->model() . '" tidak ditemukan di OpenRouter. Cek ejaannya, termasuk akhiran ":free".',
+            $status === 404 => 'Model "'.$this->model().'" tidak ditemukan di OpenRouter. Cek ejaannya, termasuk akhiran ":free".',
             $status >= 500 => 'Server OpenRouter sedang bermasalah. Coba beberapa saat lagi.',
             default => $detail ?? 'Permintaan ke OpenRouter gagal.',
         };

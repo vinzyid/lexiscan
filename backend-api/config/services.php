@@ -110,15 +110,6 @@ return [
 
     /*
      * Daftar model berbeda per akun; cek milik sendiri dengan:
-     *   curl https://api.x.ai/v1/models -H "Authorization: Bearer $XAI_API_KEY"
-     */
-    'grok' => [
-        'key' => env('XAI_API_KEY'),
-        'model' => env('XAI_MODEL', 'grok-4.5'),
-    ],
-
-    /*
-     * Daftar model berbeda per akun; cek milik sendiri dengan:
      *   curl https://api.mistral.ai/v1/models -H "Authorization: Bearer $MISTRAL_API_KEY"
      */
     'mistral' => [
@@ -127,7 +118,7 @@ return [
     ],
 
     /*
-     * Bawaannya DeepSeek: Grok dan Mistral sudah punya penyedianya sendiri, jadi
+     * Bawaannya DeepSeek: Mistral sudah punya penyedianya sendiri, jadi
      * OpenRouter di sini gunanya justru menjangkau model yang tidak punya jalur
      * langsung. Nilainya sama dengan .env.example supaya keduanya tidak berbeda
      * diam-diam.

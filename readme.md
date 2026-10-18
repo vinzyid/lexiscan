@@ -20,11 +20,9 @@
   <img alt="Laravel" src="https://img.shields.io/badge/Laravel-FF2D20?logo=laravel&logoColor=white" />
   <img alt="Supabase" src="https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white" />
   <img alt="Gemini" src="https://img.shields.io/badge/Gemini-4285F4?logo=googlegemini&logoColor=white" />
-  <img alt="Grok (xAI)" src="https://img.shields.io/badge/Grok_(xAI)-000000?logo=x&logoColor=white" />
   <img alt="Mistral" src="https://img.shields.io/badge/Mistral-FA520F?logo=mistralai&logoColor=white" />
   <img alt="OpenRouter" src="https://img.shields.io/badge/OpenRouter-6566F1?logo=openrouter&logoColor=white" />
-  <img alt="DeepSeek" src="https://img.shields.io/badge/DeepSeek-4D6BFE?logo=deepseek&logoColor=white" />
-  <img alt="Versi" src="https://img.shields.io/badge/versi-1.2.0-7C3AED" />
+  <img alt="Versi" src="https://img.shields.io/badge/versi-1.4.0-7C3AED" />
 </p>
 
 ---
@@ -83,7 +81,7 @@
 │                          │                                     │
 │              ┌───────────▼────────────┐                        │
 │              │  AI Provider           │                        │
-│              │(Gemini/Grok/Mistral/OR)│                        │
+│              │ Gemini / Mistral / OR  │                        │
 │              └────────────────────────┘                        │
 │                          │                                     │
 └──────────────────────────┼─────────────────────────────────────┘
@@ -131,11 +129,10 @@
 |---------|-------|--------|
 | **[Google ML Kit](https://developers.google.com/ml-kit)** | OCR *on-device* (tanpa internet) | ✅ Terintegrasi |
 | **[Gemini API](https://aistudio.google.com/)** | AI Simplification, Explain This, Correct Typo. Model `gemini-3.6-flash` | ✅ **Aktif (default)** |
-| **[xAI (Grok)](https://console.x.ai/)** | Penyedia alternatif, model `grok-4.5` | ✅ Didukung |
 | **[Mistral](https://console.mistral.ai/)** | Penyedia alternatif, model `mistral-small-latest` | ✅ Didukung |
-| **[OpenRouter](https://openrouter.ai/)** | Satu kunci untuk banyak model, bawaannya DeepSeek (`deepseek/deepseek-v4-flash`) | ✅ Didukung, sekaligus cadangan bawaan |
+| **[OpenRouter](https://openrouter.ai/)** | Satu kunci untuk banyak model, dipakai sebagai cadangan | ✅ Didukung |
 
-Keempatnya dipilih lewat satu baris `AI_PROVIDER` di `.env`; prompt, cache, dan
+Ketiganya dipilih lewat satu baris `AI_PROVIDER` di `.env`; prompt, cache, dan
 taksiran jejak karbon dipakai bersama, hanya lapisan HTTP-nya yang berbeda.
 `AI_FALLBACK_PROVIDER` menunjuk penyedia yang mengambil alih saat yang utama
 kehabisan jatah - kuota harian habis, rate limit, atau saldo kurang. Kunci yang
@@ -192,19 +189,12 @@ AI_PROVIDER=gemini
 GEMINI_API_KEY=AIza...
 GEMINI_MODEL=gemini-3.6-flash
 
-# Opsi 2: Grok (xAI)
-AI_PROVIDER=grok
-XAI_API_KEY=xai-...
-XAI_MODEL=grok-4.5
-
-# Opsi 3: Mistral
+# Opsi 2: Mistral (paket gratis Experiment)
 AI_PROVIDER=mistral
 MISTRAL_API_KEY=...
 MISTRAL_MODEL=mistral-small-latest
 
-# Opsi 4: OpenRouter, bawaannya DeepSeek.
-# DeepSeek tidak punya varian :free di sini, jadi model ini berbayar (murah).
-# Jangan pakai deepseek-r1: langkah berpikirnya ikut masuk ke jawaban.
+# Opsi 3: OpenRouter (satu kunci untuk banyak model)
 AI_PROVIDER=openrouter
 OPENROUTER_API_KEY=sk-or-...
 OPENROUTER_MODEL=deepseek/deepseek-v4-flash
@@ -220,6 +210,7 @@ AI_FALLBACK_PROVIDER=openrouter
 | `POST` | `/api/simplify-text` | Sederhanakan teks, level `L2`-`L5` (Sedikit Lebih Mudah sampai Paling Mudah). `L1` tidak dikirim ke sini karena itu teks aslinya | 20/menit |
 | `POST` | `/api/explain-word` | Jelaskan kata/kalimat dengan gaya tertentu | 20/menit |
 | `POST` | `/api/correct-typo` | Koreksi typo hasil OCR | 20/menit |
+| `POST` | `/api/extract-document` | Ambil teks dari PDF / DOCX (maks. 10 MB) | 20/menit |
 | `GET` | `/api/ai/health` | Cek status provider AI | - |
 | `POST` | `/api/auth/register` | Daftar akun + kemampuan membaca | 10/menit |
 | `POST` | `/api/auth/login` | Masuk, membalas token Sanctum | 10/menit |
@@ -254,28 +245,29 @@ baru dari yang dijawab simpanan, jadi hemat kuota dan emisinya kelihatan.
 ```
 mobile-app/
 ├── app/
-│   └── (tabs)/
-│       ├── index.tsx        # Dashboard (Beranda)
-│       ├── settings.tsx     # Atur: tema, tipografi, suara, akun
-│       ├── scanner.tsx      # Halaman Scan OCR & Upload
-│       ├── reader.tsx       # Halaman Baca + Simplify + Explain
-│       └── _layout.tsx      # Konfigurasi tab navigasi
+│   ├── _layout.tsx          # Akar navigasi: splash, onboarding, layar akun
+│   ├── (auth)/
+│   │   └── welcome.tsx      # Daftar didampingi / masuk + pilihan bahasa
+│   ├── (tabs)/
+│   │   ├── index.tsx        # Beranda
+│   │   ├── scanner.tsx      # Pindai kamera, galeri, PDF/DOCX
+│   │   ├── reader.tsx       # Ruang Baca + penyederhanaan + Tanya Lexi
+│   │   ├── documents.tsx    # Riwayat dokumen di HP
+│   │   └── settings.tsx     # Atur: tema, tulisan, suara, bahasa, akun
+│   ├── screening/
+│   │   └── index.tsx        # Cek Awal Risiko Disleksia
+│   └── energy.tsx, lafal.tsx, ocr-test.tsx
+│                            # Layar uji, tersembunyi di build produksi
 ├── src/
-│   ├── api/
-│   │   └── ai.ts            # HTTP client ke backend AI
-│   ├── components/
-│   │   ├── explain-sheet.tsx    # Sheet AI Explain This
-│   │   ├── typography-sheet.tsx # Sheet pengaturan tipografi
-│   │   ├── word-sheet.tsx       # Sheet suku kata
-│   │   ├── dyslexic-text.tsx    # Teks bacaan (Atkinson Hyperlegible)
-│   │   └── ...
-│   ├── store/
-│   │   └── useStore.ts      # Zustand global state
-│   ├── theme/
-│   │   ├── palettes.ts      # Palet warna & tipe level
-│   │   └── theme-provider.tsx
-│   └── data/
-│       └── sample-document.ts # Data contoh & tip
+│   ├── api/                 # Klien HTTP ke backend (AI, akun, dokumen)
+│   ├── components/          # Komponen UI (lembar penjelasan, chip jejak karbon, ...)
+│   ├── data/                # Contoh dokumen & butir cek awal
+│   ├── energy/              # Pembacaan sensor baterai untuk uji energi
+│   ├── i18n/                # Teks Bahasa Indonesia & Inggris
+│   ├── speech/              # Suara (TTS) & ejaan suku kata
+│   ├── store/               # State global (Zustand)
+│   ├── theme/               # Palet warna & tingkat bacaan
+│   └── utils/               # Suku kata, format jejak karbon, dll.
 ├── assets/
 ├── app.json
 ├── tailwind.config.js
@@ -286,7 +278,7 @@ mobile-app/
 
 ## 🚢 Versi & Rilis
 
-Versi saat ini: **1.2.0**.
+Versi saat ini: **1.4.0**.
 
 LexiScan memakai dua jalur distribusi. `runtimeVersion.policy` pada `app.json`
 disetel ke `appVersion`, sehingga nomor versi aplikasi sekaligus berperan sebagai
@@ -330,7 +322,7 @@ dengan environment variable dari `.env.example`).
 | *Solo Full-Stack Developer* | **Rafi** |
 | Frontend | React Native + Expo + NativeWind |
 | Backend | Laravel + Supabase |
-| AI Integration | Gemini / Grok / Mistral / OpenRouter (DeepSeek) |
+| AI Integration | Gemini / Mistral / OpenRouter |
 | UI/UX Implementation | Atkinson Hyperlegible + Fredoka + Adaptive Typography |
 
 ---

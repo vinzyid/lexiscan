@@ -83,8 +83,8 @@ class MistralProvider implements AiProvider
             $status === 402 => 'Langganan Mistral tidak aktif atau kredit habis. Cek di console.mistral.ai/billing.',
             $status === 429 => 'Rate limit Mistral tercapai. Tunggu sebentar lalu coba lagi.',
             // Model yang tidak ada di langganan ditolak sebagai 400, bukan 404.
-            $status === 400 && str_contains((string) $detail, 'model') => 'Model "' . $this->model() . '" tidak tersedia untuk akunmu. Cek daftar model di /v1/models.',
-            $status === 404 => 'Model "' . $this->model() . '" tidak ditemukan di Mistral. Cek ejaan namanya.',
+            $status === 400 && str_contains((string) $detail, 'model') => 'Model "'.$this->model().'" tidak tersedia untuk akunmu. Cek daftar model di /v1/models.',
+            $status === 404 => 'Model "'.$this->model().'" tidak ditemukan di Mistral. Cek ejaan namanya.',
             $status >= 500 => 'Server Mistral sedang bermasalah. Coba beberapa saat lagi.',
             default => $detail ?? 'Permintaan ke Mistral gagal.',
         };

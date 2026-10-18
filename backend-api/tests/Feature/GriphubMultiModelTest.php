@@ -3,10 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\Ai\GriphubProvider;
-use App\Services\Ai\ProviderExhaustedException;
-use App\Services\Ai\ProviderResponseException;
 use Illuminate\Support\Facades\Http;
-use RuntimeException;
 use Tests\TestCase;
 
 /**

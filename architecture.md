@@ -27,8 +27,8 @@ genuinely needed. OCR, typography, syllable splitting, and text-to-speech never 
 - **Database:** Supabase PostgreSQL.
 - **On-device ML:** `@react-native-ml-kit/text-recognition` (Google ML Kit OCR).
 - **Speech:** `expo-speech` - the device TTS engine, with an explicitly selected voice.
-- **LLM:** four interchangeable providers behind one `AI_PROVIDER` switch - Gemini
-  (default, `gemini-3.6-flash`), xAI Grok, Mistral, and OpenRouter (DeepSeek).
+- **LLM:** interchangeable providers behind one `AI_PROVIDER` switch - Gemini
+  (default, `gemini-3.6-flash`), Mistral, and OpenRouter.
   A configurable fallback provider takes over on quota exhaustion, OpenRouter by
   default.
 

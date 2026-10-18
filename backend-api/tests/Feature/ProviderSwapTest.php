@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Services\Ai\AiProvider;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -13,7 +14,7 @@ use Tests\TestCase;
  */
 class ProviderSwapTest extends TestCase
 {
-    /** Balasan OpenAI-compatible, dipakai grok, mistral, dan openrouter. */
+    /** Balasan OpenAI-compatible, dipakai mistral dan openrouter. */
     private function chatCompletion(array $paragraphs): array
     {
         return [
@@ -25,14 +26,13 @@ class ProviderSwapTest extends TestCase
     {
         return [
             'gemini' => ['gemini', 'generativelanguage.googleapis.com/*'],
-            'grok' => ['grok', 'api.x.ai/*'],
             'mistral' => ['mistral', 'api.mistral.ai/*'],
             'openrouter' => ['openrouter', 'openrouter.ai/*'],
             'griphub' => ['griphub', 'griphubrouter.web.id/*'],
         ];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('providers')]
+    #[DataProvider('providers')]
     public function test_each_provider_answers_with_the_same_response_shape(string $name, string $urlPattern): void
     {
         config([
@@ -59,7 +59,7 @@ class ProviderSwapTest extends TestCase
             ]);
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('providers')]
+    #[DataProvider('providers')]
     public function test_each_provider_refuses_to_run_without_a_key(string $name): void
     {
         config(['services.ai.provider' => $name, "services.{$name}.key" => '']);
@@ -79,7 +79,7 @@ class ProviderSwapTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
         // Pesannya menyebut pilihan yang sah supaya salah ketik cepat ketemu.
-        $this->expectExceptionMessage('Pilihannya: gemini, grok, mistral, openrouter, griphub, apinex.');
+        $this->expectExceptionMessage('Pilihannya: gemini, mistral, openrouter, griphub, apinex.');
 
         app(AiProvider::class);
     }

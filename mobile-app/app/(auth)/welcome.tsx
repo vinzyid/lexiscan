@@ -9,6 +9,7 @@ import { AiApiError } from '../../src/api/ai';
 import { AuthField } from '../../src/components/auth-field';
 import { Blob, Sparkle } from '../../src/components/figma-decor';
 import { LexiMascot } from '../../src/components/illustrations';
+import { LanguageToggle } from '../../src/components/language-toggle';
 import { PressableScale } from '../../src/components/pressable-scale';
 import { ReadingChoicePicker } from '../../src/components/reading-choice-picker';
 import { SpeakButton } from '../../src/components/speak-button';
@@ -209,6 +210,12 @@ export default function AuthScreen() {
       <Blob size={180} opacity={0.07} style={{ position: 'absolute', top: -50, right: -50 }} />
       <Sparkle size={8} style={{ position: 'absolute', top: 177, left: 63 }} />
       <Sparkle size={6} style={{ position: 'absolute', top: 265, right: 55 }} />
+
+      {/* Pilihan bahasa paling atas, sebelum isian apa pun, supaya pengguna
+          dari luar Indonesia langsung bisa membaca layar ini. */}
+      <View style={{ position: 'absolute', top: insets.top + 12, right: 16, zIndex: 1 }}>
+        <LanguageToggle />
+      </View>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}

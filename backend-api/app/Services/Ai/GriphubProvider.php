@@ -125,7 +125,7 @@ class GriphubProvider implements AiProvider
 
         return str_ends_with($base, '/chat/completions')
             ? $base
-            : $base . '/chat/completions';
+            : $base.'/chat/completions';
     }
 
     public function paragraphsFor(string $prompt, ?float $timeoutSeconds = null): LlmResult
@@ -351,7 +351,7 @@ class GriphubProvider implements AiProvider
      * Dipakai bersama jalur tunggal dan jalur pool supaya pemeriksaan galatnya
      * tidak berbeda diam-diam antara dua jalur itu.
      */
-    private function parse(\Illuminate\Http\Client\Response $response, string $model): LlmResult
+    private function parse(Response $response, string $model): LlmResult
     {
         if ($response->failed()) {
             // Pesan asli dicatat supaya kuota habis vs kunci salah bisa dibedakan.
@@ -430,7 +430,7 @@ class GriphubProvider implements AiProvider
         return match (true) {
             $status === 401 => 'GRIPHUB_API_KEY tidak valid. Periksa kembali kunci dari griphubrouter.web.id.',
             $status === 402 => 'Saldo Griphub tidak cukup untuk model ini. Periksa saldo akun Anda.',
-            $status === 404 => 'Model "' . $model . '" tidak ditemukan di Griphub. Periksa ejaan namanya.',
+            $status === 404 => 'Model "'.$model.'" tidak ditemukan di Griphub. Periksa ejaan namanya.',
             $status === 429 => 'Jatah Griphub sedang habis. Tunggu sebentar lalu coba lagi.',
             $status >= 500 => 'Server Griphub sedang bermasalah. Coba beberapa saat lagi.',
             default => $detail ?? 'Permintaan ke Griphub gagal.',

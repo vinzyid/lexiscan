@@ -36,3 +36,6 @@ error-app/
 
 # Metadata Finder macOS
 .DS_Store
+
+# Data dan hasil evaluasi lokal (foto uji, CSV energi, laporan)
+evaluasi/

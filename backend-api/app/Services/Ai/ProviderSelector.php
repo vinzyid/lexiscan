@@ -35,13 +35,13 @@ class ProviderSelector implements AiProvider
      *
      * @var array<int, string>
      */
-    public const SUPPORTED = ['gemini', 'grok', 'mistral', 'openrouter', 'griphub', 'apinex'];
+    public const SUPPORTED = ['gemini', 'mistral', 'openrouter', 'griphub', 'apinex'];
 
     /**
      * Urutan cadangan bawaan, dari yang paling diutamakan. Yang diminta
      * aplikasi selalu dicoba lebih dulu, apa pun isi daftar ini.
      */
-    private const ORDER = ['gemini', 'griphub', 'apinex', 'openrouter', 'grok', 'mistral'];
+    private const ORDER = ['gemini', 'griphub', 'apinex', 'openrouter', 'mistral'];
 
     /** @param  array<int, AiProvider>  $providers  Terurut; kosong berarti tidak ada yang siap. */
     public function __construct(
@@ -84,7 +84,6 @@ class ProviderSelector implements AiProvider
     {
         return match ($name) {
             'gemini' => new GeminiProvider,
-            'grok' => new GrokProvider,
             'mistral' => new MistralProvider,
             'openrouter' => new OpenRouterProvider,
             'griphub' => new GriphubProvider,
