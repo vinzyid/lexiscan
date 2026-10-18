@@ -433,6 +433,22 @@ export default function EnergyTestScreen() {
         </Text>
         <Text className="mt-2 font-ui-medium text-[13px] text-text-muted">{deviceLine}</Text>
 
+        <PressableScale
+          onPress={() => router.push('/lafal')}
+          disabled={running}
+          accessibilityRole="button"
+          className="mt-3 h-11 items-center justify-center self-start rounded-2xl bg-surface-alt px-4">
+          <Text className="font-ui-bold text-[14px] text-text-main">Uji lafal suku kata</Text>
+        </PressableScale>
+
+        <PressableScale
+          onPress={() => router.push('/ocr-test')}
+          disabled={running}
+          accessibilityRole="button"
+          className="mt-2 h-11 items-center justify-center self-start rounded-2xl bg-surface-alt px-4">
+          <Text className="font-ui-bold text-[14px] text-text-main">Uji akurasi OCR</Text>
+        </PressableScale>
+
         <View className="mt-5 rounded-3xl bg-surface p-4" style={{ gap: 12 }}>
           <PressableScale
             onPress={pickImage}

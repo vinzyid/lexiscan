@@ -162,6 +162,8 @@ function RootNavigator({ intro, onAdvance }: { intro: Intro; onAdvance: (next: I
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="screening" />
         <Stack.Screen name="energy" />
+        <Stack.Screen name="lafal" />
+        <Stack.Screen name="ocr-test" />
       </Stack>
 
       {/* Lembar bawah yang berisi kolom isian dirender di sini, di jendela

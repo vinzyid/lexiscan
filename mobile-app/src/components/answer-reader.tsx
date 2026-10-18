@@ -13,6 +13,7 @@ import {
 
 import { useT } from '../i18n';
 import { normalizeSpeechText } from '../speech/speech-service';
+import { syllableForSpeech } from '../speech/syllable-speech';
 import { useAutoSpeak, useSpeech } from '../speech/use-speech';
 import { useAuthStore } from '../store/useAuthStore';
 import { useOCRStore } from '../store/useStore';
@@ -178,10 +179,14 @@ export function AnswerReader({ paragraphs, speechKey }: { paragraphs: string[]; 
     const pieces = spellableWords(units[index], language)[word]?.pieces ?? [];
 
     selectUnit(index);
-    speakSequence(pieces, spellKey, {
-      onPart: (syllable) => setSpot({ unit: index, word, syllable }),
-      onDone: () => setSpot(null),
-    });
+    speakSequence(
+      pieces.map((piece) => syllableForSpeech(piece, language)),
+      spellKey,
+      {
+        onPart: (syllable) => setSpot({ unit: index, word, syllable }),
+        onDone: () => setSpot(null),
+      },
+    );
   };
 
   const handleWordPress = (index: number, word: number) => {

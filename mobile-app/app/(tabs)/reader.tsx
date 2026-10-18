@@ -55,6 +55,7 @@ import { WordSheet } from '../../src/components/word-sheet';
 import { SpeakButton } from '../../src/components/speak-button';
 import { useAutoSpeak, useSpeech, useStopSpeechOnBlur } from '../../src/speech/use-speech';
 import { normalizeSpeechText } from '../../src/speech/speech-service';
+import { syllableForSpeech } from '../../src/speech/syllable-speech';
 import { alignWordIndex, speechWordCount, wordIndexAtChar } from '../../src/utils/word-highlight';
 import { Blob, Ring, Sparkle } from '../../src/components/figma-decor';
 
@@ -411,7 +412,7 @@ export default function ReaderScreen() {
       );
 
       speakSequence(
-        plan.map((step) => step.piece),
+        plan.map((step) => syllableForSpeech(step.piece, language)),
         `paragraph:${activeIndex}`,
         {
           onPart: (i) => {

@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ScanSearch, X } from 'lucide-react-native';
 
 import { splitSyllables } from '../utils/syllables';
+import { syllableForSpeech } from '../speech/syllable-speech';
 import { useOCRStore } from '../store/useStore';
 import { GRADIENTS } from '../theme/palettes';
 import { PressableScale } from './pressable-scale';
@@ -38,7 +39,8 @@ export function WordSheet({
    * sebelumnya — itu memang yang diharapkan saat mengeja maju-mundur, dan
    * karena itu tidak memakai toggle seperti tombol paragraf.
    */
-  const speakSyllable = (syllable: string) => speak(syllable, `syllable:${syllable}`);
+  const speakSyllable = (syllable: string) =>
+    speak(syllableForSpeech(syllable, language), `syllable:${syllable}`);
 
   return (
     <Modal visible={!!word} animationType="fade" transparent onRequestClose={onClose}>
