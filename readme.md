@@ -128,7 +128,7 @@
 | Service | Peran | Status |
 |---------|-------|--------|
 | **[Google ML Kit](https://developers.google.com/ml-kit)** | OCR *on-device* (tanpa internet) | ✅ Terintegrasi |
-| **[Gemini API](https://aistudio.google.com/)** | AI Simplification, Explain This, Correct Typo. Model `gemini-3.6-flash` | ✅ **Aktif (default)** |
+| **[Gemini API](https://aistudio.google.com/)** | AI Simplification, Explain This, Correct Typo. Model `gemini-3.8-flash` | ✅ **Aktif (default)** |
 | **[Mistral](https://console.mistral.ai/)** | Penyedia alternatif, model `mistral-small-latest` | ✅ Didukung |
 | **[OpenRouter](https://openrouter.ai/)** | Satu kunci untuk banyak model, dipakai sebagai cadangan | ✅ Didukung |
 
@@ -187,7 +187,7 @@ Buka `backend-api/.env` dan atur AI provider:
 # Opsi 1: Gemini (default - kunci gratis di Google AI Studio)
 AI_PROVIDER=gemini
 GEMINI_API_KEY=AIza...
-GEMINI_MODEL=gemini-3.6-flash
+GEMINI_MODEL=gemini-3.8-flash
 
 # Opsi 2: Mistral (paket gratis Experiment)
 AI_PROVIDER=mistral
@@ -319,7 +319,7 @@ dengan environment variable dari `.env.example`).
 
 | Peran | Nama |
 |-------|------|
-| *Solo Full-Stack Developer* | **Rafi** |
+| *Full-Stack Developer* | **Rafi** |
 | Frontend | React Native + Expo + NativeWind |
 | Backend | Laravel + Supabase |
 | AI Integration | Gemini / Mistral / OpenRouter |
