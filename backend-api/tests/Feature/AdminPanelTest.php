@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Widgets\AiUsageOverview;
 use App\Models\AiUsageLog;
 use App\Models\Device;
 use App\Models\Feedback;
@@ -10,6 +11,7 @@ use App\Models\User;
 use App\Services\SystemSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
@@ -40,6 +42,19 @@ class AdminPanelTest extends TestCase
         $this->actingAs($this->admin())
             ->get('/admin')
             ->assertOk();
+    }
+
+    public function test_the_usage_overview_draws_its_daily_trend(): void
+    {
+        // Widget statistik dimuat lazy, jadi GET /admin di atas tidak pernah
+        // menjalankan kuerinya. Di sini widget-nya dirender langsung.
+        $this->seedSample();
+        $this->actingAs($this->admin());
+
+        Livewire::test(AiUsageOverview::class)
+            ->assertOk()
+            ->assertSee('Permintaan AI (30 hari)')
+            ->assertSee('Memanggil model');
     }
 
     public function test_the_dashboard_renders_when_nothing_has_happened_yet(): void

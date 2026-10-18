@@ -38,26 +38,33 @@ class AiUsageOverview extends StatsOverviewWidget
         // memanggil model; cache hit selalu nyaris nol dan akan menyeret turun.
         $latency = (clone $logs)->where('cached', false)->avg('duration_ms');
 
+        $trend = $this->dailyTrend();
+
         return [
             Stat::make('Permintaan AI (30 hari)', number_format($total, 0, ',', '.'))
                 ->description($total === 0
                     ? 'Belum ada permintaan tercatat'
                     : "{$this->percent($cached, $total)}% dilayani simpanan, tanpa memanggil model")
                 ->descriptionIcon('heroicon-m-bolt-slash')
+                ->chart($trend['total'])
                 ->color($total === 0 ? 'gray' : 'primary'),
 
             Stat::make('Memanggil model', number_format($billed, 0, ',', '.'))
                 ->description('Inilah yang benar-benar menagih kuota')
                 ->descriptionIcon('heroicon-m-cpu-chip')
+                ->chart($trend['billed'])
                 ->color('warning'),
 
             Stat::make('Token terpakai', $this->compact($tokens))
                 ->description('Masuk + keluar, termasuk token penalaran')
-                ->descriptionIcon('heroicon-m-hashtag'),
+                ->descriptionIcon('heroicon-m-hashtag')
+                ->chart($trend['tokens'])
+                ->color('info'),
 
             Stat::make('Emisi terpakai', $this->mass($spent))
                 ->description('Dihindari lewat simpanan: '.$this->mass($avoided))
                 ->descriptionIcon('heroicon-m-globe-alt')
+                ->chart($trend['avoided'])
                 ->color('success'),
 
             Stat::make('Perangkat aktif', number_format(
@@ -75,6 +82,40 @@ class AiUsageOverview extends StatsOverviewWidget
                 ->description('Hanya permintaan yang memanggil model')
                 ->descriptionIcon('heroicon-m-clock'),
         ];
+    }
+
+    /**
+     * Deret harian 14 hari terakhir untuk grafik kecil di tiap kartu. Satu
+     * kueri untuk semua deret; hari tanpa aktivitas diisi nol supaya garisnya
+     * tidak melompati hari yang sepi.
+     *
+     * @return array{total: array<int>, billed: array<int>, tokens: array<int>, avoided: array<float>}
+     */
+    private function dailyTrend(): array
+    {
+        $start = Carbon::now()->startOfDay()->subDays(13);
+
+        $rows = AiUsageLog::query()
+            ->where('created_at', '>=', $start)
+            ->selectRaw('DATE(created_at) as day, count(*) as total')
+            ->selectRaw('sum(case when cached then 0 else 1 end) as billed')
+            ->selectRaw('sum(input_tokens + output_tokens) as tokens')
+            ->selectRaw('sum(avoided_co2e_g) as avoided')
+            ->groupByRaw('DATE(created_at)')
+            ->get()
+            ->keyBy(fn ($row): string => (string) $row->day);
+
+        $trend = ['total' => [], 'billed' => [], 'tokens' => [], 'avoided' => []];
+
+        for ($day = $start->copy(); $day->lte(Carbon::now()); $day->addDay()) {
+            $row = $rows->get($day->format('Y-m-d'));
+            $trend['total'][] = (int) ($row->total ?? 0);
+            $trend['billed'][] = (int) ($row->billed ?? 0);
+            $trend['tokens'][] = (int) ($row->tokens ?? 0);
+            $trend['avoided'][] = (float) ($row->avoided ?? 0);
+        }
+
+        return $trend;
     }
 
     private function percent(int $part, int $whole): int

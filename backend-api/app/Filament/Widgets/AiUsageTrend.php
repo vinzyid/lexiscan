@@ -56,7 +56,15 @@ class AiUsageTrend extends ChartWidget
 
     protected function getOptions(): array
     {
-        return ['scales' => ['y' => ['beginAtZero' => true, 'ticks' => ['precision' => 0]]], 'interaction' => ['mode' => 'index', 'intersect' => false]];
+        // Garis grid tipis dengan warna abu transparan supaya tidak menyilaukan
+        // di mode gelap; garis vertikal dibuang karena label tanggal sudah cukup.
+        return [
+            'scales' => [
+                'x' => ['grid' => ['display' => false]],
+                'y' => ['beginAtZero' => true, 'ticks' => ['precision' => 0], 'grid' => ['color' => 'rgba(148, 163, 184, 0.18)']],
+            ],
+            'interaction' => ['mode' => 'index', 'intersect' => false],
+        ];
     }
 
     protected function getType(): string
