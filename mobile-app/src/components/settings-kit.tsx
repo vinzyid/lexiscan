@@ -105,17 +105,19 @@ export function SettingsRow({ Icon, title, value, divider = true, onPress, toggl
       ) : null}
 
       {toggle ? (
-        <Switch
-          value={toggle.value}
-          onValueChange={(next) => {
-            // Sakelar tidak lewat PressableScale, jadi keadaan barunya harus
-            // diucapkan di sini — sama seperti ToggleRow di layar lain.
-            speakLabel(`${title}, ${next ? t.settings.switchOn : t.settings.switchOff}`);
-            toggle.onValueChange(next);
-          }}
-          trackColor={{ false: colors.surfaceAlt, true: colors.primary }}
-          thumbColor="#ffffff"
-        />
+        // Hanya penanda: ketukannya diurus baris di bawah. Kalau sakelarnya
+        // ikut menerima sentuhan, satu ketukan tepat di atasnya terhitung dua
+        // kali dan nilainya kembali seperti semula.
+        <View
+          pointerEvents="none"
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants">
+          <Switch
+            value={toggle.value}
+            trackColor={{ false: colors.textMuted, true: colors.primary }}
+            thumbColor="#ffffff"
+          />
+        </View>
       ) : (
         <ChevronRight size={18} color={colors.textMuted} />
       )}
@@ -123,11 +125,32 @@ export function SettingsRow({ Icon, title, value, divider = true, onPress, toggl
   );
 
   /*
-   * Baris bersakelar tidak dibungkus tombol. Kalau dibungkus, mengetuk di mana
-   * pun ikut membalik sakelarnya — dan di layar yang tiap ketukannya berbunyi,
-   * sentuhan tak sengaja jadi perubahan setelan yang tidak disadari.
+   * Seluruh baris bersakelar bisa diketuk, bukan hanya sakelarnya. Sakelar
+   * bawaan Android kecil sekali, dan orang yang menekan judul atau
+   * keterangannya mengira setelannya rusak karena tidak ada yang berubah.
+   * Keadaan barunya diucapkan, jadi ketukan tak sengaja tetap ketahuan.
    */
-  if (toggle || !onPress) return body;
+  if (toggle) {
+    const next = !toggle.value;
+
+    return (
+      <PressableScale
+        onPress={() => {
+          speakLabel(`${title}, ${next ? t.settings.switchOn : t.settings.switchOff}`);
+          toggle.onValueChange(next);
+        }}
+        // Bukan nama tombol yang dibacakan, melainkan keadaan barunya (di atas).
+        silent
+        accessibilityRole="switch"
+        accessibilityState={{ checked: toggle.value }}
+        accessibilityLabel={value ? `${title}. ${value}` : title}
+        scaleTo={0.99}>
+        {body}
+      </PressableScale>
+    );
+  }
+
+  if (!onPress) return body;
 
   return (
     <PressableScale
