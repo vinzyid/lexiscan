@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +14,7 @@ import { PressableScale } from '../../src/components/pressable-scale';
 import { ReadingChoicePicker } from '../../src/components/reading-choice-picker';
 import { SpeakButton } from '../../src/components/speak-button';
 import { useTourStore } from '../../src/components/spotlight-tour';
+import { keyboardOverlap, useKeyboardFrame } from '../../src/hooks/use-keyboard-frame';
 import { useT } from '../../src/i18n';
 import { useStopSpeechOnUnmount } from '../../src/speech/use-speech';
 import { useAuthStore } from '../../src/store/useAuthStore';
@@ -46,6 +47,9 @@ type Mode = 'new' | 'existing';
 /** Jumlah langkah untuk pengguna baru; dipakai juga di label "LANGKAH x / 2". */
 const TOTAL_STEPS = 2;
 
+/** Jarak antara kolom yang sedang diisi dan tepi bawah area gulung. */
+const FOCUS_MARGIN = 24;
+
 export default function AuthScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -66,6 +70,63 @@ export default function AuthScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useStopSpeechOnUnmount();
+
+  /*
+   * Aplikasinya edge-to-edge, jadi di Android layar ini tidak memendek sendiri
+   * saat papan tik muncul dan kolom nama pengguna serta kata sandi tertimbun.
+   * Bagian bawah layar diberi ruang setinggi papan tiknya, kepala dipadatkan
+   * supaya kartunya punya tempat, lalu kolom yang sedang diisi digulung masuk
+   * ke pandangan, sama seperti lembar Bantuan & Dukungan.
+   */
+  const [rootHeight, setRootHeight] = useState(0);
+  const overlap = keyboardOverlap(useKeyboardFrame(), rootHeight);
+  const keyboardOpen = overlap > 0;
+
+  const scrollRef = useRef<ScrollView>(null);
+  const contentRef = useRef<View>(null);
+  const scrollY = useRef(0);
+  const [viewportHeight, setViewportHeight] = useState(0);
+
+  const revealFocusedInput = useCallback(() => {
+    const input = TextInput.State.currentlyFocusedInput();
+    const content = contentRef.current;
+    if (!input || !content || viewportHeight === 0) {
+      return;
+    }
+
+    input.measureLayout(
+      content,
+      (_x, y, _width, height) => {
+        const bottom = y + height + FOCUS_MARGIN;
+        const visibleBottom = scrollY.current + viewportHeight;
+
+        if (bottom > visibleBottom) {
+          scrollRef.current?.scrollTo({ y: bottom - viewportHeight, animated: true });
+        } else if (y < scrollY.current) {
+          scrollRef.current?.scrollTo({ y: Math.max(0, y - FOCUS_MARGIN), animated: true });
+        }
+      },
+      () => {},
+    );
+  }, [viewportHeight]);
+
+  useEffect(() => {
+    if (!keyboardOpen) {
+      return;
+    }
+
+    // Satu frame dulu, supaya tinggi kartu yang baru sudah terpasang.
+    const frame = requestAnimationFrame(revealFocusedInput);
+
+    return () => cancelAnimationFrame(frame);
+  }, [keyboardOpen, overlap, revealFocusedInput]);
+
+  /** Pindah kolom selagi papan tik tetap terbuka juga harus menggulung. */
+  const onFieldFocus = () => {
+    if (keyboardOpen) {
+      requestAnimationFrame(revealFocusedInput);
+    }
+  };
 
   const switchMode = (next: Mode) => {
     setMode(next);
@@ -195,7 +256,7 @@ export default function AuthScreen() {
   };
 
   return (
-    <View className="flex-1">
+    <View className="flex-1" onLayout={(e) => setRootHeight(e.nativeEvent.layout.height)}>
       {/* Gradien menutup seluruh layar, bukan hanya kepalanya: kartu putih di
           bawah tidak setinggi layar pada perangkat yang lebih panjang, dan sisa
           ruang di bawahnya harus tetap ungu, bukan warna latar tema. */}
@@ -212,19 +273,29 @@ export default function AuthScreen() {
       <Sparkle size={6} style={{ position: 'absolute', top: 265, right: 55 }} />
 
       {/* Pilihan bahasa paling atas, sebelum isian apa pun, supaya pengguna
-          dari luar Indonesia langsung bisa membaca layar ini. */}
-      <View style={{ position: 'absolute', top: insets.top + 12, right: 16, zIndex: 1 }}>
-        <LanguageToggle />
-      </View>
+          dari luar Indonesia langsung bisa membaca layar ini. Disembunyikan
+          selagi mengetik: kepalanya dipadatkan dan pilihan ini akan menabrak
+          judulnya. */}
+      {!keyboardOpen ? (
+        <View style={{ position: 'absolute', top: insets.top + 12, right: 16, zIndex: 1 }}>
+          <LanguageToggle />
+        </View>
+      ) : null}
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={{ flex: 1, paddingBottom: overlap }}>
         {/* ── Kepala ────────────────────────────────────────────────────── */}
-        <View className="items-center px-6 pb-6" style={{ paddingTop: insets.top + 24 }}>
-          <LexiMascot size={100} />
+        {/* Selagi papan tik terbuka hanya judulnya yang tersisa: maskot,
+            slogan, dan titik langkah memakan hampir sepertiga layar, dan
+            tanpa ruang itu kolom yang sedang diisi tidak muat di atas papan
+            tik. */}
+        <View
+          className={`items-center px-6 ${keyboardOpen ? 'pb-4' : 'pb-6'}`}
+          style={{ paddingTop: insets.top + (keyboardOpen ? 8 : 24) }}>
+          {!keyboardOpen ? <LexiMascot size={100} /> : null}
 
-          <View className="mt-2.5 flex-row items-center" style={{ gap: 10 }}>
+          <View
+            className={`${keyboardOpen ? '' : 'mt-2.5 '}flex-row items-center`}
+            style={{ gap: 10 }}>
             <Text className="font-ui-bold text-[33px] text-white" style={{ letterSpacing: -0.32 }}>
               LexiScan
             </Text>
@@ -236,14 +307,16 @@ export default function AuthScreen() {
             />
           </View>
 
-          <Text className="mt-1 font-ui text-[14px] text-white/55">{t.auth.appTagline}</Text>
+          {!keyboardOpen ? (
+            <Text className="mt-1 font-ui text-[14px] text-white/55">{t.auth.appTagline}</Text>
+          ) : null}
 
           {/*
             Titik langkah hanya untuk pengguna baru. Yang sudah punya akun cuma
             melewati satu layar, dan memperlihatkan "LANGKAH 1 / 3" kepadanya
             menjanjikan langkah yang tidak akan pernah datang.
           */}
-          {mode === 'new' ? (
+          {mode === 'new' && !keyboardOpen ? (
             <>
               <View className="mt-6 flex-row items-center" style={{ gap: 8 }}>
                 {/* Tiga keadaan, bukan dua: yang sudah dilewati lebih terang
@@ -284,142 +357,153 @@ export default function AuthScreen() {
             elevation: 24,
           }}>
           <ScrollView
+            ref={scrollRef}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            scrollEventThrottle={16}
+            onScroll={(e) => {
+              scrollY.current = e.nativeEvent.contentOffset.y;
+            }}
+            onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
             contentContainerStyle={{ paddingBottom: 16 }}>
-            {/* Pemilih mode hanya di langkah pertama — sesudah itu pengguna
-                sudah jelas sedang mendaftar. */}
-            {step === 0 ? (
-              <View
-                className="mt-6 flex-row rounded-2xl bg-surface-alt p-1"
-                style={{ gap: 4 }}
-                accessibilityRole="tablist">
-                {(['new', 'existing'] as const).map((id) => {
-                  const active = mode === id;
-                  const label = id === 'new' ? t.auth.tabNew : t.auth.tabExisting;
+            <View ref={contentRef} collapsable={false}>
+              {/* Pemilih mode hanya di langkah pertama — sesudah itu pengguna
+                  sudah jelas sedang mendaftar. */}
+              {step === 0 ? (
+                <View
+                  className="mt-6 flex-row rounded-2xl bg-surface-alt p-1"
+                  style={{ gap: 4 }}
+                  accessibilityRole="tablist">
+                  {(['new', 'existing'] as const).map((id) => {
+                    const active = mode === id;
+                    const label = id === 'new' ? t.auth.tabNew : t.auth.tabExisting;
 
-                  return (
-                    <PressableScale
-                      key={id}
-                      onPress={() => switchMode(id)}
-                      accessibilityRole="tab"
-                      accessibilityState={{ selected: active }}
-                      accessibilityLabel={label}
-                      scaleTo={0.98}
-                      wrapperStyle={{ flex: 1 }}
-                      className="overflow-hidden rounded-[14px]">
-                      {active ? (
-                        <LinearGradient
-                          colors={[...GRADIENTS.activePill.colors]}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={{ height: 39, alignItems: 'center', justifyContent: 'center' }}>
-                          <Text className="font-ui-bold text-[12.5px] text-white">{label}</Text>
-                        </LinearGradient>
-                      ) : (
-                        <View className="h-[39px] items-center justify-center">
-                          <Text className="font-ui-bold text-[12.5px] text-text-muted">{label}</Text>
-                        </View>
-                      )}
-                    </PressableScale>
-                  );
-                })}
-              </View>
-            ) : null}
+                    return (
+                      <PressableScale
+                        key={id}
+                        onPress={() => switchMode(id)}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: active }}
+                        accessibilityLabel={label}
+                        scaleTo={0.98}
+                        wrapperStyle={{ flex: 1 }}
+                        className="overflow-hidden rounded-[14px]">
+                        {active ? (
+                          <LinearGradient
+                            colors={[...GRADIENTS.activePill.colors]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={{ height: 39, alignItems: 'center', justifyContent: 'center' }}>
+                            <Text className="font-ui-bold text-[12.5px] text-white">{label}</Text>
+                          </LinearGradient>
+                        ) : (
+                          <View className="h-[39px] items-center justify-center">
+                            <Text className="font-ui-bold text-[12.5px] text-text-muted">{label}</Text>
+                          </View>
+                        )}
+                      </PressableScale>
+                    );
+                  })}
+                </View>
+              ) : null}
 
-            <Text className={`font-ui-bold text-[21px] leading-[31px] text-text-main ${
-              step === 0 ? 'mt-5' : 'mt-6'
-            }`}>
-              {heading.title}
-            </Text>
-            <Text className="mb-5 mt-1.5 font-ui text-[14px] text-text-muted">
-              {heading.subtitle}
-            </Text>
+              <Text className={`font-ui-bold text-[21px] leading-[31px] text-text-main ${
+                step === 0 ? 'mt-5' : 'mt-6'
+              }`}>
+                {heading.title}
+              </Text>
+              <Text className="mb-5 mt-1.5 font-ui text-[14px] text-text-muted">
+                {heading.subtitle}
+              </Text>
 
-            {/* ── Langkah 1 ───────────────────────────────────────────── */}
-            {step === 0 ? (
-              <>
-                {/*
-                  Nama lengkap hanya ditanyakan ke pengguna baru. Untuk yang
-                  sudah punya akun, nama sudah tersimpan di server — menanyakannya
-                  lagi hanya menambah satu kolom yang bisa salah ketik.
-                */}
-                {mode === 'new' ? (
+              {/* ── Langkah 1 ───────────────────────────────────────────── */}
+              {step === 0 ? (
+                <>
+                  {/*
+                    Nama lengkap hanya ditanyakan ke pengguna baru. Untuk yang
+                    sudah punya akun, nama sudah tersimpan di server — menanyakannya
+                    lagi hanya menambah satu kolom yang bisa salah ketik.
+                  */}
+                  {mode === 'new' ? (
+                    <AuthField
+                      label={t.auth.nameLabel}
+                      placeholder={t.auth.namePlaceholderLong}
+                      speechKey="auth:name"
+                      onFocus={onFieldFocus}
+                      value={name}
+                      onChangeText={setName}
+                      autoCapitalize="words"
+                      autoComplete="name"
+                      returnKeyType="next"
+                    />
+                  ) : null}
+
                   <AuthField
-                    label={t.auth.nameLabel}
-                    placeholder={t.auth.namePlaceholderLong}
-                    speechKey="auth:name"
-                    value={name}
-                    onChangeText={setName}
-                    autoCapitalize="words"
-                    autoComplete="name"
+                    label={t.auth.usernameLabel}
+                    hint={mode === 'new' ? t.auth.usernameHint : undefined}
+                    placeholder={t.auth.usernamePlaceholder}
+                    speechKey="auth:username"
+                    onFocus={onFieldFocus}
+                    value={username}
+                    onChangeText={setUsername}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="username"
                     returnKeyType="next"
                   />
-                ) : null}
 
-                <AuthField
-                  label={t.auth.usernameLabel}
-                  hint={mode === 'new' ? t.auth.usernameHint : undefined}
-                  placeholder={t.auth.usernamePlaceholder}
-                  speechKey="auth:username"
-                  value={username}
-                  onChangeText={setUsername}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="username"
-                  returnKeyType="next"
-                />
+                  <AuthField
+                    label={t.auth.passwordLabel}
+                    placeholder={t.auth.passwordPlaceholder}
+                    speechKey="auth:password"
+                    onFocus={onFieldFocus}
+                    password
+                    value={password}
+                    onChangeText={setPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete={mode === 'new' ? 'new-password' : 'current-password'}
+                    returnKeyType="go"
+                    onSubmitEditing={onPrimary}
+                  />
+                </>
+              ) : null}
 
-                <AuthField
-                  label={t.auth.passwordLabel}
-                  placeholder={t.auth.passwordPlaceholder}
-                  speechKey="auth:password"
-                  password
-                  value={password}
-                  onChangeText={setPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete={mode === 'new' ? 'new-password' : 'current-password'}
-                  returnKeyType="go"
-                  onSubmitEditing={onPrimary}
-                />
-              </>
-            ) : null}
+              {/* ── Langkah 2 ───────────────────────────────────────────── */}
+              {step === 1 ? (
+                <ReadingChoicePicker value={readingLevel} onChange={setReadingLevel} />
+              ) : null}
 
-            {/* ── Langkah 2 ───────────────────────────────────────────── */}
-            {step === 1 ? (
-              <ReadingChoicePicker value={readingLevel} onChange={setReadingLevel} />
-            ) : null}
+              {error ? (
+                <View className="mt-4 rounded-2xl bg-primary/[0.06] px-4 py-3">
+                  <Text className="font-ui-medium text-[15px] leading-6 text-text-main">{error}</Text>
+                </View>
+              ) : null}
 
-            {error ? (
-              <View className="mt-4 rounded-2xl bg-primary/[0.06] px-4 py-3">
-                <Text className="font-ui-medium text-[15px] leading-6 text-text-main">{error}</Text>
-              </View>
-            ) : null}
-
-            {/*
-             * Melewati pendaftaran harus selalu mungkin, dan hanya ditawarkan di
-             * langkah pertama. Fitur bacanya tetap jalan tanpa akun; yang hilang
-             * cuma penyesuaian otomatis, dan memaksa orang membuat akun sebelum
-             * sempat melihat gunanya justru menghalangi orang yang paling
-             * membutuhkannya.
-             */}
-            {step === 0 ? (
-              <PressableScale
-                onPress={skipForNow}
-                accessibilityRole="button"
-                accessibilityLabel={`${t.auth.skip}. ${t.auth.skipHint}`}
-                scaleTo={0.98}
-                className="mt-4 h-12 items-center justify-center rounded-2xl">
-                <Text className="font-ui-bold text-[15px] text-text-muted">{t.auth.skip}</Text>
-              </PressableScale>
-            ) : null}
+              {/*
+               * Melewati pendaftaran harus selalu mungkin, dan hanya ditawarkan di
+               * langkah pertama. Fitur bacanya tetap jalan tanpa akun; yang hilang
+               * cuma penyesuaian otomatis, dan memaksa orang membuat akun sebelum
+               * sempat melihat gunanya justru menghalangi orang yang paling
+               * membutuhkannya.
+               */}
+              {step === 0 ? (
+                <PressableScale
+                  onPress={skipForNow}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t.auth.skip}. ${t.auth.skipHint}`}
+                  scaleTo={0.98}
+                  className="mt-4 h-12 items-center justify-center rounded-2xl">
+                  <Text className="font-ui-bold text-[15px] text-text-muted">{t.auth.skip}</Text>
+                </PressableScale>
+              ) : null}
+            </View>
           </ScrollView>
 
           {/* ── Tombol bawah ──────────────────────────────────────────── */}
           <View
-            className="flex-row items-center pt-5"
-            style={{ gap: 12, paddingBottom: Math.max(insets.bottom, 20) }}>
+            className={`flex-row items-center ${keyboardOpen ? 'pt-3' : 'pt-5'}`}
+            style={{ gap: 12, paddingBottom: keyboardOpen ? 12 : Math.max(insets.bottom, 20) }}>
             {mode === 'new' && step > 0 ? (
               <PressableScale
                 onPress={goBack}
@@ -457,7 +541,7 @@ export default function AuthScreen() {
             </PressableScale>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </View>
   );
 }

@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   BackHandler,
-  Keyboard,
-  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -14,6 +12,7 @@ import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronRight, X, type LucideIcon } from 'lucide-react-native';
 
+import { keyboardOverlap, useKeyboardFrame } from '../hooks/use-keyboard-frame';
 import { useT } from '../i18n';
 import { useSpeakLabel } from '../speech/use-speech';
 import { useThemeColors } from '../theme/theme-provider';
@@ -215,20 +214,7 @@ function SheetBody({
   const [rootHeight, setRootHeight] = useState(0);
   const keyboard = useKeyboardFrame();
 
-  /*
-   * Seberapa tinggi papan tik menutupi lapisan ini, dihitung dari tepi atas
-   * papan tiknya. Di Android `height` dari RN sudah dikurangi bilah navigasi,
-   * padahal lembar ini menempel sampai ke dasar layar (edge-to-edge), jadi
-   * yang dipakai adalah yang lebih besar dari keduanya.
-   */
-  const overlap =
-    keyboard && rootHeight > 0
-      ? Math.max(
-          rootHeight - keyboard.screenY,
-          Platform.OS === 'android' ? keyboard.height : 0,
-          0,
-        )
-      : 0;
+  const overlap = keyboardOverlap(keyboard, rootHeight);
   const keyboardOpen = overlap > 0;
 
   const maxHeight =
@@ -376,40 +362,4 @@ function SheetBody({
       </Animated.View>
     </View>
   );
-}
-
-type KeyboardFrame = { screenY: number; height: number };
-
-/**
- * Posisi papan tik selagi terbuka, `null` saat tertutup.
- *
- * iOS memakai event "will" supaya lembarnya naik berbarengan dengan papan tik;
- * Android hanya punya event "did".
- */
-function useKeyboardFrame() {
-  const [frame, setFrame] = useState<KeyboardFrame | null>(() => {
-    const metrics = Keyboard.isVisible() ? Keyboard.metrics() : undefined;
-
-    return metrics ? { screenY: metrics.screenY, height: metrics.height } : null;
-  });
-
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const subs = [
-      Keyboard.addListener(showEvent, (e) =>
-        setFrame(
-          e.endCoordinates.height > 0
-            ? { screenY: e.endCoordinates.screenY, height: e.endCoordinates.height }
-            : null,
-        ),
-      ),
-      Keyboard.addListener(hideEvent, () => setFrame(null)),
-    ];
-
-    return () => subs.forEach((sub) => sub.remove());
-  }, []);
-
-  return frame;
 }
