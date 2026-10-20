@@ -9,8 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useThemeColors } from '../theme/theme-provider';
-import { getTypeLevel } from '../theme/palettes';
-import { useOCRStore } from '../store/useStore';
+import { useTypeLevel } from '../theme/use-type-level';
 import { useT } from '../i18n';
 
 const LINE_WIDTHS = [
@@ -26,8 +25,7 @@ const LINE_WIDTHS = [
 export function TextSkeleton() {
   const colors = useThemeColors();
   const t = useT();
-  const typeLevelId = useOCRStore((s) => s.typeLevelId);
-  const level = getTypeLevel(typeLevelId);
+  const level = useTypeLevel();
 
   const pulse = useSharedValue(0.35);
 

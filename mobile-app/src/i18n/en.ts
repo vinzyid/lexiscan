@@ -315,6 +315,7 @@ export const en: Translation = {
     profileTitle: 'Profile & Security',
     rowTheme: 'Colour Theme',
     rowDyslexia: 'Dyslexia Mode',
+    rowFontSize: 'Letter Size',
     rowDailyTip: 'Daily Study Tip',
     dailyTipOn: 'On · Every morning',
     dailyTipOff: 'Off',
@@ -450,6 +451,14 @@ export const en: Translation = {
     bicolorDesc: 'Colours alternate per word so your eyes never lose the line',
     rulerTitle: 'Reading Ruler',
     rulerDesc: 'A line marking your place, tap a line to move it',
+    fontSizeTitle: 'Letter Size',
+    fontSizeHint: 'Make it bigger until the child can read without squinting.',
+    fontSizeSmaller: 'Smaller letters',
+    fontSizeBigger: 'Bigger letters',
+    fontSizeValue: (px: number) => `${px} px`,
+    fontSizeFollowsMode: 'Follows Dyslexia Mode',
+    fontSizeCustom: 'Set by hand',
+    fontSizeReset: (px: number) => `Back to the mode size (${px} px)`,
   },
 
   wordSheet: {

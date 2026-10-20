@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Constants from 'expo-constants';
 import {
+  ALargeSmall,
   BellRing,
   BookOpen,
   Check,
@@ -25,11 +26,12 @@ import {
 import { useOCRStore } from '../../src/store/useStore';
 import { TEST_TOOLS_ENABLED } from '../../src/utils/test-tools';
 import { useAuthStore } from '../../src/store/useAuthStore';
-import { GRADIENTS, THEMES, TYPE_LEVELS } from '../../src/theme/palettes';
+import { GRADIENTS, THEMES, TYPE_LEVELS, getTypeLevel } from '../../src/theme/palettes';
 import type { ReadingLevelId } from '../../src/theme/reading-levels';
 import { useThemeColors } from '../../src/theme/theme-provider';
 import { LANGUAGES, useT } from '../../src/i18n';
 import { DyslexicText } from '../../src/components/dyslexic-text';
+import { FontSizePicker } from '../../src/components/font-size-picker';
 import { PressableScale } from '../../src/components/pressable-scale';
 import { ReadingLevelPicker } from '../../src/components/reading-level-picker';
 import { VoicePicker } from '../../src/components/voice-picker';
@@ -61,6 +63,7 @@ import { disableDailyTip, enableDailyTip } from '../../src/notifications/daily-t
 type Sheet =
   | 'theme'
   | 'type'
+  | 'fontSize'
   | 'voice'
   | 'language'
   | 'reading'
@@ -79,6 +82,7 @@ export default function SettingsScreen() {
     setThemeId,
     typeLevelId,
     setTypeLevelId,
+    fontSize,
     language,
     setLanguage,
     readingLevel,
@@ -292,6 +296,16 @@ export default function SettingsScreen() {
               title={t.settings.rowDyslexia}
               value={`${t.typeLevels[typeLevelId].name} — ${t.typeLevels[typeLevelId].desc}`}
               onPress={() => setSheet('type')}
+            />
+            <SettingsRow
+              Icon={ALargeSmall}
+              title={t.settings.rowFontSize}
+              value={`${t.typography.fontSizeValue(
+                fontSize ?? getTypeLevel(typeLevelId).fontSize,
+              )} · ${
+                fontSize === null ? t.typography.fontSizeFollowsMode : t.typography.fontSizeCustom
+              }`}
+              onPress={() => setSheet('fontSize')}
             />
             <SettingsRow
               Icon={BookOpen}
@@ -546,6 +560,11 @@ export default function SettingsScreen() {
             );
           })}
         </View>
+      </SettingsSheet>
+
+      {/* ── Lembar: Ukuran huruf ───────────────────────────────────────────── */}
+      <SettingsSheet visible={sheet === 'fontSize'} title={t.settings.rowFontSize} onClose={close}>
+        <FontSizePicker />
       </SettingsSheet>
 
       {/* ── Lembar: Suara ──────────────────────────────────────────────────── */}

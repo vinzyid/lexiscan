@@ -6,6 +6,7 @@ import { useOCRStore } from '../store/useStore';
 import { useThemeColors } from '../theme/theme-provider';
 import { useT } from '../i18n';
 import { DyslexicText } from './dyslexic-text';
+import { FontSizePicker } from './font-size-picker';
 import { PressableScale } from './pressable-scale';
 import { useSpeakLabel } from '../speech/use-speech';
 
@@ -42,6 +43,16 @@ export function TypographySheet({ visible, onClose }: { visible: boolean; onClos
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
+            {/* Paling atas: keluhan yang paling sering saat membaca adalah
+                hurufnya kekecilan, dan jawabannya harus langsung terlihat
+                tanpa menggulung melewati tiga kartu preset. */}
+            <View className="mb-5">
+              <Text className="mb-1 font-ui-bold text-[16px] text-text-main">
+                {t.typography.fontSizeTitle}
+              </Text>
+              <FontSizePicker />
+            </View>
+
             {TYPE_LEVELS.map((level) => {
               const selected = level.id === typeLevelId;
 

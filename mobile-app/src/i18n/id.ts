@@ -364,6 +364,7 @@ export const id = {
     profileTitle: 'Profil & Keamanan',
     rowTheme: 'Tema Warna',
     rowDyslexia: 'Mode Disleksia',
+    rowFontSize: 'Ukuran Huruf',
     rowDailyTip: 'Tips Belajar Harian',
     dailyTipOn: 'Aktif · Setiap pagi',
     dailyTipOff: 'Nonaktif',
@@ -512,6 +513,15 @@ export const id = {
     bicolorDesc: 'Warna berganti tiap kata supaya matamu tidak kehilangan baris',
     rulerTitle: 'Penggaris Baca',
     rulerDesc: 'Garis penanda baris, ketuk baris untuk memindahkannya',
+    fontSizeTitle: 'Ukuran Huruf',
+    fontSizeHint: 'Besarkan sampai anak bisa membaca tanpa menyipitkan mata.',
+    fontSizeSmaller: 'Kecilkan huruf',
+    fontSizeBigger: 'Besarkan huruf',
+    fontSizeValue: (px: number) => `${px} px`,
+    /** Keterangan di bawah angka saat belum diatur sendiri. */
+    fontSizeFollowsMode: 'Ikut Mode Disleksia',
+    fontSizeCustom: 'Diatur sendiri',
+    fontSizeReset: (px: number) => `Kembali ke ukuran mode (${px} px)`,
   },
 
   wordSheet: {

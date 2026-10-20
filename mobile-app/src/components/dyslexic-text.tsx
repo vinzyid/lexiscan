@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Text, type TextLayoutEventData, type NativeSyntheticEvent } from 'react-native';
 
-import { getTypeLevel, type TypeLevel } from '../theme/palettes';
+import type { TypeLevel } from '../theme/palettes';
+import { useTypeLevel } from '../theme/use-type-level';
 import { useOCRStore } from '../store/useStore';
 import { useThemeColors } from '../theme/theme-provider';
 import { splitSyllables } from '../utils/syllables';
@@ -167,10 +168,10 @@ export function DyslexicText({
   onTextLayout,
   rulerLineIndex,
 }: Props) {
-  const typeLevelId = useOCRStore((s) => s.typeLevelId);
+  const activeLevel = useTypeLevel();
   const storeSyllableSpacing = useOCRStore((s) => s.syllableSpacing);
   const language = useOCRStore((s) => s.language);
-  const level = levelOverride ?? getTypeLevel(typeLevelId);
+  const level = levelOverride ?? activeLevel;
   const colors = useThemeColors();
 
   const syllableSpacing = syllableOverride ?? storeSyllableSpacing;

@@ -171,6 +171,17 @@ interface OCRState {
   typeLevelId: TypeLevelId;
   setTypeLevelId: (id: TypeLevelId) => void;
   /**
+   * Ukuran huruf teks bacaan pilihan pendamping, dalam px; `null` berarti ikut
+   * ukuran Mode Disleksia yang sedang aktif.
+   *
+   * Tiga preset Mode Disleksia mengatur ukuran sekaligus spasi dan ketebalan.
+   * Untuk anak yang matanya cepat lelah, ukuran itu saja yang sering masih
+   * kekecilan, padahal spasinya sudah pas. Pilihan ini menimpa ukurannya
+   * tanpa ikut mengubah yang lain.
+   */
+  fontSize: number | null;
+  setFontSize: (size: number | null) => void;
+  /**
    * Pecah tiap kata menjadi suku kata langsung di teks bacaan ("bu ka ba ca"),
    * tanpa perlu mengetuk katanya lebih dulu.
    */
@@ -341,6 +352,7 @@ export const useOCRStore = create<OCRState>()(
         set({
           readingLevel: level,
           typeLevelId: preset.typeLevelId,
+          fontSize: null,
           syllableSpacing: preset.syllableSpacing,
           ttsEnabled: preset.ttsEnabled,
           ttsAutoPlay: preset.ttsAutoPlay,
@@ -359,7 +371,11 @@ export const useOCRStore = create<OCRState>()(
       themeId: 'krem',
       setThemeId: (id) => set({ themeId: id, preferencesTouched: true }),
       typeLevelId: 'sedang',
-      setTypeLevelId: (id) => set({ typeLevelId: id, preferencesTouched: true }),
+      // Memilih preset ikut membuang ukuran pilihan sendiri: kartu presetnya
+      // menjanjikan "18px", dan memilihnya harus benar-benar menghasilkan itu.
+      setTypeLevelId: (id) => set({ typeLevelId: id, fontSize: null, preferencesTouched: true }),
+      fontSize: null,
+      setFontSize: (size) => set({ fontSize: size }),
       syllableSpacing: getReadingLevel(DEFAULT_READING_LEVEL).syllableSpacing,
       setSyllableSpacing: (value) => set({ syllableSpacing: value }),
 
@@ -468,6 +484,7 @@ export const useOCRStore = create<OCRState>()(
         language: s.language,
         themeId: s.themeId,
         typeLevelId: s.typeLevelId,
+        fontSize: s.fontSize,
         preferencesTouched: s.preferencesTouched,
 
         /*
