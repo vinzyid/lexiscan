@@ -525,6 +525,10 @@ export const en: Translation = {
         title: 'Read',
         body: 'This is where the child reads. Tap Next to see the reading tools one by one.',
       },
+      typography: {
+        title: 'Adjust Text',
+        body: 'Tap this button if the letters look too small, then press A+ until the child can read without squinting. Dyslexia Mode for letter spacing lives here too.',
+      },
       simplify: {
         title: 'Simplify with AI',
         body: "Makes hard sentences easier. Start with the original text and raise the level if the child doesn't understand it yet.",

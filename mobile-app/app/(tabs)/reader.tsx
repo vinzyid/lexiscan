@@ -806,15 +806,17 @@ export default function ReaderScreen() {
               </Text>
             </View>
 
-            <PressableScale
-              onPress={() => setTypographyOpen(true)}
-              accessibilityRole="button"
-              accessibilityLabel={`${t.reader.changeTypeLabel} ${typeLevelName}`}
-              className="h-11 flex-row items-center rounded-[16px] border border-white/20 bg-white/[0.14] px-3.5"
-              style={{ gap: 6 }}>
-              <Type size={16} color="#ffffff" />
-              <Text className="font-ui-bold text-[14px] text-white">{typeLevelName}</Text>
-            </PressableScale>
+            <TourTarget id="reader.typography">
+              <PressableScale
+                onPress={() => setTypographyOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel={`${t.reader.changeTypeLabel} ${typeLevelName}`}
+                className="h-11 flex-row items-center rounded-[16px] border border-white/20 bg-white/[0.14] px-3.5"
+                style={{ gap: 6 }}>
+                <Type size={16} color="#ffffff" />
+                <Text className="font-ui-bold text-[14px] text-white">{typeLevelName}</Text>
+              </PressableScale>
+            </TourTarget>
           </View>
         </LinearGradient>
 

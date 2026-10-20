@@ -26,6 +26,7 @@ export function CompanionTour() {
   ];
 
   const readerSteps: TourStep[] = [
+    { target: 'reader.typography', ...steps.typography },
     { target: 'reader.simplify', ...steps.simplify },
     { target: 'reader.focus', ...steps.focus },
     { target: 'reader.ruler', ...steps.ruler },

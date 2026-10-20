@@ -588,6 +588,10 @@ export const id = {
         title: 'Baca',
         body: 'Di sinilah anak membaca. Ketuk Lanjut untuk melihat alat bantunya satu per satu.',
       },
+      typography: {
+        title: 'Atur Tulisan',
+        body: 'Ketuk tombol ini kalau huruf terasa kekecilan, lalu tekan A+ sampai anak bisa membaca tanpa menyipitkan mata. Mode Disleksia untuk spasi huruf juga diatur di sini.',
+      },
       simplify: {
         title: 'Sederhanakan dengan AI',
         body: 'Mempermudah kalimat yang sulit. Mulai dari teks asli, naikkan tingkatnya kalau anak belum paham isinya.',
