@@ -48,13 +48,13 @@ class AiTextService
         'id' => [
             'L2' => 'Pertahankan semua istilah teknis, tetapi pecah kalimat panjang menjadi kalimat pendek. Ini hanya sedikit lebih mudah dari aslinya.',
             'L3' => 'Gunakan bahasa sehari-hari yang santai. Istilah teknis boleh diganti padanan awam, tetapi fakta harus tetap akurat.',
-            'L4' => 'Format Easy Read: sangat singkat dan padat. Boleh memakai tanda panah atau tanda sama dengan untuk menunjukkan hubungan.',
+            'L4' => 'Format Easy Read: satu gagasan per kalimat, satu kalimat maksimal delapan kata. Tulis hubungan antarhal dengan kata biasa seperti "lalu", "jadi", atau "karena". Jangan memakai tanda panah, tanda sama dengan, atau simbol lain.',
             'L5' => 'Sesederhana mungkin. Gunakan kalimat sangat pendek dan kata yang paling umum dipakai sehari-hari.',
         ],
         'en' => [
             'L2' => 'Keep every technical term, but break long sentences into short ones. This should be only slightly easier than the original.',
             'L3' => 'Use relaxed, everyday language. Technical terms may be swapped for plain equivalents, but the facts must stay accurate.',
-            'L4' => 'Easy Read format: very short and dense. Arrows or equals signs may be used to show relationships.',
+            'L4' => 'Easy Read format: one idea per sentence, at most eight words per sentence. Show how things relate with plain words such as "then", "so", or "because". Do not use arrows, equals signs, or other symbols.',
             'L5' => 'As simple as possible. Use very short sentences and the most common everyday words.',
         ],
     ];
@@ -116,12 +116,12 @@ class AiTextService
     private const SIMPLIFY_LENGTH_RULES = [
         'id' => [
             'belum' => 'Satu paragraf maksimal dua kalimat, dan satu kalimat maksimal sepuluh kata.',
-            'mengeja' => 'Satu paragraf maksimal dua kalimat pendek.',
+            'mengeja' => 'Satu paragraf maksimal dua kalimat, dan satu kalimat maksimal dua belas kata.',
             'lancar' => 'Satu paragraf maksimal tiga kalimat.',
         ],
         'en' => [
             'belum' => 'At most two sentences per paragraph, and at most ten words per sentence.',
-            'mengeja' => 'At most two short sentences per paragraph.',
+            'mengeja' => 'At most two sentences per paragraph, and at most twelve words per sentence.',
             'lancar' => 'At most three sentences per paragraph.',
         ],
     ];
