@@ -5,6 +5,7 @@ import { dictionaryFor } from '../i18n';
 import { useOCRStore, type FootprintSample, type ServerDefaults } from '../store/useStore';
 import { currentDeviceId } from '../utils/device-id';
 import { authHeader } from './session-token';
+import { readSimplified, simplifyCacheKey, writeSimplified } from './simplify-cache';
 
 /**
  * Alamat backend Laravel:
@@ -224,14 +225,31 @@ export async function simplifyText(
   text: string,
   level: Exclude<SimplifyLevelId, 'L1'>,
 ): Promise<string[]> {
+  const sent = text.slice(0, MAX_SIMPLIFY_CHARS);
+  const cacheKey = simplifyCacheKey(sent, level, requestLanguage(), requestReadingLevel());
+
+  const cached = await readSimplified(cacheKey);
+  if (cached) {
+    /*
+     * Tidak ada permintaan ke server, jadi tidak ada jejak karbon baru. Chip
+     * di layar Baca dikosongkan supaya tidak memajang angka permintaan
+     * sebelumnya di samping hasil yang tidak memakainya.
+     */
+    useOCRStore.setState({ lastFootprint: null });
+
+    return cached;
+  }
+
   const json = await postJson('/api/simplify-text', {
-    text: text.slice(0, MAX_SIMPLIFY_CHARS),
+    text: sent,
     level,
   });
 
   if (!Array.isArray(json?.paragraphs) || json.paragraphs.length === 0) {
     throw new AiApiError(strings().api.noSimplifyResult);
   }
+
+  await writeSimplified(cacheKey, json.paragraphs);
 
   return json.paragraphs;
 }

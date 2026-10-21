@@ -295,7 +295,9 @@ export default function ReaderScreen() {
 
   /**
    * Teks pindaian: L1 adalah hasil OCR apa adanya; L2–L5 diminta ke backend
-   * (POST /api/simplify-text) dan di-cache per level di store.
+   * (POST /api/simplify-text) dan di-cache per level di store. `simplifyText`
+   * juga menyimpannya di HP, jadi teks yang pernah disederhanakan terbuka lagi
+   * tanpa jaringan (lihat src/api/simplify-cache.ts).
    */
   const isScanned = rawText.trim().length > 0;
 
