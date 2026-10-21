@@ -24,6 +24,16 @@ DOMAIN_BACKEND_ANDA {
 		}
 	}
 
+	# Tolak multipart/form-data di luar endpoint unggah dokumen. PHP2Shell
+	# (CVE-2026-109618/109619) dipicu saat PHP mem-parsing body multipart, yang
+	# terjadi sebelum middleware Laravel sempat menolak request. Pencocokan tanpa
+	# peduli huruf besar-kecil karena PHP juga menerima "Multipart/Form-Data".
+	@multipart_terlarang {
+		header_regexp Content-Type (?i)multipart
+		not path /api/extract-document
+	}
+	respond @multipart_terlarang 415
+
 	# Batasi ukuran request; endpoint hanya menerima JSON pendek.
 	request_body {
 		max_size 2MB
