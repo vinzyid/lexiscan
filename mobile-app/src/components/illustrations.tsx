@@ -36,7 +36,7 @@ export function IlluSimplify({ size = 37 }: { size?: number }) {
   return <IlluSimplifySvg width={size} height={size} />;
 }
 
-/** Satu baris disorot, sisanya diredupkan — kartu "Focus Mode". */
+/** Satu baris disorot, sisanya diredupkan — kartu "Focus Reading Mode". */
 export function IlluFocus({ size = 37 }: { size?: number }) {
   return <IlluFocusSvg width={size} height={size} />;
 }

@@ -9,7 +9,7 @@ export const en: Translation = {
     title: 'LexiScan',
     tagline: 'Reading made easier',
     subTagline: 'for every student',
-    chips: ['OCR Scan', 'AI Simplify', 'Focus Mode', 'Typography'],
+    chips: ['OCR Scan', 'AI Simplify', 'Focus Reading Mode', 'Typography'],
     footer: 'DESIGNED FOR DYSLEXIA',
     loadingLabel: 'Opening LexiScan',
     skipHint: 'Tap to continue',
@@ -180,7 +180,7 @@ export const en: Translation = {
         label: 'Simplify Text',
         desc: '5 levels, from the original wording to the simplest',
       },
-      focus: { label: 'Focus Mode', desc: 'Read one paragraph without distractions' },
+      focus: { label: 'Focus Reading Mode', desc: 'One paragraph, with a reading ruler' },
       explain: { label: 'Ask Lexi', desc: '3 explanation styles from Lexi, your helper' },
     },
     innovations: {
@@ -646,7 +646,7 @@ export const en: Translation = {
     'Turn on the Ruler, then tap the next line or use the up and down buttons.',
     'Two Colours helps your eyes track where you are in a sentence.',
     'If a sentence feels heavy, move up one simplification level.',
-    'Focus Mode dims the other paragraphs so your eyes stay put.',
+    'Focus Reading Mode dims the other paragraphs and marks the line you are reading.',
     'Tap a difficult word — LexiScan will break it into syllables.',
   ],
 

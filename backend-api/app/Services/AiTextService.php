@@ -69,12 +69,17 @@ class AiTextService
      * Menyederhanakan tidak boleh berarti memperpanjang bacaan bagi pembaca yang
      * cepat lelah, jadi setiap level wajib lebih pendek dari aslinya. Dinyatakan
      * dalam angka kata, bukan "lebih singkat", karena model menuruti angka.
+     *
+     * Angka ini TARGET, bukan pagar: panjang teks asli yang jadi pagarnya. Pada
+     * percobaan pertama angka ini dijadikan batas mati (L4 0,7, L5 0,8) dan
+     * model memenuhinya dengan membuang isi: akhir cerita Kancil hilang dan
+     * fakta kunci L3 turun ke 88%. Menyederhanakan tidak boleh mengubah makna.
      */
     private const SIMPLIFY_WORD_RATIO = [
         'L2' => 0.9,
         'L3' => 0.85,
-        'L4' => 0.7,
-        'L5' => 0.8,
+        'L4' => 0.8,
+        'L5' => 0.85,
     ];
 
     /**
@@ -431,7 +436,8 @@ class AiTextService
             - Keep the number of paragraphs as close to the original as possible.
             - {$lengthRule}
             - The meaning MUST match the original: who does what, the order of events, cause and effect, names, numbers, and key terms must not change or disappear.
-            - The result MUST be shorter than the original: at most {$maxWords} words in total (the original has {$sourceWords} words). Shorten by using fewer words and cutting repetition or words that add no meaning, not by cutting content.
+            - The result MUST be shorter than the original ({$sourceWords} words). Aim for about {$maxWords} words, by using fewer words and cutting repetition or words that add no meaning, not by cutting content.
+            - Meaning matters more than the word target: if about {$maxWords} words cannot hold all the content, go over it, but stay under {$sourceWords} words. For a story, the ending must be kept.
 
             Original text:
             {$text}
@@ -448,7 +454,8 @@ class AiTextService
             - Pertahankan jumlah paragraf sedekat mungkin dengan teks asli.
             - {$lengthRule}
             - Makna WAJIB sama dengan teks asli: siapa melakukan apa, urutan kejadian, sebab-akibat, nama, angka, dan istilah inti tidak boleh berubah atau hilang.
-            - Hasil WAJIB lebih pendek dari teks asli: paling banyak {$maxWords} kata seluruhnya (teks asli {$sourceWords} kata). Pendekkan dengan memakai kata yang lebih sedikit dan membuang pengulangan atau kata yang tidak menambah makna, bukan dengan membuang isi.
+            - Hasil WAJIB lebih pendek dari teks asli ({$sourceWords} kata). Usahakan sekitar {$maxWords} kata, dengan memakai kata yang lebih sedikit dan membuang pengulangan atau kata yang tidak menambah makna, bukan dengan membuang isi.
+            - Makna lebih penting daripada target kata: kalau sekitar {$maxWords} kata tidak cukup untuk memuat seluruh isi, boleh lebih, asal tetap di bawah {$sourceWords} kata. Untuk cerita, akhir ceritanya wajib ada.
 
             Teks asli:
             {$text}

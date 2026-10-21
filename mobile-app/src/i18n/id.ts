@@ -10,7 +10,7 @@ export const id = {
     title: 'LexiScan',
     tagline: 'Membaca jadi lebih mudah',
     subTagline: 'untuk semua pelajar',
-    chips: ['Pindai Teks', 'Sederhanakan AI', 'Mode Fokus', 'Atur Tulisan'],
+    chips: ['Pindai Teks', 'Sederhanakan AI', 'Mode Baca Fokus', 'Atur Tulisan'],
     footer: 'DIRANCANG UNTUK DISLEKSIA',
     loadingLabel: 'Membuka LexiScan',
     skipHint: 'Ketuk untuk lanjut',
@@ -221,7 +221,7 @@ export const id = {
         label: 'Sederhanakan Teks',
         desc: '5 tingkat, dari bahasa asli sampai paling mudah',
       },
-      focus: { label: 'Mode Fokus', desc: 'Baca satu paragraf tanpa gangguan' },
+      focus: { label: 'Mode Baca Fokus', desc: 'Satu paragraf, dibantu penggaris baca' },
       explain: { label: 'Tanya Lexi', desc: '3 gaya penjelasan dari Lexi si asisten' },
     },
     innovations: {
@@ -729,7 +729,7 @@ export const id = {
     'Nyalakan Penggaris, lalu ketuk baris berikutnya atau pakai tombol naik-turun.',
     'Dua Warna membantu matamu melacak posisi dalam kalimat.',
     'Kalau satu kalimat terasa berat, naikkan level penyederhanaan satu tingkat.',
-    'Mode Fokus meredupkan paragraf lain supaya matamu tidak melompat.',
+    'Mode Baca Fokus meredupkan paragraf lain dan menandai baris yang sedang kamu baca.',
     'Ketuk kata yang sulit — LexiScan akan memecahnya jadi suku kata.',
   ],
 

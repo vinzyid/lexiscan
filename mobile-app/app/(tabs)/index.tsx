@@ -39,7 +39,8 @@ export default function DashboardScreen() {
   const [typographyOpen, setTypographyOpen] = useState(false);
   const [explainOpen, setExplainOpen] = useState(false);
 
-  const { focusMode, toggleFocusMode, typeLevelId, simplifyLevel } = useOCRStore();
+  const { focusMode, toggleFocusMode, rulerMode, toggleRulerMode, typeLevelId, simplifyLevel } =
+    useOCRStore();
   const reader = useAuthStore((s) => s.reader);
 
   /** Lebar kartu sesungguhnya (Figma: 358 pada layar 390). */
@@ -92,7 +93,9 @@ export default function DashboardScreen() {
       label: t.dashboard.features.focus.label,
       desc: t.dashboard.features.focus.desc,
       onPress: () => {
+        // Fokus dan penggaris dinyalakan bersama: paragraf lain redup, baris yang dibaca ditandai.
         if (!focusMode) toggleFocusMode();
+        if (!rulerMode) toggleRulerMode();
         router.push('/reader');
       },
     },

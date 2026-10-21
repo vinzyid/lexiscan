@@ -24,7 +24,7 @@ const STORAGE_KEY = 'lexiscan-simplify-cache';
  * cache-nya sendiri otomatis karena kuncinya memuat sidik jari prompt, tetapi
  * HP tidak tahu promptnya, jadi hasil lama di sini harus dibuang dengan tangan.
  */
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 
 /** Pagar ukuran: yang paling lama tidak dibuka dibuang lebih dulu. */
 const MAX_ENTRIES = 120;
