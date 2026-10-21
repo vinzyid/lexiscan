@@ -60,6 +60,24 @@ class AiTextService
     ];
 
     /**
+     * Batas jumlah kata hasil penyederhanaan, sebagai bagian dari panjang teks
+     * aslinya.
+     *
+     * Tanpa batas ini model sering mengembalikan teks yang sama panjang atau
+     * malah lebih panjang dari aslinya (sampai 1,49x pada evaluasi 21 Oktober
+     * 2026), karena kalimat panjang dipecah dan istilah diganti penjelasan.
+     * Menyederhanakan tidak boleh berarti memperpanjang bacaan bagi pembaca yang
+     * cepat lelah, jadi setiap level wajib lebih pendek dari aslinya. Dinyatakan
+     * dalam angka kata, bukan "lebih singkat", karena model menuruti angka.
+     */
+    private const SIMPLIFY_WORD_RATIO = [
+        'L2' => 0.9,
+        'L3' => 0.85,
+        'L4' => 0.7,
+        'L5' => 0.8,
+    ];
+
+    /**
      * Gaya penjelasan fitur Tanya Lexi.
      *
      * Gaya 'sederhana' dulu bernama 'anak10' dan berbunyi "seperti berbicara
@@ -280,7 +298,7 @@ class AiTextService
         if (count($chunks) === 1) {
             return $this->remember(
                 "simplify:{$language}:{$level}:{$readingLevel}:".md5($text),
-                $this->simplifyPrompt($chunks[0], $rule, $language, $readingLevel),
+                $this->simplifyPrompt($chunks[0], $rule, $language, $readingLevel, $level),
             );
         }
 
@@ -321,7 +339,7 @@ class AiTextService
         $keys = [];
 
         foreach ($chunks as $index => $chunk) {
-            $prompt = $this->simplifyPrompt($chunk, $rule, $language, $readingLevel);
+            $prompt = $this->simplifyPrompt($chunk, $rule, $language, $readingLevel, $level);
             $suffix = "simplify:{$language}:{$level}:{$readingLevel}:part{$index}:".md5($chunk);
             $keys[$index] = $this->cacheKey($suffix, $prompt);
             $prompts[$index] = $prompt;
@@ -392,9 +410,13 @@ class AiTextService
     }
 
     /** Prompt penyederhanaan untuk SATU potongan teks yang sudah pasti muat. */
-    private function simplifyPrompt(string $text, string $rule, string $language, string $readingLevel): string
+    private function simplifyPrompt(string $text, string $rule, string $language, string $readingLevel, string $level): string
     {
         $lengthRule = self::SIMPLIFY_LENGTH_RULES[$language][$readingLevel];
+
+        // Batasnya dihitung dari potongan ini sendiri, karena tiap potongan teks panjang punya prompt sendiri.
+        $sourceWords = count(preg_split('/\s+/u', trim($text), -1, PREG_SPLIT_NO_EMPTY) ?: []);
+        $maxWords = max(5, (int) floor($sourceWords * (self::SIMPLIFY_WORD_RATIO[$level] ?? 0.85)));
 
         return $language === 'en'
             ? <<<PROMPT
@@ -408,6 +430,8 @@ class AiTextService
             - Do not drop important facts.
             - Keep the number of paragraphs as close to the original as possible.
             - {$lengthRule}
+            - The meaning MUST match the original: who does what, the order of events, cause and effect, names, numbers, and key terms must not change or disappear.
+            - The result MUST be shorter than the original: at most {$maxWords} words in total (the original has {$sourceWords} words). Shorten by using fewer words and cutting repetition or words that add no meaning, not by cutting content.
 
             Original text:
             {$text}
@@ -423,6 +447,8 @@ class AiTextService
             - Jangan menghilangkan fakta penting.
             - Pertahankan jumlah paragraf sedekat mungkin dengan teks asli.
             - {$lengthRule}
+            - Makna WAJIB sama dengan teks asli: siapa melakukan apa, urutan kejadian, sebab-akibat, nama, angka, dan istilah inti tidak boleh berubah atau hilang.
+            - Hasil WAJIB lebih pendek dari teks asli: paling banyak {$maxWords} kata seluruhnya (teks asli {$sourceWords} kata). Pendekkan dengan memakai kata yang lebih sedikit dan membuang pengulangan atau kata yang tidak menambah makna, bukan dengan membuang isi.
 
             Teks asli:
             {$text}
